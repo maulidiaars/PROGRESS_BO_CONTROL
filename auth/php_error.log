@@ -1,0 +1,25 @@
+[11-Jan-2026 06:24:01 UTC] Database connection successful
+[11-Jan-2026 06:24:01 UTC] ================ LOGIN ATTEMPT ================
+[11-Jan-2026 06:24:01 UTC] Input NPK (raw): 12345
+[11-Jan-2026 06:24:01 UTC] Input Password: ***HIDDEN***
+[11-Jan-2026 06:24:01 UTC] NPK length: 5
+[11-Jan-2026 06:24:01 UTC] NPK trimmed: '12345'
+[11-Jan-2026 06:24:01 UTC] --- Mencari user dengan NPK: '12345' ---
+[11-Jan-2026 06:24:01 UTC] Query #1: SELECT * FROM M_USER WHERE npk = ?
+[11-Jan-2026 06:24:01 UTC] Parameter: '12345'
+[11-Jan-2026 06:24:01 UTC] Query #2: SELECT * FROM M_USER WHERE LTRIM(RTRIM(npk)) = ?
+[11-Jan-2026 06:24:01 UTC] Parameter: '12345'
+[11-Jan-2026 06:24:01 UTC] Query #3: SELECT * FROM M_USER WHERE CAST(npk AS VARCHAR(50)) = ?
+[11-Jan-2026 06:24:01 UTC] Parameter: '12345'
+[11-Jan-2026 06:24:01 UTC] Query #4: SELECT * FROM M_USER WHERE npk LIKE ?
+[11-Jan-2026 06:24:01 UTC] Parameter: '12345'
+[11-Jan-2026 06:24:01 UTC] --- Debug: Checking ALL NPKs in database ---
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '2231080' (Length: 7)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '2230855' (Length: 7)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '2141106' (Length: 7)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '10001' (Length: 5)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '10002' (Length: 5)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '10003' (Length: 5)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '10004' (Length: 5)
+[11-Jan-2026 06:24:01 UTC] NPK in DB: '10005' (Length: 5)
+[11-Jan-2026 06:24:01 UTC] Total users in database: 8

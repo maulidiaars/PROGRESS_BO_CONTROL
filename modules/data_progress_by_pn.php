@@ -1,0 +1,197 @@
+<?php 
+if (ob_get_length()) ob_clean();
+
+header('Content-Type: application/json');
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/status_logic.php'; // INCLUDE BARU
+
+if (!$conn) {
+    echo json_encode([
+        "success" => false,
+        "data" => [],
+        "message" => "Database belum terkoneksi",
+        "count" => 0
+    ]);
+    exit;
+}
+
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
+$response = [
+    "success" => false,
+    "data" => [],
+    "message" => "Unknown error",
+    "count" => 0
+];
+
+try {
+    $date1 = isset($_GET['date1']) ? trim($_GET['date1']) : '';  
+    $date2 = isset($_GET['date2']) ? trim($_GET['date2']) : '';  
+    $supplier_code = isset($_GET['supplier_code']) ? trim($_GET['supplier_code']) : '';  
+    
+    if ($conn === false) {
+        throw new Exception('Database connection failed');
+    }
+
+    $date1 = ($date1 !== '' && is_numeric($date1)) ? intval($date1) : '';
+    $date2 = ($date2 !== '' && is_numeric($date2)) ? intval($date2) : '';
+
+    $sql = "SELECT
+        CONVERT(varchar, o.DELV_DATE) AS DATE,  
+        ISNULL(o.SUPPLIER_CODE, '') AS SUPPLIER_CODE,  
+        ISNULL(o.PART_NO, '') AS PART_NO,  
+        ISNULL(o.PART_NAME, '') AS PART_NAME,  
+        ISNULL(o.ETA, '') AS ETA,
+        
+        -- REGULER orders berdasarkan ETA
+        SUM(CASE 
+            WHEN o.ETA IS NOT NULL 
+            AND o.ETA != ''
+            AND (
+                (TRY_CAST(o.ETA AS TIME) BETWEEN '07:00:00' AND '20:00:00') OR
+                (o.ETA LIKE '0[0-9]:%' OR o.ETA LIKE '1[0-9]:%') OR
+                (CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
+            )
+            THEN ISNULL(o.ORD_QTY, 0) 
+            ELSE 0 
+        END) AS REGULER_DS,  
+        
+        SUM(CASE 
+            WHEN o.ETA IS NOT NULL 
+            AND o.ETA != ''
+            AND NOT (
+                (TRY_CAST(o.ETA AS TIME) BETWEEN '07:00:00' AND '20:00:00') OR
+                (o.ETA LIKE '0[0-9]:%' OR o.ETA LIKE '1[0-9]:%') OR
+                (CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
+            )
+            THEN ISNULL(o.ORD_QTY, 0) 
+            ELSE 0 
+        END) AS REGULER_NS,  
+        
+        -- ADD orders (ambil MAX karena per DATE, SUPPLIER, PART)
+        ISNULL(MAX(o.ADD_DS), 0) AS ADD_DS,
+        ISNULL(MAX(o.ADD_NS), 0) AS ADD_NS,
+        
+        -- Remarks
+        ISNULL(MAX(o.REMARK_DS), '') AS REMARK_DS,
+        ISNULL(MAX(o.REMARK_NS), '') AS REMARK_NS,
+        
+        -- Total order
+        SUM(ISNULL(o.ORD_QTY, 0)) AS TOTAL_ORD_QTY,
+        
+        -- Actual incoming (REAL-TIME QUERY)
+        ISNULL((
+            SELECT SUM(ub.TRAN_QTY) 
+            FROM T_UPDATE_BO ub 
+            WHERE ub.PART_NO = o.PART_NO 
+            AND ub.DATE = o.DELV_DATE
+            AND ub.HOUR BETWEEN 7 AND 20
+        ), 0) AS DS_ACTUAL,
+        
+        ISNULL((
+            SELECT SUM(ub.TRAN_QTY) 
+            FROM T_UPDATE_BO ub 
+            WHERE ub.PART_NO = o.PART_NO 
+            AND ub.DATE = o.DELV_DATE
+            AND (ub.HOUR BETWEEN 21 AND 23 OR ub.HOUR BETWEEN 0 AND 6)
+        ), 0) AS NS_ACTUAL
+        
+    FROM T_ORDER o  
+    WHERE 1=1";
+
+    $params = array();
+
+    if ($date1 !== '' && $date2 !== '') {  
+        $sql .= " AND o.DELV_DATE BETWEEN ? AND ?";
+        $params[] = $date1;
+        $params[] = $date2;
+    } else if ($date1 !== '') {  
+        $sql .= " AND o.DELV_DATE = ?";
+        $params[] = $date1;
+    }
+
+    if ($supplier_code !== '' && $supplier_code !== 'select-all') {  
+        $supplier_codes = explode(',', $supplier_code);
+        $placeholders = implode(',', array_fill(0, count($supplier_codes), '?'));
+        $sql .= " AND o.SUPPLIER_CODE IN ($placeholders)";
+        
+        foreach ($supplier_codes as $code) {
+            $params[] = trim($code);
+        }
+    }
+
+    $sql .= " GROUP BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO, o.PART_NAME, o.ETA 
+              ORDER BY o.DELV_DATE DESC, o.SUPPLIER_CODE, o.PART_NO";
+
+    $stmt = sqlsrv_query($conn, $sql, $params);
+    $data = [];
+
+    if ($stmt === false) {
+        $errors = sqlsrv_errors();
+        error_log("SQL Error: " . print_r($errors, true));
+        
+        $response["message"] = "Database query failed: " . ($errors[0]['message'] ?? 'Unknown error');
+        $response["error"] = true;
+        echo json_encode($response);
+        exit;
+    }
+
+    $rowCount = 0;
+    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        // Format data dasar
+        $row['DATE'] = isset($row['DATE']) ? strval($row['DATE']) : '';
+        $row['REGULER_DS'] = intval($row['REGULER_DS'] ?? 0);
+        $row['REGULER_NS'] = intval($row['REGULER_NS'] ?? 0);
+        $row['ADD_DS'] = intval($row['ADD_DS'] ?? 0);
+        $row['ADD_NS'] = intval($row['ADD_NS'] ?? 0);
+        $row['TOTAL_ORD_QTY'] = intval($row['TOTAL_ORD_QTY'] ?? 0);
+        $row['DS_ACTUAL'] = intval($row['DS_ACTUAL'] ?? 0);
+        $row['NS_ACTUAL'] = intval($row['NS_ACTUAL'] ?? 0);
+        
+        // Hitung total
+        $row['ORD_QTY_TOTAL'] = $row['TOTAL_ORD_QTY'] + $row['ADD_DS'] + $row['ADD_NS'];
+        $row['TOTAL_INCOMING'] = $row['DS_ACTUAL'] + $row['NS_ACTUAL'];
+        
+        // ========== PAKE FUNGSI STATUS UNIVERSAL ==========
+        $row['STATUS'] = calculateOrderStatus(
+            $row['DATE'],           // tanggal order
+            $row['ETA'],            // ETA
+            $row['REGULER_DS'],     // DS reguler
+            $row['ADD_DS'],         // DS add
+            $row['REGULER_NS'],     // NS reguler
+            $row['ADD_NS'],         // NS add
+            $row['DS_ACTUAL'],      // actual DS
+            $row['NS_ACTUAL']       // actual NS
+        );
+        
+        $row['REMARK_DS'] = isset($row['REMARK_DS']) ? strval($row['REMARK_DS']) : '';
+        $row['REMARK_NS'] = isset($row['REMARK_NS']) ? strval($row['REMARK_NS']) : '';
+        
+        $data[] = $row;
+        $rowCount++;
+    }
+
+    sqlsrv_free_stmt($stmt);
+
+    error_log("Data returned: " . $rowCount . " rows (WITH NEW UNIVERSAL LOGIC)");
+    
+    $response["success"] = true;
+    $response["data"] = $data;
+    $response["message"] = "Data loaded successfully";
+    $response["count"] = $rowCount;
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
+    
+} catch (Exception $e) {
+    error_log("Exception: " . $e->getMessage());
+    
+    $response["message"] = $e->getMessage();
+    $response["error"] = true;
+    
+    echo json_encode($response);
+}
+
+sqlsrv_close($conn);
+exit;
+?>
