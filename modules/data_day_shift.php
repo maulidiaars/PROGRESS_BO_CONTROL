@@ -43,7 +43,6 @@ WITH TRAN_DATA AS (
             SUM(ub.TRAN_QTY) AS TRAN_QTY
         FROM T_UPDATE_BO ub
         WHERE ub.HOUR BETWEEN 8 AND 20
-        -- FILTER: HANYA PART YANG ADA DI ORDER
         AND EXISTS (
             SELECT 1 FROM T_ORDER o 
             WHERE o.PART_NO = ub.PART_NO 
@@ -81,19 +80,66 @@ ORD_DATA AS (
             PART_NO,
             PART_NAME,
             SUPPLIER_CODE,
-            CAST(LEFT(ETA, 2) AS INT) AS ETA_HOUR,
-            SUM(ORD_QTY) AS ORD_QTY
+            -- PERHITUNGAN TOTAL PER JAM (SUM semua cycle)
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '08:00:00' AND '08:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [8],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '09:00:00' AND '09:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [9],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '10:00:00' AND '10:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [10],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '11:00:00' AND '11:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [11],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '12:00:00' AND '12:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [12],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '13:00:00' AND '13:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [13],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '14:00:00' AND '14:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [14],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '15:00:00' AND '15:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [15],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '16:00:00' AND '16:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [16],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '17:00:00' AND '17:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [17],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '18:00:00' AND '18:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [18],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '19:00:00' AND '19:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [19],
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '20:00:00' AND '20:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [20]
         FROM T_ORDER
         WHERE ETA IS NOT NULL 
         AND ETA != ''
         AND TRY_CAST(ETA AS TIME) IS NOT NULL
         AND TRY_CAST(ETA AS TIME) BETWEEN '08:00:00' AND '20:00:00'
-        GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE, CAST(LEFT(ETA, 2) AS INT)
+        GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE  -- TANPA ETA_HOUR!
     ) AS SourceTable
-    PIVOT (
-        SUM(ORD_QTY)
-        FOR ETA_HOUR IN ([8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [18], [19], [20])
-    ) AS PivotTable
 )
 SELECT 
     COALESCE(T.DATE, O.DELV_DATE) AS DATE,

@@ -526,11 +526,23 @@ function refreshActualMaps() {
     
     if (!date1 || !date2) return;
     
+    // Konversi format tanggal untuk API
+    let sendDate1 = date1.replace(/-/g, '');
+    let sendDate2 = date2.replace(/-/g, '');
+    
+    console.log('🔄 Refreshing actual maps for date range:', sendDate1, 'to', sendDate2);
+    
     $.ajax({  
         url: 'modules/data_day_shift1.php',  
-        type: 'GET',  
+        type: 'GET',
+        data: {
+            date1: sendDate1,
+            date2: sendDate2
+        },
         dataType: 'json',  
         success: function(response) {
+            console.log('✅ DS Actual Data:', response.data?.length || 0, 'records');
+            
             const data = Array.isArray(response)
                 ? response
                 : (response?.data || []);
@@ -549,6 +561,8 @@ function refreshActualMaps() {
                 var key = safeTrim(item.DATE) + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
                 dsActualMap[key] = total_incoming;  
             });  
+            
+            console.log('📊 DS Actual Map updated:', Object.keys(dsActualMap).length, 'keys');
         },  
         error: function(xhr) {  
             console.log("Error refreshing DS actual map", xhr.status);  
@@ -557,9 +571,15 @@ function refreshActualMaps() {
     
     $.ajax({  
         url: 'modules/data_night_shift1.php',  
-        type: 'GET',  
+        type: 'GET',
+        data: {
+            date1: sendDate1,
+            date2: sendDate2
+        },
         dataType: 'json',  
         success: function(response) {
+            console.log('✅ NS Actual Data:', response.data?.length || 0, 'records');
+            
             const data = Array.isArray(response)
                 ? response
                 : (response?.data || []);
@@ -579,6 +599,8 @@ function refreshActualMaps() {
                 var key = safeTrim(item.DATE) + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
                 nsActualMap[key] = total_incoming;  
             });  
+            
+            console.log('📊 NS Actual Map updated:', Object.keys(nsActualMap).length, 'keys');
         },  
         error: function(xhr) {  
             console.log("Error refreshing NS actual map", xhr.status);  
@@ -1519,237 +1541,38 @@ function fetchDataInformation() {
         success: function(response) {
             console.log("📨 Data information response:", response);
             
-            // DEBUG: Lihat struktur data
-            if (response.data && response.data.length > 0) {
-                console.log("🔍 First item structure:", response.data[0]);
-                console.log("🔍 Request field check:", response.data[0].REQUEST);
-                console.log("🔍 Item field check:", response.data[0].ITEM);
-                console.log("🔍 Remark field check:", response.data[0].REMARK);
-            }
-            
-            tableInformation.clear();
-            
-            let data = [];
-            if (Array.isArray(response.data)) {
-                // Filter berdasarkan ID yang unik
-                const uniqueIds = new Set();
-                data = response.data.filter(item => {
-                    if (!item || !item.ID_INFORMATION) return false;
-                    const id = item.ID_INFORMATION;
-                    if (uniqueIds.has(id)) {
-                        console.warn("⚠️ Removing duplicate ID:", id);
-                        return false;
-                    }
-                    uniqueIds.add(id);
-                    return true;
-                });
-                console.log(`✅ Unique items: ${data.length} (filtered ${response.data.length - data.length} duplicates)`);
+            if (response.success) {
+                // DataTable akan otomatis merender karena sudah ada konfigurasi columns
+                tableInformation.clear();
+                
+                if (response.data && response.data.length > 0) {
+                    tableInformation.rows.add(response.data).draw();
+                    
+                    // Debug: log data untuk memastikan field ada
+                    console.log("🔍 Sample data:", response.data[0]);
+                    console.log("🔍 Request field:", response.data[0].REQUEST);
+                    console.log("🔍 Remark field:", response.data[0].REMARK);
+                    
+                    // Update badge
+                    const openCount = response.data.filter(item => 
+                        item.STATUS === 'Open' && item.user_role === 'recipient'
+                    ).length;
+                    
+                    updateInfoBadge(openCount);
+                    
+                } else {
+                    // Tampilkan pesan jika tidak ada data
+                    tableInformation.clear().draw();
+                }
+                
             } else {
-                console.warn("Invalid data format:", response);
-                data = [];
+                console.error("❌ Failed to fetch data:", response.message);
+                tableInformation.clear().draw();
             }
-            
-            if (data.length === 0) {
-                tableInformation.row.add([
-                    '', '', '', '', 
-                    '<div class="text-center text-muted p-3"><i class="bi bi-info-circle me-2"></i>No information available for selected date range</div>',
-                    '', '', '', '', '', '', ''
-                ]).draw();
-                
-                $('#table-information tbody tr:last').addClass('empty-row').find('td').css({
-                    'text-align': 'center',
-                    'font-style': 'italic'
-                });
-                
-                updateInfoBadge();
-                return;
-            }
-            
-            $('#table-information_wrapper .empty-row').remove();
-            
-            var no_urut = 1;
-            var rows = [];
-            
-            $.each(data, function(index, item) {
-                const itemData = item || {};
-                
-                // DEBUG SETIAP ITEM
-                console.log(`🔍 Item ${index}:`, {
-                    id: itemData.ID_INFORMATION,
-                    item: itemData.ITEM,
-                    request: itemData.REQUEST,
-                    remark: itemData.REMARK,
-                    timeTo: itemData.TIME_TO,
-                    picTo: itemData.PIC_TO,
-                    status: itemData.STATUS
-                });
-                
-                const timeTo = itemData.TIME_TO || "-";
-                const remark = itemData.REMARK || "-";
-                const picTo = itemData.PIC_TO || "-";
-                const status = itemData.STATUS || "Open";
-                const itemText = itemData.ITEM || "";
-                const requestText = itemData.REQUEST || "";
-                const timeFrom = itemData.TIME_FROM || "-";
-                const picFrom = itemData.PIC_FROM || "System";
-                const idInfo = itemData.ID_INFORMATION || 0;
-                const date = itemData.DATE || "-";
-                const userRole = itemData.user_role || "viewer";
-                
-                console.log(`📋 Processing info ${idInfo}:`, {
-                    id: idInfo,
-                    picFrom, picTo, status, userRole,
-                    itemText: itemText,
-                    requestText: requestText,
-                    remark: remark
-                });
-                
-                // Status badge dengan 3 status: Open, On Progress, Closed
-                let statusBadge = '';
-                if (status === 'Open') {
-                    statusBadge = '<span class="badge bg-danger">⏳ OPEN</span>';
-                } else if (status === 'On Progress') {
-                    statusBadge = '<span class="badge bg-warning">🔄 ON PROGRESS</span>';
-                } else if (status === 'Closed') {
-                    statusBadge = '<span class="badge bg-success">✅ CLOSED</span>';
-                } else {
-                    statusBadge = '<span class="badge bg-secondary">' + status + '</span>';
-                }
-                
-                // ========== ACTION BUTTONS UNTUK FROM (kolom ke-6) ==========
-                let fromActionButtons = '';
-                
-                // Hanya pengirim yang bisa edit/hapus, TAPI hanya jika status masih Open
-                if (userRole === 'sender') {
-                    // Edit button - hanya jika status Open (bukan On Progress atau Closed)
-                    if (status === 'Open') {
-                        fromActionButtons += `
-                            <button class="btn btn-sm btn-warning btn-edit-info me-1" 
-                                    data-id="${idInfo}" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                        `;
-                    }
-                    
-                    // Delete button - selalu bisa
-                    fromActionButtons += `
-                        <button class="btn btn-sm btn-danger btn-delete-info" 
-                                data-id="${idInfo}" title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    `;
-                    
-                } else {
-                    fromActionButtons = '-';
-                }
-                
-                // ========== ACTION BUTTONS UNTUK TO (kolom ke-11) ==========
-                let toActionButtons = '';
-                
-                // Hanya penerima yang bisa reply, dan hanya jika status belum Closed
-                if (userRole === 'recipient' && status !== 'Closed') {
-                    // Button Reply dengan icon berbeda berdasarkan status
-                    if (status === 'Open') {
-                        toActionButtons = `
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-sm btn-success btn-reply-info flex-fill" 
-                                        data-id="${idInfo}" title="Update Status">
-                                    <i class="bi bi-reply"></i> Reply
-                                </button>
-                            </div>
-                        `;
-                    } else if (status === 'On Progress') {
-                        toActionButtons = `
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-sm btn-info btn-reply-info flex-fill" 
-                                        data-id="${idInfo}" title="Update Status">
-                                    <i class="bi bi-arrow-clockwise"></i> Update
-                                </button>
-                            </div>
-                        `;
-                    }
-                } else {
-                    toActionButtons = '-';
-                }
-                
-                let displayDate = date;
-                if (/^\d{8}$/.test(date)) {
-                    displayDate = date.slice(0,4) + '-' + date.slice(4,6) + '-' + date.slice(6,8);
-                }
-                
-                // Row untuk DataTable - PERBAIKAN BESAR DI SINI
-                const row = [
-                    no_urut, // 0
-                    displayDate, // 1
-                    '<span class="fw-bold">' + timeFrom + '</span>', // 2
-                    '<span class="text-primary fw-bold">' + picFrom + '</span>', // 3
-                    // Kolom Item - Tampilkan full text
-                    '<div class="text-start" style="white-space: normal; min-width: 200px;">' + 
-                        '<strong>' + itemText + '</strong>' + 
-                    '</div>', // 4
-                    // Kolom Request - Tampilkan full text - PERBAIKAN DI SINI
-                    '<div class="text-start small" style="white-space: normal; min-width: 300px;">' + 
-                        requestText + 
-                    '</div>', // 5
-                    fromActionButtons, // 6 - Action From
-                    '<span class="fw-bold">' + timeTo + '</span>', // 7
-                    // Kolom PIC_TO - Tampilkan semua penerima
-                    '<span class="text-success fw-bold" style="white-space: normal;">' + picTo + '</span>', // 8
-                    statusBadge, // 9 - Status
-                    // Kolom Remark - Tampilkan full text - PERBAIKAN DI SINI
-                    '<div class="text-start" style="white-space: normal; min-width: 200px;">' + remark + '</div>', // 10
-                    toActionButtons // 11 - Action To
-                ];
-                
-                rows.push(row);
-                no_urut++;
-            });
-            
-            // Clear and add rows
-            tableInformation.clear();
-            if (rows.length > 0) {
-                tableInformation.rows.add(rows).draw();
-            }
-            
-            // Add row classes based on status
-            $('#table-information tbody tr').each(function() {
-                const statusCell = $(this).find('td').eq(9);
-                if (statusCell.html().includes('bg-danger')) {
-                    $(this).addClass('table-danger');
-                } else if (statusCell.html().includes('bg-warning')) {
-                    $(this).addClass('table-warning');
-                } else if (statusCell.html().includes('bg-success')) {
-                    $(this).addClass('table-success');
-                }
-            });
-            
-            updateInfoBadge();
-            
-            // Debug
-            console.log(`🔧 Total rows: ${rows.length}, Sender actions: ${$('.btn-edit-info, .btn-delete-info').length}, Recipient actions: ${$('.btn-reply-info').length}`);
-            
-            // Re-bind events
-            setTimeout(() => {
-                if (window.informationSystem && window.informationSystem.bindTableEvents) {
-                    window.informationSystem.bindTableEvents();
-                }
-            }, 500);
-            
         },
         error: function(xhr, status, error) {
-            console.error("Error fetching data information:", xhr.responseText);
-            
+            console.error("❌ Error fetching data information:", xhr.responseText);
             tableInformation.clear().draw();
-            $('#table-information tbody').html(`
-                <tr class="error-row">
-                    <td colspan="12" class="text-center text-danger py-4">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        Failed to load data. Please try again.
-                    </td>
-                </tr>
-            `);
-            
-            handleAjaxError(xhr, "Failed to fetch information data");
         }
     });
 }
@@ -2150,7 +1973,7 @@ function renderAccumTable() {
         html += '<td><strong>Data ' + itemNumber + '</strong></td>';  
         
         for(let i=0;i<daysInMonth;i++) {
-            html += `<td class="text-end">${ordQtyPerDay[i] > 0 ? ordQtyPerDay[i] : 0}</td>`;
+            html += `<td class="text-center">${ordQtyPerDay[i] > 0 ? ordQtyPerDay[i] : 0}</td>`;
         }  
         html += '</tr>';  
 
@@ -2158,7 +1981,7 @@ function renderAccumTable() {
         html += '<tr>';  
         html += '<td>Add D/S</td>';  
         for(let i=0;i<daysInMonth;i++) {
-            html += `<td class="text-end text-primary fw-bold">${addDsPerDay[i]}</td>`;
+            html += `<td class="text-center text-primary fw-bold">${addDsPerDay[i]}</td>`;
         }  
         html += '</tr>';  
 
@@ -2166,7 +1989,7 @@ function renderAccumTable() {
         html += '<tr>';  
         html += '<td>Add N/S</td>';  
         for(let i=0;i<daysInMonth;i++) {
-            html += `<td class="text-end text-warning fw-bold">${addNsPerDay[i]}</td>`;
+            html += `<td class="text-center text-warning fw-bold">${addNsPerDay[i]}</td>`;
         }  
         html += '</tr>';    
 
@@ -2174,7 +1997,7 @@ function renderAccumTable() {
         html += '<tr>';  
         html += '<td><strong>Total Order</strong></td>';  
         for(let i=0;i<daysInMonth;i++) {
-            html += `<td class="text-end"><strong>${totalOrderPerDay[i]}</strong></td>`;
+            html += `<td class="text-center"><strong>${totalOrderPerDay[i]}</strong></td>`;
         }  
         html += '</tr>';
         
@@ -2182,7 +2005,7 @@ function renderAccumTable() {
         html += '<tr>';  
         html += '<td>Total Incoming</td>';  
         for(let i=0;i<daysInMonth;i++) {
-            html += `<td class="text-end">${totalIncomingPerDay[i]}</td>`;
+            html += `<td class="text-center">${totalIncomingPerDay[i]}</td>`;
         }  
         html += '</tr>';  
         
@@ -2193,11 +2016,11 @@ function renderAccumTable() {
             let result = resultPerDay[i];
             // Warna: Hijau jika positif (Over), Merah jika negatif (Kurang)
             if (result > 0) {
-                html += `<td class="text-end text-success fw-bold">${result}</td>`;
+                html += `<td class="text-center text-success fw-bold">${result}</td>`;
             } else if (result < 0) {
-                html += `<td class="text-end text-danger fw-bold">${result}</td>`;
+                html += `<td class="text-center text-danger fw-bold">${result}</td>`;
             } else {
-                html += `<td class="text-end">${result}</td>`;
+                html += `<td class="text-center">${result}</td>`;
             }
         }  
         html += '</tr>';  
@@ -2208,11 +2031,11 @@ function renderAccumTable() {
         for(let i=0;i<daysInMonth;i++) {
             let balance = balancePerDay[i];
             if (balance > 0) {
-                html += `<td class="text-end text-success fw-bold">${balance}</td>`;
+                html += `<td class="text-center text-success fw-bold">${balance}</td>`;
             } else if (balance < 0) {
-                html += `<td class="text-end text-danger fw-bold">${balance}</td>`;
+                html += `<td class="text-center text-danger fw-bold">${balance}</td>`;
             } else {
-                html += `<td class="text-end">${balance}</td>`;
+                html += `<td class="text-center">${balance}</td>`;
             }
         }  
         html += '</tr>';  
@@ -3540,7 +3363,8 @@ $(document).ready(function() {
         return show;
     });
     
-// Di bagian initialization DataTable, tambahkan drawCallback
+// CARI KODE INI (sekitar line 2050-2100) dan GANTI:
+
 tableInformation = $('#table-information').DataTable({
     pageLength: 10,
     autoWidth: true,
@@ -3562,25 +3386,91 @@ tableInformation = $('#table-information').DataTable({
             previous: 'Previous'
         }
     },
-    columnDefs: [
-        { 
-            targets: [6, 11], // Kolom action
-            orderable: false,
-            searchable: false,
-            className: 'text-center'
+    columns: [  // TAMBAHKAN PROPERTI columns UNTUK MAPPING YANG BENAR
+        { title: "No", data: null, render: function(data, type, row, meta) {
+            return meta.row + 1;
+        }},
+        { title: "Date", data: "DATE", render: formatDate },
+        { title: "Time", data: "TIME_FROM" },
+        { title: "PIC", data: "PIC_FROM" },
+        { title: "Item", data: "ITEM", className: "text-start", 
+          render: function(data) {
+              return '<div style="white-space: normal; min-width: 200px;">' + data + '</div>';
+          }
         },
-        {
-            targets: [5, 10], // Kolom Request dan Remark
-            render: function(data, type, row) {
-                if (type === 'display' && data.length > 50) {
-                    return data.substr(0, 50) + '...';
-                }
-                return data;
-            }
+        { title: "Request", data: "REQUEST", className: "text-start",
+          render: function(data) {
+              return '<div style="white-space: normal; min-width: 300px;">' + data + '</div>';
+          }
+        },
+        { title: "Action From", data: null, orderable: false, searchable: false,
+          render: function(data, type, row) {
+              const role = row.user_role || '';
+              const status = row.STATUS || '';
+              
+              // Hanya sender yang bisa edit/delete
+              if (role === 'sender') {
+                  let buttons = '';
+                  // Edit hanya jika status Open
+                  if (status === 'Open') {
+                      buttons += `<button class="btn btn-sm btn-warning btn-edit-info me-1" 
+                                  data-id="${row.ID_INFORMATION}" title="Edit">
+                                  <i class="bi bi-pencil"></i>
+                                </button>`;
+                  }
+                  // Delete button
+                  buttons += `<button class="btn btn-sm btn-danger btn-delete-info" 
+                                  data-id="${row.ID_INFORMATION}" title="Delete">
+                                  <i class="bi bi-trash"></i>
+                                </button>`;
+                  return buttons;
+              }
+              return '-';
+          }
+        },
+        { title: "Time", data: "TIME_TO" },
+        { title: "PIC", data: "PIC_TO" },
+        { title: "Status", data: "STATUS", 
+          render: function(data) {
+              if (data === 'Open') return '<span class="badge bg-danger">⏳ OPEN</span>';
+              if (data === 'On Progress') return '<span class="badge bg-warning">🔄 ON PROGRESS</span>';
+              if (data === 'Closed') return '<span class="badge bg-success">✅ CLOSED</span>';
+              return '<span class="badge bg-secondary">' + data + '</span>';
+          }
+        },
+        { title: "Remark", data: "REMARK", className: "text-start",
+          render: function(data) {
+              return '<div style="white-space: normal; min-width: 200px;">' + (data || '-') + '</div>';
+          }
+        },
+        { title: "Action To", data: null, orderable: false, searchable: false,
+          render: function(data, type, row) {
+              const role = row.user_role || '';
+              const status = row.STATUS || '';
+              
+              // Hanya recipient yang bisa reply
+              if (role === 'recipient' && status !== 'Closed') {
+                  let buttonText = '';
+                  let buttonClass = '';
+                  
+                  if (status === 'Open') {
+                      buttonText = '<i class="bi bi-reply"></i> Reply';
+                      buttonClass = 'btn-success';
+                  } else if (status === 'On Progress') {
+                      buttonText = '<i class="bi bi-arrow-clockwise"></i> Update';
+                      buttonClass = 'btn-info';
+                  }
+                  
+                  return `<button class="btn btn-sm ${buttonClass} btn-reply-info" 
+                                data-id="${row.ID_INFORMATION}" title="Update Status">
+                                ${buttonText}
+                          </button>`;
+              }
+              return '-';
+          }
         }
     ],
     drawCallback: function(settings) {
-        // Re-bind events setiap kali tabel di-draw
         console.log('🔄 DataTable draw callback');
         setTimeout(() => {
             if (window.informationSystem && window.informationSystem.bindTableEvents) {
@@ -3590,8 +3480,7 @@ tableInformation = $('#table-information').DataTable({
         }, 300);
     },
     initComplete: function() {
-        console.log('✅ Information DataTable initialized');
-        // Initial bind
+        console.log('✅ Information DataTable initialized with proper columns');
         if (window.informationSystem) {
             setTimeout(() => {
                 window.informationSystem.bindTableEvents();

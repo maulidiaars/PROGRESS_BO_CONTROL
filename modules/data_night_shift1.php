@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/status_logic.php'; // INCLUDE BARU
+require_once __DIR__ . '/../config/status_logic.php';
 
 $response = [
     "success" => true,
@@ -15,7 +15,10 @@ if (!$conn) {
     exit;
 }
 
-// **FIX: QUERY NIGHT SHIFT YANG BENAR**
+// **PERBAIKAN: TERIMA PARAMETER DATE RANGE**
+$date1 = isset($_GET['date1']) ? $_GET['date1'] : date('Ymd');
+$date2 = isset($_GET['date2']) ? $_GET['date2'] : date('Ymd');
+
 $sql = "
     SELECT 
         COALESCE(ub.DATE, o.DELV_DATE) AS DATE,
@@ -36,9 +39,9 @@ $sql = "
     FROM T_UPDATE_BO ub
     FULL OUTER JOIN T_ORDER o 
         ON ub.PART_NO = o.PART_NO AND ub.DATE = o.DELV_DATE
-    WHERE (ub.HOUR BETWEEN 8 AND 20 OR ub.HOUR IS NULL)
-    AND COALESCE(ub.DATE, o.DELV_DATE) = ?
-    -- FILTER BARU: Hanya ambil yang ada di order
+    WHERE ((ub.HOUR BETWEEN 21 AND 23) OR (ub.HOUR BETWEEN 0 AND 7) OR ub.HOUR IS NULL)
+    AND COALESCE(ub.DATE, o.DELV_DATE) BETWEEN ? AND ?
+    -- FILTER: Hanya ambil yang ada di order
     AND EXISTS (
         SELECT 1 FROM T_ORDER o2 
         WHERE o2.PART_NO = COALESCE(ub.PART_NO, o.PART_NO)
@@ -50,8 +53,8 @@ $sql = "
              o.SUPPLIER_CODE
 ";
 
-$dateParam = date('Ymd');
-$stmt = sqlsrv_query($conn, $sql, [$dateParam]);
+$params = [$date1, $date2];
+$stmt = sqlsrv_query($conn, $sql, $params);
 
 if ($stmt === false) {
     $response["success"] = false;

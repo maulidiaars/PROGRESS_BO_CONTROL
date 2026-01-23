@@ -3,7 +3,7 @@ if (ob_get_length()) ob_clean();
 
 header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/status_logic.php'; // INCLUDE BARU
+require_once __DIR__ . '/../config/status_logic.php';
 
 if (!$conn) {
     echo json_encode([
@@ -37,14 +37,17 @@ try {
     $date1 = ($date1 !== '' && is_numeric($date1)) ? intval($date1) : '';
     $date2 = ($date2 !== '' && is_numeric($date2)) ? intval($date2) : '';
 
+    // QUERY YANG DIPERBAIKI: GROUP BY TANPA ETA, AGREGASI SEMUA CYCLE
     $sql = "SELECT
         CONVERT(varchar, o.DELV_DATE) AS DATE,  
         ISNULL(o.SUPPLIER_CODE, '') AS SUPPLIER_CODE,  
         ISNULL(o.PART_NO, '') AS PART_NO,  
         ISNULL(o.PART_NAME, '') AS PART_NAME,  
-        ISNULL(o.ETA, '') AS ETA,
         
-        -- REGULER orders berdasarkan ETA
+        -- Total semua order (reguler) tanpa memperhatikan ETA
+        SUM(ISNULL(o.ORD_QTY, 0)) AS TOTAL_REGULAR_ORDER,
+        
+        -- REGULER DS: total order dengan ETA di day shift
         SUM(CASE 
             WHEN o.ETA IS NOT NULL 
             AND o.ETA != ''
@@ -57,6 +60,7 @@ try {
             ELSE 0 
         END) AS REGULER_DS,  
         
+        -- REGULER NS: total order dengan ETA di night shift
         SUM(CASE 
             WHEN o.ETA IS NOT NULL 
             AND o.ETA != ''
@@ -69,16 +73,16 @@ try {
             ELSE 0 
         END) AS REGULER_NS,  
         
-        -- ADD orders (ambil MAX karena per DATE, SUPPLIER, PART)
+        -- ADD orders: ambil MAX karena hanya 1 nilai per part per tanggal
         ISNULL(MAX(o.ADD_DS), 0) AS ADD_DS,
         ISNULL(MAX(o.ADD_NS), 0) AS ADD_NS,
         
-        -- Remarks
-        ISNULL(MAX(o.REMARK_DS), '') AS REMARK_DS,
-        ISNULL(MAX(o.REMARK_NS), '') AS REMARK_NS,
+        -- Remarks: ambil MAX/pertama
+        MAX(ISNULL(o.REMARK_DS, '')) AS REMARK_DS,
+        MAX(ISNULL(o.REMARK_NS, '')) AS REMARK_NS,
         
-        -- Total order
-        SUM(ISNULL(o.ORD_QTY, 0)) AS TOTAL_ORD_QTY,
+        -- ETA: untuk perhitungan status, ambil ETA pertama
+        MAX(o.ETA) AS ETA,
         
         -- Actual incoming (REAL-TIME QUERY)
         ISNULL((
@@ -121,7 +125,8 @@ try {
         }
     }
 
-    $sql .= " GROUP BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO, o.PART_NAME, o.ETA 
+    // PERHATIAN: GROUP BY TANPA ETA!
+    $sql .= " GROUP BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO, o.PART_NAME
               ORDER BY o.DELV_DATE DESC, o.SUPPLIER_CODE, o.PART_NO";
 
     $stmt = sqlsrv_query($conn, $sql, $params);
@@ -141,22 +146,22 @@ try {
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         // Format data dasar
         $row['DATE'] = isset($row['DATE']) ? strval($row['DATE']) : '';
+        $row['TOTAL_REGULAR_ORDER'] = intval($row['TOTAL_REGULAR_ORDER'] ?? 0);
         $row['REGULER_DS'] = intval($row['REGULER_DS'] ?? 0);
         $row['REGULER_NS'] = intval($row['REGULER_NS'] ?? 0);
         $row['ADD_DS'] = intval($row['ADD_DS'] ?? 0);
         $row['ADD_NS'] = intval($row['ADD_NS'] ?? 0);
-        $row['TOTAL_ORD_QTY'] = intval($row['TOTAL_ORD_QTY'] ?? 0);
         $row['DS_ACTUAL'] = intval($row['DS_ACTUAL'] ?? 0);
         $row['NS_ACTUAL'] = intval($row['NS_ACTUAL'] ?? 0);
         
-        // Hitung total
-        $row['ORD_QTY_TOTAL'] = $row['TOTAL_ORD_QTY'] + $row['ADD_DS'] + $row['ADD_NS'];
+        // Hitung total order (reguler + add)
+        $row['ORD_QTY_TOTAL'] = $row['TOTAL_REGULAR_ORDER'] + $row['ADD_DS'] + $row['ADD_NS'];
         $row['TOTAL_INCOMING'] = $row['DS_ACTUAL'] + $row['NS_ACTUAL'];
         
         // ========== PAKE FUNGSI STATUS UNIVERSAL ==========
         $row['STATUS'] = calculateOrderStatus(
             $row['DATE'],           // tanggal order
-            $row['ETA'],            // ETA
+            $row['ETA'],            // ETA (ambil yang pertama)
             $row['REGULER_DS'],     // DS reguler
             $row['ADD_DS'],         // DS add
             $row['REGULER_NS'],     // NS reguler
@@ -174,7 +179,7 @@ try {
 
     sqlsrv_free_stmt($stmt);
 
-    error_log("Data returned: " . $rowCount . " rows (WITH NEW UNIVERSAL LOGIC)");
+    error_log("Data returned: " . $rowCount . " rows (WITH GROUPING FIX - NO DUPLICATE)");
     
     $response["success"] = true;
     $response["data"] = $data;
