@@ -47,31 +47,35 @@ try {
         -- Total semua order (reguler) tanpa memperhatikan ETA
         SUM(ISNULL(o.ORD_QTY, 0)) AS TOTAL_REGULAR_ORDER,
         
-        -- REGULER DS: total order dengan ETA di day shift
+        -- REGULER DS: total order dengan ETA di DAY SHIFT (07:00 - 20:00)
         SUM(CASE 
             WHEN o.ETA IS NOT NULL 
             AND o.ETA != ''
             AND (
-                (TRY_CAST(o.ETA AS TIME) BETWEEN '07:00:00' AND '20:00:00') OR
-                (o.ETA LIKE '0[0-9]:%' OR o.ETA LIKE '1[0-9]:%') OR
-                (CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
+                -- Format jam normal: 07:00 - 20:00
+                (TRY_CAST(o.ETA AS TIME) >= '07:00:00' AND TRY_CAST(o.ETA AS TIME) <= '20:00:00') OR
+                -- Handle format string 24 jam
+                (TRY_CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
             )
             THEN ISNULL(o.ORD_QTY, 0) 
             ELSE 0 
         END) AS REGULER_DS,  
-        
-        -- REGULER NS: total order dengan ETA di night shift
+
+        -- REGULER NS: total order dengan ETA di NIGHT SHIFT (21:00 - 06:00)
         SUM(CASE 
             WHEN o.ETA IS NOT NULL 
             AND o.ETA != ''
-            AND NOT (
-                (TRY_CAST(o.ETA AS TIME) BETWEEN '07:00:00' AND '20:00:00') OR
-                (o.ETA LIKE '0[0-9]:%' OR o.ETA LIKE '1[0-9]:%') OR
-                (CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
+            AND (
+                -- Jam 21:00 - 23:59
+                (TRY_CAST(o.ETA AS TIME) >= '21:00:00' AND TRY_CAST(o.ETA AS TIME) <= '23:59:59') OR
+                -- Jam 00:00 - 06:59
+                (TRY_CAST(o.ETA AS TIME) >= '00:00:00' AND TRY_CAST(o.ETA AS TIME) <= '06:59:59') OR
+                -- Handle format string
+                (TRY_CAST(LEFT(o.ETA, 2) AS INT) >= 21 OR TRY_CAST(LEFT(o.ETA, 2) AS INT) <= 6)
             )
             THEN ISNULL(o.ORD_QTY, 0) 
             ELSE 0 
-        END) AS REGULER_NS,  
+        END) AS REGULER_NS,
         
         -- ADD orders: ambil MAX karena hanya 1 nilai per part per tanggal
         ISNULL(MAX(o.ADD_DS), 0) AS ADD_DS,
@@ -84,19 +88,26 @@ try {
         -- ETA: untuk perhitungan status, ambil ETA pertama
         MAX(o.ETA) AS ETA,
         
-        -- Actual incoming (REAL-TIME QUERY)
+
+        -- Actual incoming (REAL-TIME QUERY) - PAKAI MAX BUKAN SUM!
         ISNULL((
-            SELECT SUM(ub.TRAN_QTY) 
+            SELECT MAX(ub.TRAN_QTY)  -- PAKAI MAX, BUKAN SUM!
             FROM T_UPDATE_BO ub 
-            WHERE ub.PART_NO = o.PART_NO 
+            WHERE (
+                ub.PART_NO = o.PART_NO 
+                OR REPLACE(ub.PART_NO, ' ', '') = REPLACE(o.PART_NO, ' ', '')
+            )
             AND ub.DATE = o.DELV_DATE
             AND ub.HOUR BETWEEN 7 AND 20
         ), 0) AS DS_ACTUAL,
-        
+
         ISNULL((
-            SELECT SUM(ub.TRAN_QTY) 
+            SELECT MAX(ub.TRAN_QTY)  -- PAKAI MAX, BUKAN SUM!
             FROM T_UPDATE_BO ub 
-            WHERE ub.PART_NO = o.PART_NO 
+            WHERE (
+                ub.PART_NO = o.PART_NO 
+                OR REPLACE(ub.PART_NO, ' ', '') = REPLACE(o.PART_NO, ' ', '')
+            )
             AND ub.DATE = o.DELV_DATE
             AND (ub.HOUR BETWEEN 21 AND 23 OR ub.HOUR BETWEEN 0 AND 6)
         ), 0) AS NS_ACTUAL

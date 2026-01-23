@@ -516,7 +516,6 @@ function updateSupplierCodes(selectedPic) {
     supplierSelectize.setValue([]);
 }
 
-// ================= DATA LOADING FUNCTIONS =================
 function refreshActualMaps() {
     dsActualMap = {};  
     nsActualMap = {};  
@@ -524,14 +523,19 @@ function refreshActualMaps() {
     let date1 = $('#range-date1').val();  
     let date2 = $('#range-date2').val();  
     
-    if (!date1 || !date2) return;
+    if (!date1 || !date2) {
+        console.log('⚠️ Date range belum dipilih');
+        return;
+    }
     
     // Konversi format tanggal untuk API
     let sendDate1 = date1.replace(/-/g, '');
     let sendDate2 = date2.replace(/-/g, '');
     
-    console.log('🔄 Refreshing actual maps for date range:', sendDate1, 'to', sendDate2);
+    console.log('🔄 Refreshing actual maps for date range:', date1, 'to', date2);
+    console.log('📤 Sending to API:', sendDate1, 'to', sendDate2);
     
+    // DAY SHIFT - PERBAIKAN: MENGGUNAKAN QUERY BARU
     $.ajax({  
         url: 'modules/data_day_shift1.php',  
         type: 'GET',
@@ -541,34 +545,91 @@ function refreshActualMaps() {
         },
         dataType: 'json',  
         success: function(response) {
-            console.log('✅ DS Actual Data:', response.data?.length || 0, 'records');
+            console.log('✅ DS Actual Data Response:', response);
             
-            const data = Array.isArray(response)
-                ? response
-                : (response?.data || []);
-
-            if (!Array.isArray(data)) {
-                console.warn("Format response data_day_shift1 salah:", response);
+            if (!response.success) {
+                console.error('❌ DS API Error:', response.message);
                 return;
             }
             
+            const data = response.data || [];
+            const totalIncoming = response.total_incoming || 0;
+            
+            console.log('📊 DS Data loaded:', data.length, 'records');
+            console.log('💰 Total incoming DS:', totalIncoming);
+            
+            // Reset map
+            dsActualMap = {};
+            
+            // AKUMULASI DATA KE MAP
             $.each(data, function(index, item) {  
-                var total_incoming = 0;  
-                for(var jam=8; jam<=20; jam++) {  
-                    var jamStr = jam < 10 ? '0' + jam : '' + jam;  
-                    total_incoming += (parseInt(item['TRAN_' + jamStr]) || 0);  
-                }  
                 var key = safeTrim(item.DATE) + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
+                
+                // Gunakan TOTAL_INCOMING dari query (sudah terakumulasi)
+                var total_incoming = parseInt(item.TOTAL_INCOMING) || 0;
+                
+                // Jika TOTAL_INCOMING 0, hitung manual dari per jam
+                if (total_incoming === 0) {
+                    total_incoming = 0;
+                    for(var jam=8; jam<=20; jam++) {  
+                        var jamStr = jam < 10 ? '0' + jam : '' + jam;  
+                        total_incoming += (parseInt(item['TRAN_' + jamStr]) || 0);  
+                    }
+                }
+                
+                // Simpan ke map
                 dsActualMap[key] = total_incoming;  
+                
+                // Debug log untuk beberapa item pertama
+                if (index < 5) {
+                    console.log('🔍 DS Item', index + 1, ':', {
+                        key: key,
+                        date: item.DATE,
+                        supplier: item.SUPPLIER_CODE,
+                        part_no: item.PART_NO,
+                        total_incoming: total_incoming,
+                        per_jam: {
+                            '08': item.TRAN_08,
+                            '09': item.TRAN_09,
+                            '10': item.TRAN_10,
+                            '11': item.TRAN_11,
+                            '12': item.TRAN_12
+                        }
+                    });
+                }
             });  
             
             console.log('📊 DS Actual Map updated:', Object.keys(dsActualMap).length, 'keys');
+            
+            // Sample beberapa key untuk debugging
+            const sampleKeys = Object.keys(dsActualMap).slice(0, 3);
+            sampleKeys.forEach(key => {
+                console.log('🔑 Sample DS Key:', key, '=', dsActualMap[key]);
+            });
+            
+            // Refresh table progress jika ada
+            if (typeof tableDetailProgress !== 'undefined' && tableDetailProgress) {
+                console.log('🔄 Refreshing progress table...');
+                tableDetailProgress.draw();
+            }
+            
+            // Update tampilan jika ada modal DS terbuka
+            if ($('#modal-detail-ds').is(':visible')) {
+                console.log('🔄 Refreshing DS modal data...');
+                loadDSData();
+            }
         },  
-        error: function(xhr) {  
-            console.log("Error refreshing DS actual map", xhr.status);  
+        error: function(xhr, status, error) {  
+            console.error("❌ Error refreshing DS actual map:", {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                error: error,
+                response: xhr.responseText
+            });  
         }  
     });  
     
+    // NIGHT SHIFT - PERBAIKAN: MENGGUNAKAN QUERY BARU
     $.ajax({  
         url: 'modules/data_night_shift1.php',  
         type: 'GET',
@@ -578,32 +639,92 @@ function refreshActualMaps() {
         },
         dataType: 'json',  
         success: function(response) {
-            console.log('✅ NS Actual Data:', response.data?.length || 0, 'records');
+            console.log('✅ NS Actual Data Response:', response);
             
-            const data = Array.isArray(response)
-                ? response
-                : (response?.data || []);
-
-            if (!Array.isArray(data)) {
-                console.warn("Format response data_night_shift1 salah:", response);
+            if (!response.success) {
+                console.error('❌ NS API Error:', response.message);
                 return;
             }
             
+            const data = response.data || [];
+            const totalIncoming = response.total_incoming || 0;
+            
+            console.log('📊 NS Data loaded:', data.length, 'records');
+            console.log('💰 Total incoming NS:', totalIncoming);
+            
+            // Reset map
+            nsActualMap = {};
+            
             $.each(data, function(index, item) {  
-                var total_incoming = 0;  
-                var jamArr = [21,22,23,0,1,2,3,4,5,6,7];  
-                jamArr.forEach(function(jam){  
-                    var jamStr = jam < 10 ? '0' + jam : '' + jam;  
-                    total_incoming += (parseInt(item['TRAN_' + jamStr]) || 0);  
-                });  
                 var key = safeTrim(item.DATE) + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
+                
+                // Gunakan TOTAL_INCOMING dari query (sudah terakumulasi)
+                var total_incoming = parseInt(item.TOTAL_INCOMING) || 0;
+                
+                // Jika TOTAL_INCOMING 0, hitung manual dari per jam
+                if (total_incoming === 0) {
+                    total_incoming = 0;
+                    var jamArr = [21,22,23,0,1,2,3,4,5,6,7];  
+                    jamArr.forEach(function(jam){  
+                        var jamStr = jam < 10 ? '0' + jam : '' + jam;  
+                        total_incoming += (parseInt(item['TRAN_' + jamStr]) || 0);  
+                    });  
+                }
+                
+                // Simpan ke map
                 nsActualMap[key] = total_incoming;  
+                
+                // Debug log untuk beberapa item pertama
+                if (index < 5) {
+                    console.log('🔍 NS Item', index + 1, ':', {
+                        key: key,
+                        date: item.DATE,
+                        supplier: item.SUPPLIER_CODE,
+                        part_no: item.PART_NO,
+                        total_incoming: total_incoming,
+                        per_jam: {
+                            '21': item.TRAN_21,
+                            '22': item.TRAN_22,
+                            '23': item.TRAN_23,
+                            '00': item.TRAN_00
+                        }
+                    });
+                }
             });  
             
             console.log('📊 NS Actual Map updated:', Object.keys(nsActualMap).length, 'keys');
+            
+            // Sample beberapa key untuk debugging
+            const sampleKeys = Object.keys(nsActualMap).slice(0, 3);
+            sampleKeys.forEach(key => {
+                console.log('🔑 Sample NS Key:', key, '=', nsActualMap[key]);
+            });
+            
+            // Refresh table progress jika ada
+            if (typeof tableDetailProgress !== 'undefined' && tableDetailProgress) {
+                console.log('🔄 Refreshing progress table...');
+                tableDetailProgress.draw();
+            }
+            
+            // Update tampilan jika ada modal NS terbuka
+            if ($('#modal-detail-ns').is(':visible')) {
+                console.log('🔄 Refreshing NS modal data...');
+                loadNSData();
+            }
+            
+            // Update accum table jika terbuka
+            if ($('#modalByAccum').is(':visible')) {
+                console.log('🔄 Refreshing accum table...');
+                renderAccumTable();
+            }
         },  
-        error: function(xhr) {  
-            console.log("Error refreshing NS actual map", xhr.status);  
+        error: function(xhr, status, error) {  
+            console.error("❌ Error refreshing NS actual map:", {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                error: error,
+                response: xhr.responseText
+            });  
         }  
     });  
 }
@@ -846,7 +967,7 @@ function loadDSData() {
     });
 }
 
-// ================= FUNGSI PROSES DS DATA - PERBAIKAN =================
+// ================= FUNGSI PROSES DS DATA - DIPERBAIKI =================
 function processDSData(rawData) {
     let groupedData = {};
     
@@ -868,32 +989,39 @@ function processDSData(rawData) {
                 partNo: item.PART_NO,
                 partName: item.PART_DESC || item.PART_NAME,
                 orderData: {},
-                incomingData: {}
+                incomingData: {},
+                // VARIABLE BARU UNTUK SIMPAN NILAI MAX PER JAM
+                maxIncomingPerHour: {}
             };
             
             // Initialize order data
             for(let hour = 8; hour <= 20; hour++) {
-                let hourKey = hour < 10 ? 'ORD_0' + hour : 'ORD_' + hour;
                 groupedData[key].orderData[hour] = 0;
             }
             
             // Initialize incoming data
             for(let hour = 8; hour <= 20; hour++) {
-                let hourKey = hour < 10 ? 'TRAN_0' + hour : 'TRAN_' + hour;
                 groupedData[key].incomingData[hour] = 0;
+                groupedData[key].maxIncomingPerHour[hour] = 0;
             }
         }
         
-        // Collect order data
+        // Collect order data (SUM seperti biasa)
         for(let hour = 8; hour <= 20; hour++) {
             let hourKey = hour < 10 ? 'ORD_0' + hour : 'ORD_' + hour;
             groupedData[key].orderData[hour] += parseInt(item[hourKey] || 0);
         }
         
-        // Collect incoming data
+        // PERBAIKAN: Untuk incoming, AMBIL NILAI MAX, BUKAN SUM!
         for(let hour = 8; hour <= 20; hour++) {
             let hourKey = hour < 10 ? 'TRAN_0' + hour : 'TRAN_' + hour;
-            groupedData[key].incomingData[hour] += parseInt(item[hourKey] || 0);
+            let incomingValue = parseInt(item[hourKey] || 0);
+            
+            // JIKA NILAI INI LEBIH BESAR DARI SEBELUMNYA, UPDATE
+            if (incomingValue > groupedData[key].maxIncomingPerHour[hour]) {
+                groupedData[key].maxIncomingPerHour[hour] = incomingValue;
+                groupedData[key].incomingData[hour] = incomingValue;
+            }
         }
     });
     
@@ -903,16 +1031,24 @@ function processDSData(rawData) {
     Object.keys(groupedData).forEach(key => {
         const item = groupedData[key];
         
-        // Calculate totals
+        // Calculate total order (SUM semua jam)
         let totalOrder = 0;
         for(let hour = 8; hour <= 20; hour++) {
             totalOrder += item.orderData[hour];
         }
         
+        // PERBAIKAN: Total incoming = NILAI MAKSIMAL DARI SEMUA JAM
+        // (bukan SUM semua jam, karena data sudah akumulasi)
         let totalIncoming = 0;
         for(let hour = 8; hour <= 20; hour++) {
-            totalIncoming += item.incomingData[hour];
+            // Cari nilai maksimum dari semua jam
+            if (item.incomingData[hour] > totalIncoming) {
+                totalIncoming = item.incomingData[hour];
+            }
         }
+        
+        // Atau pakai cara ini: ambil nilai jam terakhir (20:00)
+        // let totalIncoming = item.incomingData[20] || 0;
         
         const searchText = [
             item.date,
@@ -1214,7 +1350,9 @@ function processNSData(rawData) {
                 partNo: item.PART_NO,
                 partName: item.PART_DESC || item.PART_NAME,
                 orderData: {},
-                incomingData: {}
+                incomingData: {},
+                // VARIABLE BARU
+                maxIncomingPerHour: {}
             };
             
             // Initialize order data
@@ -1225,19 +1363,26 @@ function processNSData(rawData) {
             // Initialize incoming data
             nsHours.forEach(hour => {
                 groupedData[key].incomingData[hour] = 0;
+                groupedData[key].maxIncomingPerHour[hour] = 0;
             });
         }
         
-        // Collect order data
+        // Collect order data (SUM)
         nsHours.forEach(hour => {
             let hourKey = hour < 10 ? 'ORD_0' + hour : 'ORD_' + hour;
             groupedData[key].orderData[hour] += parseInt(item[hourKey] || 0);
         });
         
-        // Collect incoming data
+        // PERBAIKAN: Untuk incoming, AMBIL NILAI MAX, BUKAN SUM!
         nsHours.forEach(hour => {
             let hourKey = hour < 10 ? 'TRAN_0' + hour : 'TRAN_' + hour;
-            groupedData[key].incomingData[hour] += parseInt(item[hourKey] || 0);
+            let incomingValue = parseInt(item[hourKey] || 0);
+            
+            // JIKA NILAI INI LEBIH BESAR DARI SEBELUMNYA, UPDATE
+            if (incomingValue > groupedData[key].maxIncomingPerHour[hour]) {
+                groupedData[key].maxIncomingPerHour[hour] = incomingValue;
+                groupedData[key].incomingData[hour] = incomingValue;
+            }
         });
     });
     
@@ -1247,16 +1392,23 @@ function processNSData(rawData) {
     Object.keys(groupedData).forEach(key => {
         const item = groupedData[key];
         
-        // Calculate totals
+        // Calculate total order (SUM)
         let totalOrder = 0;
         nsHours.forEach(hour => {
             totalOrder += item.orderData[hour];
         });
         
+        // PERBAIKAN: Total incoming = NILAI MAKSIMAL DARI SEMUA JAM
         let totalIncoming = 0;
         nsHours.forEach(hour => {
-            totalIncoming += item.incomingData[hour];
+            // Cari nilai maksimum dari semua jam
+            if (item.incomingData[hour] > totalIncoming) {
+                totalIncoming = item.incomingData[hour];
+            }
         });
+        
+        // Atau pakai nilai jam terakhir (07:00)
+        // let totalIncoming = item.incomingData[7] || 0;
         
         const searchText = [
             item.date,
@@ -1934,22 +2086,41 @@ function renderAccumTable() {
             });
         }
         
-        for(let i=0; i<daysInMonth; i++) {  
-            let tanggal = year + month + pad(i+1);
-            let key = tanggal + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
+// ========== FIX: INI PERBAIKAN UTAMA ==========
+// Reset incoming setiap hari ke 0 dulu
+for(let i=0; i<daysInMonth; i++) {  
+    totalIncomingPerDay[i] = 0;  
+}
+
+// Ambil incoming dari table DETAIL PROGRESS (yang sudah benar)
+if (tableDetailProgress) {
+    const progressData = tableDetailProgress.rows().data().toArray();
+    
+    progressData.forEach(function(row) {
+        const rowDate = String(row.DATE || '');
+        if (rowDate.length === 8) {
+            const rowYear = rowDate.substr(0,4);
+            const rowMonth = rowDate.substr(4,2);
+            const rowDay = parseInt(rowDate.substr(6,2));
             
-            let dsIncoming = 0;
-            if (dsActualMap[key] !== undefined) {
-                dsIncoming = parseInt(dsActualMap[key]) || 0;
+            // Cocokkan dengan item yang sedang diproses
+            if (rowYear === year && 
+                rowMonth === month && 
+                rowDay >= 1 && rowDay <= daysInMonth &&
+                row.SUPPLIER_CODE === item.SUPPLIER_CODE &&
+                row.PART_NO === item.PART_NO) {
+                
+                const dayIndex = rowDay - 1;
+                const dsActual = parseInt(row.DS_ACTUAL) || 0;
+                const nsActual = parseInt(row.NS_ACTUAL) || 0;
+                
+                // INI YANG BENAR: Total incoming = DS + NS untuk hari itu
+                totalIncomingPerDay[dayIndex] = dsActual + nsActual;
             }
-            
-            let nsIncoming = 0;
-            if (nsActualMap[key] !== undefined) {
-                nsIncoming = parseInt(nsActualMap[key]) || 0;
-            }
-            
-            totalIncomingPerDay[i] = dsIncoming + nsIncoming;  
-        }  
+        }
+    });
+}
+// ========== AKHIR PERBAIKAN ==========
         
         // ========== FIX: PERHITUNGAN YANG BENAR SESUAI DATA ==========
         // Result = Incoming - Order (TETAP SEPERTI LAMA)
@@ -3386,88 +3557,155 @@ tableInformation = $('#table-information').DataTable({
             previous: 'Previous'
         }
     },
-    columns: [  // TAMBAHKAN PROPERTI columns UNTUK MAPPING YANG BENAR
-        { title: "No", data: null, render: function(data, type, row, meta) {
-            return meta.row + 1;
-        }},
-        { title: "Date", data: "DATE", render: formatDate },
-        { title: "Time", data: "TIME_FROM" },
-        { title: "PIC", data: "PIC_FROM" },
-        { title: "Item", data: "ITEM", className: "text-start", 
-          render: function(data) {
-              return '<div style="white-space: normal; min-width: 200px;">' + data + '</div>';
-          }
+    columns: [
+        { 
+            title: "No", 
+            data: null, 
+            render: function(data, type, row, meta) {
+                return meta.row + 1;
+            },
+            className: "text-center"
         },
-        { title: "Request", data: "REQUEST", className: "text-start",
-          render: function(data) {
-              return '<div style="white-space: normal; min-width: 300px;">' + data + '</div>';
-          }
+        { 
+            title: "Date", 
+            data: "DATE", 
+            render: formatDate,
+            className: "text-center"
         },
-        { title: "Action From", data: null, orderable: false, searchable: false,
-          render: function(data, type, row) {
-              const role = row.user_role || '';
-              const status = row.STATUS || '';
-              
-              // Hanya sender yang bisa edit/delete
-              if (role === 'sender') {
-                  let buttons = '';
-                  // Edit hanya jika status Open
-                  if (status === 'Open') {
-                      buttons += `<button class="btn btn-sm btn-warning btn-edit-info me-1" 
-                                  data-id="${row.ID_INFORMATION}" title="Edit">
-                                  <i class="bi bi-pencil"></i>
-                                </button>`;
-                  }
-                  // Delete button
-                  buttons += `<button class="btn btn-sm btn-danger btn-delete-info" 
-                                  data-id="${row.ID_INFORMATION}" title="Delete">
-                                  <i class="bi bi-trash"></i>
-                                </button>`;
-                  return buttons;
-              }
-              return '-';
-          }
+        { 
+            title: "Time", 
+            data: "TIME_FROM",
+            className: "text-center" 
         },
-        { title: "Time", data: "TIME_TO" },
-        { title: "PIC", data: "PIC_TO" },
-        { title: "Status", data: "STATUS", 
-          render: function(data) {
-              if (data === 'Open') return '<span class="badge bg-danger">⏳ OPEN</span>';
-              if (data === 'On Progress') return '<span class="badge bg-warning">🔄 ON PROGRESS</span>';
-              if (data === 'Closed') return '<span class="badge bg-success">✅ CLOSED</span>';
-              return '<span class="badge bg-secondary">' + data + '</span>';
-          }
+        { 
+            title: "PIC", 
+            data: "PIC_FROM",
+            className: "text-center"
         },
-        { title: "Remark", data: "REMARK", className: "text-start",
-          render: function(data) {
-              return '<div style="white-space: normal; min-width: 200px;">' + (data || '-') + '</div>';
-          }
+        { 
+            title: "Item", 
+            data: "ITEM", 
+            className: "text-center",
+            render: function(data) {
+                return '<div class="table-text-center">' + (data || '-') + '</div>';
+            }
         },
-        { title: "Action To", data: null, orderable: false, searchable: false,
-          render: function(data, type, row) {
-              const role = row.user_role || '';
-              const status = row.STATUS || '';
-              
-              // Hanya recipient yang bisa reply
-              if (role === 'recipient' && status !== 'Closed') {
-                  let buttonText = '';
-                  let buttonClass = '';
-                  
-                  if (status === 'Open') {
-                      buttonText = '<i class="bi bi-reply"></i> Reply';
-                      buttonClass = 'btn-success';
-                  } else if (status === 'On Progress') {
-                      buttonText = '<i class="bi bi-arrow-clockwise"></i> Update';
-                      buttonClass = 'btn-info';
-                  }
-                  
-                  return `<button class="btn btn-sm ${buttonClass} btn-reply-info" 
-                                data-id="${row.ID_INFORMATION}" title="Update Status">
-                                ${buttonText}
-                          </button>`;
-              }
-              return '-';
-          }
+        { 
+            title: "Request", 
+            data: "REQUEST", 
+            className: "text-center",
+            render: function(data) {
+                return '<div class="table-text-center">' + (data || '-') + '</div>';
+            }
+        },
+        { 
+            title: "Action", 
+            data: null, 
+            orderable: false, 
+            searchable: false,
+            className: "text-center",
+            render: function(data, type, row) {
+                const role = row.user_role || '';
+                const status = row.STATUS || '';
+                
+                // Hanya sender yang bisa edit/delete
+                if (role === 'sender') {
+                    let buttons = '';
+                    // Edit hanya jika status Open
+                    if (status === 'Open') {
+                        buttons += `<button class="btn btn-sm btn-warning btn-edit-info me-1 btn-action-table" 
+                                    data-id="${row.ID_INFORMATION}" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                  </button>`;
+                    }
+                    // Delete button
+                    buttons += `<button class="btn btn-sm btn-danger btn-delete-info btn-action-table" 
+                                    data-id="${row.ID_INFORMATION}" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                  </button>`;
+                    return buttons;
+                }
+                return '-';
+            }
+        },
+        { 
+            title: "Time", 
+            data: "TIME_TO",
+            className: "text-center",
+            render: function(data) {
+                return data || '-';
+            }
+        },
+        { 
+            title: "PIC", 
+            data: "PIC_TO",
+            className: "text-center",
+            render: function(data) {
+                return data || '-';
+            }
+        },
+        { 
+            title: "Status", 
+            data: "STATUS", 
+            className: "text-center",
+            render: function(data) {
+                let badgeClass = 'bg-secondary';
+                let displayText = data || '-';
+                
+                if (data === 'Open') {
+                    badgeClass = 'bg-danger';
+                    displayText = 'OPEN';
+                } else if (data === 'On Progress') {
+                    badgeClass = 'bg-warning';
+                    displayText = 'ON PROGRESS';
+                } else if (data === 'Closed') {
+                    badgeClass = 'bg-success';
+                    displayText = 'CLOSED';
+                }
+                
+                return `<div class="status-container">
+                    <span class="badge ${badgeClass} w-100 py-2">${displayText}</span>
+                </div>`;
+            }
+        },
+        { 
+            title: "Remark", 
+            data: "REMARK", 
+            className: "text-center",
+            render: function(data) {
+                return '<div class="table-text-center">' + (data || '-') + '</div>';
+            }
+        },
+        { 
+            title: "Action", 
+            data: null, 
+            orderable: false, 
+            searchable: false,
+            className: "text-center",
+            render: function(data, type, row) {
+                const role = row.user_role || '';
+                const status = row.STATUS || '';
+                
+                // Hanya recipient yang bisa reply
+                if (role === 'recipient' && status !== 'Closed') {
+                    let buttonText = '';
+                    let buttonClass = '';
+                    
+                    if (status === 'Open') {
+                        buttonText = '<i class="bi bi-reply"></i> Reply';
+                        buttonClass = 'btn-success';
+                    } else if (status === 'On Progress') {
+                        buttonText = '<i class="bi bi-arrow-clockwise"></i> Update';
+                        buttonClass = 'btn-info';
+                    }
+                    
+                    return `<button class="btn btn-sm ${buttonClass} btn-reply-info" 
+                              data-id="${row.ID_INFORMATION}" title="Update Status">
+                              ${buttonText}
+                            </button>`;
+                }
+                return '-';
+            }
         }
     ],
     drawCallback: function(settings) {

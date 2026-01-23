@@ -4,78 +4,62 @@
  * Logika harus sama di semua tempat: data_progress_by_pn.php, update-status.php, dll
  */
 
-function calculateOrderStatus($orderDate, $eta, $dsReguler, $dsAdd, $nsReguler, $nsAdd, $dsActual, $nsActual) {
-    // 1. Convert to integers
-    $orderDateInt = intval($orderDate);
-    $today = intval(date('Ymd'));
-    $currentHour = intval(date('H'));
+function calculateOrderStatus($date, $eta, $dsOrder, $dsAdd, $nsOrder, $nsAdd, $dsActual, $nsActual) {
+    $totalOrder = $dsOrder + $dsAdd + $nsOrder + $nsAdd;
+    $totalIncoming = $dsActual + $nsActual;
     
-    // 2. Calculate totals
-    $totalOrderDS = intval($dsReguler) + intval($dsAdd);
-    $totalOrderNS = intval($nsReguler) + intval($nsAdd);
-    $totalOrder = $totalOrderDS + $totalOrderNS;
+    $currentHour = date('H');
+    $currentDate = date('Ymd');
+    $orderDate = $date;
     
-    $totalActual = intval($dsActual) + intval($nsActual);
-    
-    // ========== LOGIKA UTAMA ==========
-    
-    // 1. OVER bisa terjadi kapan saja (lebih dari order)
-    if ($totalActual > $totalOrder) {
-        return 'OVER';
+    // Parse ETA
+    $etaHour = 0;
+    if (!empty($eta) && strpos($eta, ':') !== false) {
+        $etaHour = intval(explode(':', $eta)[0]);
     }
     
-    // 2. OK bisa terjadi kapan saja (sesuai atau lebih - tapi lebih sudah ditangani di OVER)
-    if ($totalActual >= $totalOrder) {
-        return 'OK';
+    // Tentukan shift
+    $isDayShift = ($etaHour >= 7 && $etaHour <= 20);
+    $isNightShift = ($etaHour >= 21 || $etaHour <= 6);
+    
+    // ===== STATUS YANG LANGSUNG SHOW (GA PAKE TAMENG) =====
+    if ($totalIncoming > $totalOrder) {
+        return 'OVER';  // Langsung show
     }
     
-    // 3. Data LAMPAU (kemarin/sebelumnya) → DELAY
-    if ($orderDateInt < $today) {
-        return 'DELAY';
+    if ($totalIncoming == $totalOrder) {
+        return 'OK';    // Langsung show
     }
     
-    // 4. Data MASA DEPAN (besok/lusa) → ON_PROGRESS
-    if ($orderDateInt > $today) {
-        return 'ON_PROGRESS';
-    }
-    
-    // 5. Data HARI INI → cek shift dan checkpoint
-    if ($orderDateInt == $today) {
-        // Parse ETA hour
-        $etaHour = 0;
-        if (!empty($eta) && preg_match('/^(\d{1,2}):/', $eta, $matches)) {
-            $etaHour = intval($matches[1]);
-        }
-        
-        // Tentukan shift berdasarkan ETA
-        $shift = 'DS'; // default
-        if (($etaHour >= 21 && $etaHour <= 23) || ($etaHour >= 0 && $etaHour <= 6)) {
-            $shift = 'NS';
-        } elseif ($etaHour >= 7 && $etaHour <= 20) {
-            $shift = 'DS';
-        }
+    // ===== JIKA MASIH KURANG (POTENTIAL DELAY) =====
+    if ($totalIncoming < $totalOrder) {
         
         // DAY SHIFT logic
-        if ($shift === 'DS') {
-            // Checkpoint: 16:00
-            if ($currentHour < 16) {
-                return 'ON_PROGRESS'; // MASIH ADA TAMENG
+        if ($isDayShift && $currentDate == $orderDate) {
+            if ($currentHour >= 16) {
+                // Sudah checkpoint, TAMENG DILEPAS
+                return 'DELAY';
             } else {
-                return 'DELAY'; // TAMENG DICABUT!
+                // Masih sebelum checkpoint, TAMENG ON
+                return 'ON_PROGRESS';
             }
         }
+        
         // NIGHT SHIFT logic  
-        else {
-            // Checkpoint: 04:00
-            if ($currentHour < 4 || $currentHour >= 21) {
-                return 'ON_PROGRESS'; // MASIH ADA TAMENG
+        if ($isNightShift) {
+            $nextDay = date('Ymd', strtotime($orderDate . ' +1 day'));
+            
+            if ($currentDate == $nextDay && $currentHour >= 6) {
+                // Sudah checkpoint besok pagi, TAMENG DILEPAS
+                return 'DELAY';
             } else {
-                return 'DELAY'; // TAMENG DICABUT!
+                // Masih malam atau belum jam 6, TAMENG ON
+                return 'ON_PROGRESS';
             }
         }
     }
     
-    // Default fallback
+    // Fallback
     return 'ON_PROGRESS';
 }
 

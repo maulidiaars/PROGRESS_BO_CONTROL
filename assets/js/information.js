@@ -1,4 +1,4 @@
-// assets/js/information.js - FIX DUPLICATE DECLARATION
+// assets/js/information.js - FIX DENGAN NOTIFIKASI REAL-TIME
 (function() {
     'use strict';
     
@@ -17,6 +17,82 @@
             this.selectedRecipients = [];
             this.setupEventListeners();
             this.bindTableEvents();
+            this.initRealTimeNotifications();
+        }
+        
+        initRealTimeNotifications() {
+            console.log('🔔 Initializing real-time notifications...');
+            
+            // Check for new notifications every 5 seconds
+            setInterval(() => {
+                this.checkNewNotifications();
+            }, 5000); // 5 seconds
+            
+            // Initial check
+            setTimeout(() => {
+                this.checkNewNotifications();
+            }, 2000);
+        }
+        
+        checkNewNotifications() {
+            $.ajax({
+                url: 'api/check_new_info.php',
+                type: 'GET',
+                dataType: 'json',
+                success: (response) => {
+                    if (response.success && response.count > 0) {
+                        console.log('🔔 New notifications found:', response.count);
+                        this.updateNotificationBadge(response.count);
+                        
+                        // Play sound if there are urgent notifications
+                        if (response.urgent_count > 0) {
+                            this.playNotificationSound();
+                        }
+                        
+                        // Auto-refresh information table if needed
+                        if (response.assigned_to_me > 0) {
+                            setTimeout(() => {
+                                this.refreshInformationTable();
+                            }, 3000);
+                        }
+                    }
+                },
+                error: (xhr) => {
+                    console.error('❌ Error checking notifications:', xhr.responseText);
+                }
+            });
+        }
+        
+        playNotificationSound() {
+            try {
+                const audio = new Audio('assets/sound/notification.mp3');
+                audio.volume = 0.3;
+                audio.play().catch(e => console.log("Audio play failed:", e));
+            } catch (e) {
+                console.log("Audio not supported");
+            }
+        }
+        
+        updateNotificationBadge(count) {
+            const $badge = $('#notificationBadge');
+            const $infoBadge = $('#info-badge');
+            
+            if (count > 0) {
+                $badge.text(count).show().addClass('bg-danger animate__animated animate__pulse');
+                $infoBadge.text(count).show().addClass('bg-danger');
+                
+                // Update document title
+                document.title = `(${count}) Progress BO Control`;
+                
+                // Auto-hide animation after 2 seconds
+                setTimeout(() => {
+                    $badge.removeClass('animate__pulse');
+                }, 2000);
+            } else {
+                $badge.hide();
+                $infoBadge.hide();
+                document.title = "Progress BO Control";
+            }
         }
         
         setupEventListeners() {
@@ -317,15 +393,11 @@
                         $('#select-all-recipients').prop('checked', false);
                         $('#recipient-all').prop('checked', false);
                         
-                        // Refresh table
+                        // Refresh table and notifications after 2 seconds
                         setTimeout(() => {
                             this.refreshInformationTable();
-                        }, 500);
-                        
-                        // Refresh notification badge
-                        if (typeof checkNotifications === 'function') {
-                            setTimeout(() => checkNotifications(), 1000);
-                        }
+                            this.checkNewNotifications();
+                        }, 2000);
                         
                     } else {
                         if (response.duplicate) {
@@ -455,7 +527,8 @@
                         
                         setTimeout(() => {
                             this.refreshInformationTable();
-                        }, 500);
+                            this.checkNewNotifications();
+                        }, 2000);
                         
                     } else {
                         this.showToast('error', 'Failed!', response.message || 'Failed to update information');
@@ -517,12 +590,21 @@
                         
                         // Tampilkan status saat ini
                         let statusBadge = '';
+                        let statusColor = '';
                         if (info.STATUS === 'Open') {
-                            statusBadge = '<span class="badge bg-danger ms-2">OPEN</span>';
+                            statusBadge = 'OPEN';
+                            statusColor = 'bg-danger';
                         } else if (info.STATUS === 'On Progress') {
-                            statusBadge = '<span class="badge bg-warning ms-2">ON PROGRESS</span>';
+                            statusBadge = 'ON PROGRESS';
+                            statusColor = 'bg-warning';
+                        } else if (info.STATUS === 'Closed') {
+                            statusBadge = 'CLOSED';
+                            statusColor = 'bg-success';
                         }
-                        $('#display-status').html(statusBadge);
+                        
+                        $('#display-status').html(`
+                            <span class="badge ${statusColor} px-3 py-2">${statusBadge}</span>
+                        `);
                         
                         // Reset form
                         $('#txt-remark-update').val('');
@@ -593,15 +675,11 @@
                         // Close modal
                         $('#modal-update-information-to').modal('hide');
                         
-                        // Refresh table
+                        // Refresh table and notifications
                         setTimeout(() => {
                             this.refreshInformationTable();
-                        }, 500);
-                        
-                        // Refresh notification badge
-                        if (typeof checkNotifications === 'function') {
-                            setTimeout(() => checkNotifications(), 1000);
-                        }
+                            this.checkNewNotifications();
+                        }, 2000);
                         
                     } else {
                         this.showToast('error', 'Failed!', response.message || 'Failed to save reply');
@@ -657,6 +735,7 @@
                         
                         setTimeout(() => {
                             this.refreshInformationTable();
+                            this.checkNewNotifications();
                         }, 500);
                         
                     } else {

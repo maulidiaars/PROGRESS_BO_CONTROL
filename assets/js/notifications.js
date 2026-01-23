@@ -1,691 +1,340 @@
-
-class InformationSystem {
+// assets/js/notifications.js - VERSION LENGKAP DENGAN REAL-TIME
+class NotificationSystem {
     constructor() {
-        console.log('📋 InformationSystem initialized');
-        this.currentUser = $('.nav-profile span').text() || 
-                          $('#user-name').val() || 
-                          'Unknown';
-        this.selectedRecipients = [];
+        this.intervalId = null;
+        this.notificationCount = 0;
+        this.init();
+    }
+    
+    init() {
+        console.log('🔔 NotificationSystem initialized');
         this.setupEventListeners();
-        this.bindTableEvents();
+        this.startPolling();
     }
     
     setupEventListeners() {
-        // Modal Add Information
-        $('#modal-add-information').on('show.bs.modal', (e) => {
-            this.loadRecipients();
-            $('#txt-time1').val(new Date().toTimeString().substring(0, 5));
-        });
-        
-        // Checkbox events
-        $(document).on('change', '#select-all-recipients', (e) => {
-            const isChecked = $(e.target).is(':checked');
-            $('.recipient-checkbox').prop('checked', isChecked).trigger('change');
-        });
-        
-        $(document).on('change', '#recipient-all', (e) => {
-            const isChecked = $(e.target).is(':checked');
-            $('.recipient-checkbox').prop('checked', isChecked).trigger('change');
-        });
-        
-        $(document).on('change', '.recipient-checkbox', (e) => {
-            this.updateSelectedRecipients();
-        });
-        
-        // Form submissions
-        $('#addInformationForm').submit((e) => {
+        // Mark all as read
+        $(document).on('click', '#markAllRead', (e) => {
             e.preventDefault();
-            e.stopPropagation();
-            this.submitInformation();
-            return false;
+            this.markAllAsRead();
         });
         
-        $('#updateFromInformationForm').submit((e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.updateInformation();
-            return false;
+        // Notification click
+        $(document).on('click', '.notification-item', (e) => {
+            if (!$(e.target).closest('a').length) {
+                const notificationId = $(e.currentTarget).data('id');
+                if (notificationId) {
+                    this.markAsRead(notificationId);
+                }
+            }
         });
         
-        // Button actions di modal reply
-        $(document).on('click', '#btn-on-progress', (e) => {
-            e.preventDefault();
-            this.replyInformation('on_progress');
-        });
-        
-        $(document).on('click', '#btn-closed', (e) => {
-            e.preventDefault();
-            this.replyInformation('closed');
-        });
-        
-        // Modal hide events
-        $('#modal-add-information').on('hidden.bs.modal', () => {
-            this.selectedRecipients = [];
-            $('#selected-users-badge').empty();
-            $('#selected-count').text('0');
-            $('#hidden-recipients').val('[]');
-            $('#select-all-recipients').prop('checked', false);
-            $('#recipient-all').prop('checked', false);
+        // Dropdown show/hide
+        $('#notificationDropdown').on('show.bs.dropdown', () => {
+            this.loadNotifications();
         });
     }
     
-    bindTableEvents() {
-        console.log('🔗 Binding table events...');
+    startPolling() {
+        // Check every 5 seconds for new notifications
+        this.intervalId = setInterval(() => {
+            this.checkNewNotifications();
+        }, 5000);
         
-        // Hapus event listeners lama
-        $(document).off('click', '.btn-edit-info');
-        $(document).off('click', '.btn-delete-info');
-        $(document).off('click', '.btn-reply-info');
-        
-        // Bind event untuk Edit button
-        $(document).on('click', '.btn-edit-info', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const id = $(e.currentTarget).data('id');
-            console.log('✏️ Edit info clicked:', id);
-            this.editInformation(id);
-        });
-        
-        // Bind event untuk Delete button
-        $(document).on('click', '.btn-delete-info', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const id = $(e.currentTarget).data('id');
-            console.log('🗑️ Delete info clicked:', id);
-            this.deleteInformation(id);
-        });
-        
-        // Bind event untuk Reply button
-        $(document).on('click', '.btn-reply-info', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const id = $(e.currentTarget).data('id');
-            console.log('↩️ Reply info clicked:', id);
-            this.replyInformationModal(id);
-        });
-        
-        console.log('✅ Table events bound successfully');
+        // Initial check
+        setTimeout(() => {
+            this.checkNewNotifications();
+        }, 2000);
     }
     
-    loadRecipients() {
+    checkNewNotifications() {
         $.ajax({
-            url: 'modules/data_information.php?type=get-recipients',
+            url: 'api/check_new_info.php',
             type: 'GET',
             dataType: 'json',
-            beforeSend: () => {
-                $('.recipients-container').html(`
-                    <div class="text-center py-3">
-                        <div class="spinner-border spinner-border-sm text-primary"></div>
-                        <span class="ms-2">Loading users...</span>
-                    </div>
-                `);
-            },
+            cache: false,
             success: (response) => {
-                console.log('👥 Loaded recipients:', response);
                 if (response.success) {
-                    this.renderRecipients(response.users);
-                } else {
-                    this.showToast('error', 'Failed to load recipients', response.message);
-                    this.renderRecipients([]);
+                    const newCount = response.count || 0;
+                    
+                    if (newCount !== this.notificationCount) {
+                        this.notificationCount = newCount;
+                        this.updateBadge(newCount);
+                        
+                        // Play sound if there are new urgent notifications
+                        if (response.urgent_count > 0 && newCount > 0) {
+                            this.playNotificationSound();
+                        }
+                        
+                        // Auto-refresh notifications if dropdown is open
+                        if ($('#notificationDropdown').hasClass('show')) {
+                            this.loadNotifications();
+                        }
+                    }
                 }
             },
-            error: (xhr, status, error) => {
-                console.error('❌ Failed to load users:', xhr.responseText);
-                this.showToast('error', 'Error', 'Failed to load users');
-                this.renderRecipients([]);
+            error: (xhr) => {
+                console.error('❌ Error checking notifications:', xhr.responseText);
             }
         });
     }
     
-    renderRecipients(users) {
-        const container = $('.recipients-container');
+    loadNotifications() {
+        $.ajax({
+            url: 'api/get_notifications.php',
+            type: 'GET',
+            dataType: 'json',
+            cache: false,
+            beforeSend: () => {
+                $('#notificationContainer').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <span class="ms-2">Loading notifications...</span>
+                    </div>
+                `);
+            },
+            success: (response) => {
+                if (response.success) {
+                    this.renderNotifications(response.notifications, response.unread_count);
+                } else {
+                    this.showEmptyState('Failed to load notifications');
+                }
+            },
+            error: (xhr) => {
+                console.error('❌ Error loading notifications:', xhr.responseText);
+                this.showEmptyState('Error loading notifications');
+            }
+        });
+    }
+    
+    renderNotifications(notifications, unreadCount) {
+        const container = $('#notificationContainer');
         
-        if (!users || users.length === 0) {
-            container.html(`
-                <div class="alert alert-warning py-2 mb-0">
-                    <i class="bi bi-exclamation-triangle"></i> No users found
-                </div>
-            `);
+        if (!notifications || notifications.length === 0) {
+            this.showEmptyState();
             return;
         }
         
         let html = '';
         
-        // Add "ALL" option at the top
-        html += `
-            <div class="mb-2 border-bottom pb-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="recipient-all" value="ALL">
-                    <label class="form-check-label fw-bold" for="recipient-all">
-                        <i class="bi bi-people-fill me-1"></i>ALL USERS (Everyone)
-                    </label>
-                </div>
-            </div>
-            <div class="recipient-checkbox-group">
-        `;
+        // Group notifications by type
+        const urgentNotifications = notifications.filter(n => n.notification_type === 'assigned_to_you');
+        const yourInfoNotifications = notifications.filter(n => n.notification_type === 'your_information');
+        const otherNotifications = notifications.filter(n => n.notification_type === 'other_information');
+        const delayNotifications = notifications.filter(n => n.type === 'delay');
         
-        users.forEach(user => {
-            if (user.name && user.name !== this.currentUser) {
-                const safeId = user.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-                html += `
-                <div class="recipient-item">
-                    <div class="form-check">
-                        <input class="form-check-input recipient-checkbox" 
-                               type="checkbox" 
-                               value="${user.name.replace(/"/g, '&quot;')}" 
-                               id="recipient-${safeId}">
-                        <label class="form-check-label" for="recipient-${safeId}">
-                            <i class="bi bi-person-circle me-1"></i>${user.name}
-                        </label>
-                    </div>
-                </div>
-                `;
-            }
-        });
+        // Urgent notifications (assigned to you)
+        if (urgentNotifications.length > 0) {
+            html += `
+                <div class="notification-group mb-3">
+                    <small class="text-uppercase fw-bold text-warning mb-2 d-block">URGENT</small>
+            `;
+            
+            urgentNotifications.forEach(notification => {
+                html += this.createNotificationItem(notification, true);
+            });
+            
+            html += `</div>`;
+        }
         
-        html += `</div>`;
+        // Your information
+        if (yourInfoNotifications.length > 0) {
+            html += `
+                <div class="notification-group mb-3">
+                    <small class="text-uppercase fw-bold text-info mb-2 d-block">Your Information</small>
+            `;
+            
+            yourInfoNotifications.forEach(notification => {
+                html += this.createNotificationItem(notification);
+            });
+            
+            html += `</div>`;
+        }
+        
+        // Delay notifications
+        if (delayNotifications.length > 0) {
+            html += `
+                <div class="notification-group mb-3">
+                    <small class="text-uppercase fw-bold text-danger mb-2 d-block">Delivery Delay</small>
+            `;
+            
+            delayNotifications.forEach(notification => {
+                html += this.createNotificationItem(notification);
+            });
+            
+            html += `</div>`;
+        }
+        
+        // Other notifications
+        if (otherNotifications.length > 0) {
+            html += `
+                <div class="notification-group">
+                    <small class="text-uppercase fw-bold text-muted mb-2 d-block">Other Information</small>
+            `;
+            
+            otherNotifications.forEach(notification => {
+                html += this.createNotificationItem(notification);
+            });
+            
+            html += `</div>`;
+        }
+        
         container.html(html);
         
-        // Trigger initial update
-        this.updateSelectedRecipients();
+        // Update badge
+        this.updateBadge(unreadCount);
     }
     
-    updateSelectedRecipients() {
-        this.selectedRecipients = [];
-        
-        // Get all checked checkboxes (excluding ALL)
-        $('.recipient-checkbox:checked').each((index, element) => {
-            const value = $(element).val();
-            if (value && value !== 'ALL' && !this.selectedRecipients.includes(value)) {
-                this.selectedRecipients.push(value);
-            }
-        });
-        
-        // Jika ALL dicentang, dapatkan semua user
-        if ($('#recipient-all').is(':checked')) {
-            this.selectedRecipients = [];
-            $('.recipient-checkbox').each((i, el) => {
-                const value = $(el).val();
-                if (value && value !== 'ALL') {
-                    this.selectedRecipients.push(value);
-                }
-            });
-        }
-        
-        // Update UI
-        $('#selected-count').text(this.selectedRecipients.length);
-        
-        // Update badge display
-        const badgeContainer = $('#selected-users-badge');
-        badgeContainer.empty();
-        
-        if (this.selectedRecipients.length > 0) {
-            let badgeHtml = '';
-            const displayCount = Math.min(this.selectedRecipients.length, 5);
-            
-            for (let i = 0; i < displayCount; i++) {
-                badgeHtml += `<span class="badge bg-primary me-1 mb-1">${this.selectedRecipients[i]}</span>`;
-            }
-            
-            if (this.selectedRecipients.length > 5) {
-                badgeHtml += `<span class="badge bg-secondary">+${this.selectedRecipients.length - 5} more</span>`;
-            }
-            
-            badgeContainer.html(badgeHtml);
-        } else {
-            badgeContainer.html('<span class="text-muted">No users selected</span>');
-        }
-        
-        // Update hidden field
-        $('#hidden-recipients').val(JSON.stringify(this.selectedRecipients));
-        
-        console.log('📋 Selected recipients:', this.selectedRecipients);
-    }
-    
-    submitInformation() {
-        const form = $('#addInformationForm')[0];
-        const formData = new FormData(form);
-        
-        console.log('📤 Submitting form...');
-        console.log('Selected recipients:', this.selectedRecipients);
-        
-        // Validasi
-        if (this.selectedRecipients.length === 0) {
-            this.showToast('warning', 'Select Recipients', 'Please select at least one recipient');
-            return false;
-        }
-        
-        const item = $('#txtItem').val().trim();
-        const request = $('#txtRequest').val().trim();
-        
-        if (!item) {
-            this.showToast('warning', 'Item Required', 'Please fill Item field');
-            $('#txtItem').focus();
-            return false;
-        }
-        
-        if (!request) {
-            this.showToast('warning', 'Request Required', 'Please fill Request field');
-            $('#txtRequest').focus();
-            return false;
-        }
-        
-        // Show loading
-        const submitBtn = $(form).find('button[type="submit"]');
-        const originalText = submitBtn.html();
-        submitBtn.prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm"></span> Sending...');
-        
-        $.ajax({
-            url: 'modules/data_information.php',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            dataType: 'json',
-            timeout: 10000,
-            beforeSend: () => {
-                console.log('🚀 Sending request to server...');
-            },
-            success: (response) => {
-                console.log('✅ Server response:', response);
-                
-                submitBtn.prop('disabled', false).html(originalText);
-                
-                if (response.success) {
-                    this.showToast('success', 'Success!', 
-                        `Information sent to ${response.recipient_count || 0} recipient(s)`);
-                    
-                    // Close modal
-                    $('#modal-add-information').modal('hide');
-                    
-                    // Reset form
-                    form.reset();
-                    this.selectedRecipients = [];
-                    $('#selected-users-badge').empty();
-                    $('#selected-count').text('0');
-                    $('#hidden-recipients').val('[]');
-                    $('#select-all-recipients').prop('checked', false);
-                    $('#recipient-all').prop('checked', false);
-                    
-                    // Refresh table
-                    setTimeout(() => {
-                        this.refreshInformationTable();
-                    }, 500);
-                    
-                    // Refresh notification badge
-                    if (typeof checkNotifications === 'function') {
-                        setTimeout(() => checkNotifications(), 1000);
-                    }
-                    
-                } else {
-                    if (response.duplicate) {
-                        this.showToast('warning', 'Duplicate Information', 
-                            'You already sent this information today. Please wait until tomorrow or edit the existing one.');
-                    } else {
-                        this.showToast('error', 'Failed!', response.message || 'Failed to send information');
-                    }
-                    console.error('❌ Server error:', response);
-                }
-            },
-            error: (xhr, status, error) => {
-                console.error('❌ Submit error:', {
-                    status: xhr.status,
-                    statusText: xhr.statusText,
-                    responseText: xhr.responseText,
-                    error: error
-                });
-                
-                submitBtn.prop('disabled', false).html(originalText);
-                
-                let errorMsg = 'Server error. Please try again.';
-                try {
-                    const err = JSON.parse(xhr.responseText);
-                    errorMsg = err.message || errorMsg;
-                } catch (e) {}
-                
-                this.showToast('error', 'Error!', errorMsg);
-            }
-        });
-        
-        return false;
-    }
-    
-    editInformation(id) {
-        console.log('🔄 Opening edit modal for ID:', id);
-        
-        $.ajax({
-            url: 'modules/data_information.php?type=get-single&id=' + id,
-            type: 'GET',
-            dataType: 'json',
-            success: (response) => {
-                console.log('✅ Edit info data loaded:', response);
-                if (response.success && response.data) {
-                    const info = response.data;
-                    
-                    // Validasi: hanya pengirim yang bisa edit
-                    if (info.PIC_FROM !== this.currentUser) {
-                        this.showToast('error', 'Access Denied', 'Only the sender can edit this information');
-                        console.log('❌ Not sender:', info.PIC_FROM, '!=', this.currentUser);
-                        return;
-                    }
-                    
-                    // Validasi: tidak bisa edit jika sudah On Progress atau Closed
-                    if (info.STATUS === 'On Progress' || info.STATUS === 'Closed') {
-                        this.showToast('warning', 'Cannot Edit', 'Cannot edit information that is already in progress or closed');
-                        return;
-                    }
-                    
-                    // Fill modal
-                    $('#txt-id-information').val(info.ID_INFORMATION);
-                    $('#txt-timefrom-update').val(info.TIME_FROM || '');
-                    $('#txt-picfrom-update').val(info.PIC_FROM || '');
-                    $('#txt-item-update').val(info.ITEM || '');
-                    $('#txt-request-update').val(info.REQUEST || '');
-                    
-                    const today = new Date().toISOString().split('T')[0];
-                    $('#txt-date-information-from').html("(" + today + ")");
-                    
-                    console.log('🎯 Showing edit modal');
-                    $('#modal-update-information-from').modal('show');
-                    
-                } else {
-                    this.showToast('error', 'Error', 'Failed to load information');
-                }
-            },
-            error: (xhr) => {
-                console.error('❌ Error loading info:', xhr.responseText);
-                this.showToast('error', 'Error', 'Failed to load information');
-            }
-        });
-    }
-    
-    updateInformation() {
-        const form = $('#updateFromInformationForm')[0];
-        const formData = new FormData(form);
-        
-        console.log('📤 Updating information...');
-        
-        // Validasi
-        const item = $('#txt-item-update').val().trim();
-        const request = $('#txt-request-update').val().trim();
-        
-        if (!item) {
-            this.showToast('warning', 'Item Required', 'Please fill Item field');
-            $('#txt-item-update').focus();
-            return false;
-        }
-        
-        if (!request) {
-            this.showToast('warning', 'Request Required', 'Please fill Request field');
-            $('#txt-request-update').focus();
-            return false;
-        }
-        
-        const submitBtn = $(form).find('button[type="submit"]');
-        const originalText = submitBtn.html();
-        submitBtn.prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm"></span> Updating...');
-        
-        $.ajax({
-            url: 'modules/data_information.php',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            dataType: 'json',
-            success: (response) => {
-                console.log('✅ Update response:', response);
-                
-                submitBtn.prop('disabled', false).html(originalText);
-                
-                if (response.success) {
-                    this.showToast('success', 'Success!', 'Information updated successfully');
-                    
-                    $('#modal-update-information-from').modal('hide');
-                    
-                    setTimeout(() => {
-                        this.refreshInformationTable();
-                    }, 500);
-                    
-                } else {
-                    this.showToast('error', 'Failed!', response.message || 'Failed to update information');
-                }
-            },
-            error: (xhr) => {
-                console.error('❌ Update error:', xhr.responseText);
-                submitBtn.prop('disabled', false).html(originalText);
-                this.showToast('error', 'Error!', 'Server error. Please try again.');
-            }
-        });
-        
-        return false;
-    }
-    
-    replyInformationModal(id) {
-        console.log('🔄 Opening reply modal for ID:', id);
-        
-        $.ajax({
-            url: 'modules/data_information.php?type=get-single&id=' + id,
-            type: 'GET',
-            dataType: 'json',
-            success: (response) => {
-                console.log('✅ Reply info data loaded:', response);
-                if (response.success && response.data) {
-                    const info = response.data;
-                    
-                    // Cek apakah user adalah salah satu penerima
-                    const recipients = info.PIC_TO ? info.PIC_TO.split(', ') : [];
-                    const isRecipient = recipients.includes(this.currentUser);
-                    
-                    if (!isRecipient) {
-                        this.showToast('error', 'Access Denied', 'Only recipients can reply to this information');
-                        return;
-                    }
-                    
-                    // Validasi: tidak bisa reply jika sudah closed
-                    if (info.STATUS === 'Closed') {
-                        this.showToast('warning', 'Cannot Reply', 'This information is already closed');
-                        return;
-                    }
-                    
-                    // Fill modal data
-                    $('#txt-id-information2').val(info.ID_INFORMATION);
-                    $('#txt-timefrom-to-update').val(info.TIME_FROM || '');
-                    $('#txt-picfrom-to-update').val(info.PIC_FROM || '');
-                    $('#txt-itemto-update').val(info.ITEM || '');
-                    $('#txt-requestto-update').val(info.REQUEST || '');
-                    $('#txt-picto-update').val(this.currentUser); // PIC_TO adalah user yang sedang login
-                    $('#txt-timeto-update').val(new Date().toTimeString().substring(0, 5));
-                    
-                    // Display data (tampilkan semua text tanpa potong)
-                    $('#display-picfrom').text(info.PIC_FROM || '-');
-                    $('#display-timefrom').text(info.TIME_FROM || '-');
-                    $('#display-picto').text(info.PIC_TO || '-');
-                    $('#display-date').text(info.DATE || '-');
-                    $('#display-item').text(info.ITEM || '-');
-                    $('#display-request').text(info.REQUEST || '-');
-                    
-                    // Tampilkan status saat ini
-                    let statusBadge = '';
-                    if (info.STATUS === 'Open') {
-                        statusBadge = '<span class="badge bg-danger ms-2">OPEN</span>';
-                    } else if (info.STATUS === 'On Progress') {
-                        statusBadge = '<span class="badge bg-warning ms-2">ON PROGRESS</span>';
-                    }
-                    $('#display-status').html(statusBadge);
-                    
-                    // Reset form
-                    $('#txt-remark-update').val('');
-                    
-                    // Update button text berdasarkan status
-                    if (info.STATUS === 'Open') {
-                        $('#btn-on-progress').html('<i class="bi bi-clock-history"></i> Mark as On Progress');
-                    } else if (info.STATUS === 'On Progress') {
-                        $('#btn-on-progress').html('<i class="bi bi-arrow-clockwise"></i> Update Progress');
-                    }
-                    
-                    // Show modal
-                    $('#modal-update-information-to').modal('show');
-                    
-                } else {
-                    this.showToast('error', 'Error', 'Failed to load information');
-                }
-            },
-            error: (xhr) => {
-                console.error('❌ Error loading info:', xhr.responseText);
-                this.showToast('error', 'Error', 'Failed to load information');
-            }
-        });
-    }
-    
-    replyInformation(actionType) {
-        console.log('📤 Replying to information with action:', actionType);
-        
-        const form = $('#updateToInformationForm')[0];
-        const formData = new FormData(form);
-        
-        // Tambah action_type ke formData
-        formData.append('action_type', actionType);
-        
-        // Validasi untuk action closed
-        if (actionType === 'closed') {
-            const remark = $('#txt-remark-update').val().trim();
-            if (!remark) {
-                this.showToast('warning', 'Remark Required', 'Please fill Remark field for closing information');
-                $('#txt-remark-update').focus();
-                return;
-            }
-        }
-        
-        const submitBtn = actionType === 'closed' ? $('#btn-closed') : $('#btn-on-progress');
-        const originalText = submitBtn.html();
-        submitBtn.prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm"></span> Saving...');
-        
-        $.ajax({
-            url: 'modules/data_information.php',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            dataType: 'json',
-            success: (response) => {
-                console.log('✅ Reply response:', response);
-                
-                submitBtn.prop('disabled', false).html(originalText);
-                
-                if (response.success) {
-                    const message = actionType === 'closed' ? 'Information closed successfully!' : 
-                                  'Status updated to On Progress!';
-                    
-                    this.showToast('success', 'Success!', message);
-                    
-                    // Close modal
-                    $('#modal-update-information-to').modal('hide');
-                    
-                    // Refresh table
-                    setTimeout(() => {
-                        this.refreshInformationTable();
-                    }, 500);
-                    
-                    // Refresh notification badge
-                    if (typeof checkNotifications === 'function') {
-                        setTimeout(() => checkNotifications(), 1000);
-                    }
-                    
-                } else {
-                    this.showToast('error', 'Failed!', response.message || 'Failed to save reply');
-                }
-            },
-            error: (xhr) => {
-                console.error('❌ Reply error:', xhr.responseText);
-                submitBtn.prop('disabled', false).html(originalText);
-                this.showToast('error', 'Error!', 'Server error. Please try again.');
-            }
-        });
-        
-        return false;
-    }
-    
-    deleteInformation(id) {
-        Swal.fire({
-            title: 'Delete Information?',
-            text: 'Are you sure you want to delete this information? This action cannot be undone.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel',
-            showLoaderOnConfirm: true,
-            preConfirm: () => {
-                return new Promise((resolve, reject) => {
-                    $.ajax({
-                        url: 'modules/data_information.php',
-                        type: 'POST',
-                        data: {
-                            type: 'delete',
-                            id_information: id
-                        },
-                        dataType: 'json',
-                        success: (response) => {
-                            resolve(response);
-                        },
-                        error: () => {
-                            reject('Network error');
-                        }
-                    });
-                });
-            },
-            allowOutsideClick: () => !Swal.isLoading()
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const response = result.value;
-                
-                if (response && response.success) {
-                    this.showToast('success', 'Deleted!', 'Information deleted successfully');
-                    
-                    setTimeout(() => {
-                        this.refreshInformationTable();
-                    }, 500);
-                    
-                } else {
-                    this.showToast('error', 'Failed!', response?.message || 'Failed to delete information');
-                }
-            }
-        });
-    }
-    
-    refreshInformationTable() {
-        // Panggil fungsi global refresh
-        if (typeof fetchDataInformation === 'function') {
-            fetchDataInformation();
-        }
-    }
-    
-    showToast(type, title, message, duration = 3000) {
-        // Remove existing toasts
-        $('.custom-toast').remove();
-        
+    createNotificationItem(notification, isUrgent = false) {
         const iconMap = {
-            'success': 'bi-check-circle-fill',
-            'error': 'bi-x-circle-fill',
-            'warning': 'bi-exclamation-triangle-fill',
-            'info': 'bi-info-circle-fill'
+            'information': 'bi-info-circle',
+            'delay': 'bi-clock',
+            'urgent': 'bi-exclamation-triangle'
         };
         
         const colorMap = {
-            'success': '#28a745',
-            'error': '#dc3545',
-            'warning': '#ffc107',
-            'info': '#17a2b8'
+            'information': 'info',
+            'delay': 'danger',
+            'urgent': 'danger'
         };
         
+        const type = isUrgent ? 'urgent' : notification.type;
+        const isUnread = notification.is_unread || false;
+        const timeAgo = this.getTimeAgo(notification.datetime_full);
+        
+        return `
+            <div class="notification-item ${isUnread ? 'unread' : ''} ${isUrgent ? 'urgent-blink' : ''}" 
+                 data-id="${notification.id}" style="cursor: pointer;">
+                <div class="d-flex gap-3">
+                    <div class="notification-icon bg-${colorMap[type]} rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="bi ${iconMap[type]} text-white"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h6 class="notification-title mb-0">${notification.title}</h6>
+                            <span class="badge bg-${notification.badge_color} status-badge">${notification.status_text}</span>
+                        </div>
+                        <p class="notification-message mb-2">${notification.display_message || notification.message}</p>
+                        <div class="notification-meta d-flex justify-content-between">
+                            <span class="notification-time">${timeAgo}</span>
+                            <span class="notification-from">${notification.from_user}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    showEmptyState(message = 'No notifications') {
+        $('#notificationContainer').html(`
+            <div class="empty-notifications text-center py-5">
+                <i class="bi bi-bell-slash fs-1 text-muted mb-3"></i>
+                <p class="mb-1">${message}</p>
+                <small class="text-muted">Everything is up to date</small>
+            </div>
+        `);
+    }
+    
+    markAsRead(notificationId) {
+        $.ajax({
+            url: 'api/mark_notification_read.php',
+            type: 'POST',
+            data: { notification_id: notificationId },
+            dataType: 'json',
+            success: (response) => {
+                if (response.success) {
+                    // Remove unread style
+                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                    
+                    // Update badge
+                    this.checkNewNotifications();
+                }
+            }
+        });
+    }
+    
+    markAllAsRead() {
+        // Get all unread notification IDs
+        const unreadIds = [];
+        $('.notification-item.unread').each(function() {
+            const id = $(this).data('id');
+            if (id) unreadIds.push(id);
+        });
+        
+        if (unreadIds.length === 0) return;
+        
+        // Mark each as read
+        let completed = 0;
+        unreadIds.forEach(id => {
+            $.ajax({
+                url: 'api/mark_notification_read.php',
+                type: 'POST',
+                data: { notification_id: id },
+                dataType: 'json',
+                success: () => {
+                    completed++;
+                    if (completed === unreadIds.length) {
+                        // Update UI
+                        $('.notification-item').removeClass('unread');
+                        this.checkNewNotifications();
+                        this.showToast('success', 'All notifications marked as read');
+                    }
+                }
+            });
+        });
+    }
+    
+    updateBadge(count) {
+        const $badge = $('#notificationBadge');
+        const $infoBadge = $('#info-badge');
+        
+        if (count > 0) {
+            $badge.text(count).show().addClass('bg-danger');
+            $infoBadge.text(count).show().addClass('bg-danger');
+            
+            // Animate badge for new notifications
+            if ($badge.text() !== count.toString()) {
+                $badge.addClass('animate__animated animate__pulse');
+                setTimeout(() => $badge.removeClass('animate__pulse'), 2000);
+            }
+        } else {
+            $badge.hide();
+            $infoBadge.hide();
+        }
+    }
+    
+    playNotificationSound() {
+        try {
+            const audio = new Audio('assets/sound/notification.mp3');
+            audio.volume = 0.3;
+            audio.play().catch(e => console.log("Audio play failed:", e));
+        } catch (e) {
+            console.log("Audio not supported");
+        }
+    }
+    
+    getTimeAgo(datetime) {
+        if (!datetime) return 'Just now';
+        
+        const now = new Date();
+        const past = new Date(datetime);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return past.toLocaleDateString();
+    }
+    
+    showToast(type, title, message) {
         const toast = $(`
-            <div class="custom-toast" style="border-left-color: ${colorMap[type] || '#6c757d'}">
-                <div class="toast-icon" style="color: ${colorMap[type] || '#6c757d'}">
-                    <i class="bi ${iconMap[type] || 'bi-info-circle-fill'}"></i>
+            <div class="custom-toast toast-${type}">
+                <div class="toast-icon">
+                    <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-info-circle'}"></i>
                 </div>
                 <div class="toast-content">
                     <div class="toast-title">${title}</div>
@@ -700,23 +349,12 @@ class InformationSystem {
         setTimeout(() => {
             toast.removeClass('show');
             setTimeout(() => toast.remove(), 300);
-        }, duration);
+        }, 3000);
     }
 }
 
+// Initialize notification system
 $(document).ready(function() {
-    console.log('📋 Initializing InformationSystem...');
-    window.informationSystem = new InformationSystem();
-    
-    // Re-bind events setelah DataTable initialized
-    $(document).on('draw.dt', function(e, settings) {
-        if (settings.nTable.id === 'table-information') {
-            console.log('🔄 DataTable redrawn, binding events...');
-            setTimeout(() => {
-                if (window.informationSystem && window.informationSystem.bindTableEvents) {
-                    window.informationSystem.bindTableEvents();
-                }
-            }, 100);
-        }
-    });
+    console.log('🔔 Initializing NotificationSystem...');
+    window.notificationSystem = new NotificationSystem();
 });
