@@ -57,9 +57,6 @@ tbody, td, tfoot, th, thead, tr {
   border-width: 0.2px;
 }
 
-.modal-table {
-  --bs-modal-width: 97%;
-}
 
 #overlay {
   position: fixed;
@@ -2183,3 +2180,239 @@ tbody, td, tfoot, th, thead, tr {
     border-radius: 4px;
     margin-top: 8px;
 }
+
+
+
+/* Di modals-detail.php atau style.css tambah: */
+.table-order-reg-row td {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    color: #000 !important;
+    border-color: rgba(13, 110, 253, 0.2) !important;
+}
+
+.table-order-add-row td {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    color: #000 !important;
+    border-color: rgba(255, 193, 7, 0.2) !important;
+}
+
+.table-incoming-row td {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+    color: #000 !important;
+    border-color: rgba(25, 135, 84, 0.2) !important;
+}
+
+.badge.badge-order-reg {
+    background-color: #0d6efd !important;
+    color: white !important;
+}
+
+.badge.badge-order-add {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.badge.badge-incoming {
+    background-color: #198754 !important;
+    color: white !important;
+}
+
+
+/* Tambahkan di bagian CSS */
+.badge-regular {
+    background-color: #0d6efd !important; /* Biru */
+    color: white !important;
+}
+
+.badge-add {
+    background-color: #ffc107 !important; /* Kuning */
+    color: black !important;
+}
+
+.badge-incoming {
+    background-color: #198754 !important; /* Hijau */
+    color: white !important;
+}
+
+/* Warna baris tabel */
+.table-regular-row td {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+.table-add-row td {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.table-incoming-row td {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+/* === CSS UNTUK NIGHT SHIFT === */
+
+/* Badge untuk Night Shift */
+.badge-regular-ns {
+    background-color: #6f42c1 !important; /* Ungu */
+    color: white !important;
+}
+
+.badge-add-ns {
+    background-color: #fd7e14 !important; /* Orange */
+    color: white !important;
+}
+
+.badge-incoming-ns {
+    background-color: #20c997 !important; /* Teal */
+    color: white !important;
+}
+
+/* Warna baris tabel Night Shift */
+.table-regular-ns-row td {
+    background-color: rgba(111, 66, 193, 0.1) !important;
+}
+
+.table-add-ns-row td {
+    background-color: rgba(253, 126, 20, 0.1) !important;
+}
+
+.table-incoming-ns-row td {
+    background-color: rgba(32, 201, 151, 0.1) !important;
+}
+
+/* Modal Night Shift header */
+.modal-header.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+}
+
+/* Button Night Shift */
+.btn-ns-primary {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+}
+
+.btn-ns-primary:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+}
+
+
+
+/* Tambahkan di akhir custom-styles.css */
+
+/* ================= HIGHLIGHT ROW FOR NOTIFICATION AUTO-SCROLL ================= */
+.highlight-row {
+    animation: highlightPulse 2s ease-in-out 3 !important;
+    background-color: rgba(255, 193, 7, 0.2) !important;
+    border-left: 4px solid #ffc107 !important;
+}
+
+@keyframes highlightPulse {
+    0% { background-color: rgba(255, 193, 7, 0.1); }
+    50% { background-color: rgba(255, 193, 7, 0.3); }
+    100% { background-color: rgba(255, 193, 7, 0.1); }
+}
+
+/* Modal Elegant Styles */
+.modal-xl {
+    max-width: 1200px !important;
+}
+
+.icon-container {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+/* Form Control Styles */
+.form-control-lg {
+    font-size: 1rem !important;
+    padding: 0.75rem 1rem !important;
+}
+
+/* Recipient Checkbox Grid */
+.recipient-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.recipient-item {
+    padding: 12px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.recipient-item:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.recipient-item.selected {
+    background: rgba(13, 110, 253, 0.1);
+    border-color: #0d6efd;
+}
+
+/* Status Cards */
+.status-card {
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.status-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+}
+
+.status-card.selected {
+    border-width: 3px !important;
+    background: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* Notification Styles */
+.notification-item {
+    transition: all 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(5px);
+}
+
+.notification-item.unread {
+    border-left: 3px solid #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+.urgent-blink {
+    animation: blinkUrgent 1s infinite;
+}
+
+@keyframes blinkUrgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* 7 Days Retention Info */
+.retention-info {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #20c997;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+.retention-info i {
+    color: #20c997;
+}
+
+

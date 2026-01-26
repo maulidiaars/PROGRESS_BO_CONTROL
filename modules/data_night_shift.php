@@ -41,11 +41,16 @@ WITH TRAN_DATA AS (
             SUM(ub.TRAN_QTY) AS TRAN_QTY
         FROM T_UPDATE_BO ub
         WHERE ((ub.HOUR BETWEEN 21 AND 23) OR (ub.HOUR BETWEEN 0 AND 7))
-        AND EXISTS (   -- FILTER BARU: Hanya ambil yang ada di order
+        AND EXISTS (
             SELECT 1 FROM T_ORDER o 
-            WHERE o.PART_NO = ub.PART_NO 
-            AND o.DELV_DATE = ub.DATE
+            WHERE o.DELV_DATE = ub.DATE 
+            AND (
+                o.PART_NO = ub.PART_NO
+                OR REPLACE(o.PART_NO, ' ', '') = REPLACE(ub.PART_NO, ' ', '')
+                OR UPPER(RTRIM(LTRIM(o.PART_NO))) = UPPER(RTRIM(LTRIM(ub.PART_NO)))
+            )
         )
+        AND ub.DATE BETWEEN '$DATE1' AND '$DATE2'
         GROUP BY ub.DATE, ub.PART_NO, ub.PART_DESC, ub.HOUR
     ) AS SourceTable
     PIVOT (
@@ -76,7 +81,6 @@ ORD_DATA AS (
             PART_NO,
             PART_NAME,
             SUPPLIER_CODE,
-            -- PERHITUNGAN TOTAL PER JAM (SUM semua cycle) - FIXED!
             SUM(CASE 
                 WHEN TRY_CAST(ETA AS TIME) BETWEEN '21:00:00' AND '21:59:59' THEN ORD_QTY 
                 ELSE 0 
@@ -129,7 +133,7 @@ ORD_DATA AS (
             TRY_CAST(ETA AS TIME) >= '21:00:00' 
             OR TRY_CAST(ETA AS TIME) <= '07:00:00'
         )
-        -- GROUP BY TANPA ETA_HOUR! Hanya per part, supplier, date
+        AND DELV_DATE BETWEEN '$DATE1' AND '$DATE2'
         GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE
     ) AS SourceTable
 )

@@ -52,3 +52,123 @@
         display: none !important;
     }
 }
+
+
+
+/* Tambahkan di akhir custom-styles.css */
+
+/* ================= HIGHLIGHT ROW FOR NOTIFICATION AUTO-SCROLL ================= */
+.highlight-row {
+    animation: highlightPulse 2s ease-in-out 3 !important;
+    background-color: rgba(255, 193, 7, 0.2) !important;
+    border-left: 4px solid #ffc107 !important;
+}
+
+@keyframes highlightPulse {
+    0% { background-color: rgba(255, 193, 7, 0.1); }
+    50% { background-color: rgba(255, 193, 7, 0.3); }
+    100% { background-color: rgba(255, 193, 7, 0.1); }
+}
+
+/* Modal Elegant Styles */
+.modal-xl {
+    max-width: 1200px !important;
+}
+
+.icon-container {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+/* Form Control Styles */
+.form-control-lg {
+    font-size: 1rem !important;
+    padding: 0.75rem 1rem !important;
+}
+
+/* Recipient Checkbox Grid */
+.recipient-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.recipient-item {
+    padding: 12px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.recipient-item:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.recipient-item.selected {
+    background: rgba(13, 110, 253, 0.1);
+    border-color: #0d6efd;
+}
+
+/* Status Cards */
+.status-card {
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.status-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+}
+
+.status-card.selected {
+    border-width: 3px !important;
+    background: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* Notification Styles */
+.notification-item {
+    transition: all 0.2s;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(5px);
+}
+
+.notification-item.unread {
+    border-left: 3px solid #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+.urgent-blink {
+    animation: blinkUrgent 1s infinite;
+}
+
+@keyframes blinkUrgent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* 7 Days Retention Info */
+.retention-info {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #20c997;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+.retention-info i {
+    color: #20c997;
+}

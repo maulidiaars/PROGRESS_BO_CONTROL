@@ -192,21 +192,23 @@ try {
         // Default: return as is
         return $timeValue;
     }
-        
-    // ============ UPLOAD BO (SIMPLE INSERT) - DENGAN FILTER ORDER ============
+    
+    // ============ UPLOAD BO (SIMPLE INSERT) - PERBAIKAN TOTAL ============
     if ($type == "upload_bo") {
         // TENTUKAN JAM DARI WAKTU UPLOAD
         $uploadHour = date('H'); // Jam saat upload
         $currentDate = date('Ymd'); // Tanggal hari ini
         
-        // LOGIKA SHIFT
+        // **FIX: LOGIKA SHIFT YANG BENAR**
         if ($uploadHour >= 8 && $uploadHour <= 20) {
             $HOUR = $uploadHour;
             $SHIFT = 1; // Day Shift
         } else {
+            // Jika jam 21-23 (Night Shift hari ini) atau 0-7 (Night Shift besok)
             $HOUR = $uploadHour;
             $SHIFT = 2; // Night Shift
             
+            // Jika jam 0-7, tanggal tetap hari ini (karena night shift lanjutan)
             if ($uploadHour >= 0 && $uploadHour <= 7) {
                 $currentDate = date('Ymd'); // Tetap tanggal hari ini
             }
@@ -217,22 +219,7 @@ try {
         $response['debug']['assigned_shift'] = $SHIFT;
         $response['debug']['assigned_date'] = $currentDate;
         
-        // 1. AMBIL SEMUA PART YANG ADA ORDER HARI INI
-        $orderCheckSql = "SELECT DISTINCT PART_NO FROM T_ORDER WHERE DELV_DATE = ?";
-        $orderStmt = sqlsrv_prepare($conn, $orderCheckSql, [$currentDate]);
-        $validParts = [];
-        
-        if ($orderStmt && sqlsrv_execute($orderStmt)) {
-            while ($orderRow = sqlsrv_fetch_array($orderStmt, SQLSRV_FETCH_ASSOC)) {
-                $validParts[] = str_replace(" ", "", trim($orderRow['PART_NO']));
-            }
-        }
-        sqlsrv_free_stmt($orderStmt);
-        
-        $response['debug']['valid_parts_count'] = count($validParts);
-        $response['debug']['valid_parts_sample'] = array_slice($validParts, 0, 5);
-        
-        // 2. HAPUS HANYA DATA UNTUK JAM YANG SAMA
+        // **FIX: HAPUS HANYA DATA UNTUK JAM YANG SAMA**
         $delete_sql = "DELETE FROM T_UPDATE_BO WHERE DATE = ? AND HOUR = ?";
         $delete_stmt = sqlsrv_prepare($conn, $delete_sql, [$currentDate, $HOUR]);
         if ($delete_stmt) {
@@ -242,13 +229,8 @@ try {
             sqlsrv_free_stmt($delete_stmt);
         }
         
-        // 3. INSERT DATA HANYA YANG ADA DI ORDER
         $insertQuery = "INSERT INTO T_UPDATE_BO (DATE, HOUR, SHIFT, CODE, PART_NO, PART_DESC, CLS, TRAN_QTY, LOT, WH_CODE) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        $validCount = 0;
-        $invalidCount = 0;
-        $invalidParts = [];
         
         for ($row = 2; $row <= $highestRow; $row++) {
             // Skip row kosong
@@ -270,8 +252,10 @@ try {
             
             $DATE = $tanggalObjek->format("Ymd");
             
-            // Untuk Night Shift jam 0-7, date harus sama dengan file
+            // **FIX: Untuk Night Shift jam 0-7, date harus sama dengan file (tidak pakai currentDate)**
+            // Karena file BO mungkin untuk tanggal kemarin (night shift lanjutan)
             if ($SHIFT == 2 && ($HOUR >= 0 && $HOUR <= 7)) {
+                // Pakai tanggal dari file, bukan tanggal hari ini
                 $DATE = $tanggalObjek->format("Ymd");
             }
             
@@ -297,19 +281,7 @@ try {
                 continue;
             }
             
-            // ========== FILTER: CEK APAKAH PART ADA DI ORDER ==========
-            if (!in_array($PART_NO, $validParts)) {
-                $invalidCount++;
-                $invalidParts[] = [
-                    'part_no' => $PART_NO,
-                    'part_desc' => $PART_DESC,
-                    'qty' => $TRAN_QTY
-                ];
-                error_log("SKIPPED: Part $PART_NO not found in orders for date $DATE");
-                continue; // SKIP DATA INI!
-            }
-            
-            // JIKA VALID, INSERT KE DATABASE
+            // **FIX: GUNAKAN JAM DARI WAKTU UPLOAD ($HOUR)**
             $params = [
                 $DATE, 
                 $HOUR,
@@ -326,7 +298,7 @@ try {
             $stmt = sqlsrv_prepare($conn, $insertQuery, $params);
             
             if ($stmt && sqlsrv_execute($stmt)) {
-                $validCount++;
+                $successCount++;
             } else {
                 $errors = sqlsrv_errors();
                 error_log("Failed to insert BO data at row $row: " . print_r($errors, true));
@@ -336,12 +308,7 @@ try {
             if ($stmt) sqlsrv_free_stmt($stmt);
         }
         
-        $response['debug']['valid_inserted'] = $validCount;
-        $response['debug']['invalid_skipped'] = $invalidCount;
-        $response['debug']['invalid_parts'] = $invalidParts;
-        
-        $response['message'] = "✅ Successfully uploaded $validCount BO records (Skipped $invalidCount without order) for hour $HOUR (Shift: $SHIFT)";
-        $successCount = $validCount;
+        $response['message'] = "✅ Successfully uploaded $successCount BO records for hour $HOUR (Shift: $SHIFT)";
     }
     
     // ============ UPLOAD ORDER ============

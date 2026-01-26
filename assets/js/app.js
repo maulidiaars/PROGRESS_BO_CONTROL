@@ -1,87 +1,620 @@
-// ================= ADD ORDER FUNCTIONS =================
+// ================= ADD ORDER DENGAN PILIHAN JAM =================
 let currentDSData = null;
 let currentNSData = null;
+let dsSelectedHours = {}; // {hour: quantity}
+let nsSelectedHours = {}; // {hour: quantity}
 
+// ========== HELPER FUNCTIONS ==========
+function getDayNameID(dateString) {
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return days[date.getDay()];
+}
+
+function getMonthNameID(dateString) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const [year, month] = dateString.split('-').map(Number);
+    return months[month - 1];
+}
+
+// ========== ELEGANT MINIMAL STYLE ==========
+function addElegantModalStyles() {
+    if (!$('#elegant-modal-styles').length) {
+        $('head').append(`
+        <style id="elegant-modal-styles">
+            .minimal-date-modal {
+                font-family: 'Inter', 'Segoe UI', sans-serif;
+                text-align: center;
+            }
+
+            .minimal-date-modal .icon {
+                width: 64px;
+                height: 64px;
+                margin: 0 auto 16px;
+                border-radius: 50%;
+                background: rgba(74,108,247,.08);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .minimal-date-modal.warning .icon {
+                background: rgba(255,193,7,.15);
+            }
+
+            .minimal-date-modal h4 {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 6px;
+                color: #111827;
+            }
+
+            .minimal-date-modal p {
+                font-size: 14px;
+                color: #6B7280;
+                margin-bottom: 20px;
+            }
+
+            .minimal-date-modal .date-chip {
+                display: inline-block;
+                padding: 6px 14px;
+                border-radius: 999px;
+                background: #F1F5F9;
+                font-size: 13px;
+                font-weight: 500;
+                color: #334155;
+            }
+
+            .swal2-popup.date-restriction-popup {
+                border-radius: 18px !important;
+                padding: 28px 24px !important;
+            }
+        </style>
+        `);
+    }
+}
+
+// ========== REUSABLE BLOCKED DATE MODAL ==========
+function showDateBlockedModal({ rowDateFormatted, color }) {
+    addElegantModalStyles();
+
+    Swal.fire({
+        html: `
+        <div class="minimal-date-modal ${color === 'warning' ? 'warning' : ''}">
+            <div class="icon">
+                <i class="bi bi-calendar-x text-${color} fs-3"></i>
+            </div>
+
+            <h4>Fitur Tidak Tersedia</h4>
+            <p>
+                Add order hanya bisa dilakukan untuk
+                <br><strong>tanggal hari ini</strong>
+            </p>
+
+            <div class="date-chip">
+                Tanggal dipilih: ${rowDateFormatted}
+            </div>
+        </div>
+        `,
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: color === 'warning' ? '#FFC107' : '#4A6CF7',
+        showCancelButton: false,
+        showCloseButton: true,
+        backdrop: 'rgba(0,0,0,0.25)',
+        allowOutsideClick: false,
+        width: 420,
+        customClass: {
+            popup: 'date-restriction-popup shadow-lg',
+            confirmButton: 'px-5 py-2 rounded-pill fw-medium'
+        }
+    });
+}
+
+// ========== SHOW ADD DS MODAL ==========
 function showAddDSModal() {
     var row = tableDetailProgress.row($(this).parents('tr'));
     var data = row.data();
-    
     if (!data) return;
-    
-    currentDSData = data;
-    
-    var dateStr = String(data.DATE);
-    if (/^\d{8}$/.test(dateStr)) {
-        dateStr = dateStr.slice(0,4) + '-' + dateStr.slice(4,6) + '-' + dateStr.slice(6,8);
+
+    const today = new Date();
+    const todayFormatted = today.toISOString().split('T')[0];
+    const rowDateFormatted = formatDate(data.DATE);
+
+    if (rowDateFormatted.replace(/-/g, '') !== todayFormatted.replace(/-/g, '')) {
+        showDateBlockedModal({
+            rowDateFormatted: rowDateFormatted,
+            color: 'primary'
+        });
+        return;
     }
-    
-    // Set hidden values
+
+    currentDSData = data;
+    dsSelectedHours = {};
+
     $('#add-ds-date').val(data.DATE);
     $('#add-ds-supplier').val(data.SUPPLIER_CODE);
     $('#add-ds-partno').val(data.PART_NO);
-    
-    // Set display values
-    $('#txt-ds-date').text(dateStr);
-    $('#txt-ds-supplier').text(data.SUPPLIER_CODE);
-    $('#txt-ds-partno').text(data.PART_NO);
+
+    $('#txt-ds-date').text(rowDateFormatted);
+    $('#txt-ds-supplier').text(data.SUPPLIER_CODE || '');
+    $('#txt-ds-partno').text(data.PART_NO || '');
     $('#txt-ds-partname').text(data.PART_NAME || data.PART_DESC || '');
-    
-    // Reset form
-    $('#txt-ds-addqty').val(0);
+
     $('#txt-ds-remark').val('');
     $('#ds-action').val('add');
-    
-    // Hide alerts
+    $('#ds-total-qty').text('0');
+    $('#ds-no-hour-selected').show();
+
+    const now = new Date();
+    $('#current-time-display').text(
+        now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0')
+    );
+
     $('#ds-error-alert, #ds-success-alert').addClass('d-none');
-    
-    // Load current status
+
+    generateDSHourSelection();
     loadCurrentDSStatus(data.DATE, data.SUPPLIER_CODE, data.PART_NO);
-    
-    // Load history
-    loadDSHistory(data.DATE, data.SUPPLIER_CODE, data.PART_NO);
-    
+
     $('#modal-add-ds').modal('show');
 }
 
+// ========== SHOW ADD NS MODAL ==========
 function showAddNSModal() {
     var row = tableDetailProgress.row($(this).parents('tr'));
     var data = row.data();
-    
     if (!data) return;
-    
-    currentNSData = data;
-    
-    var dateStr = String(data.DATE);
-    if (/^\d{8}$/.test(dateStr)) {
-        dateStr = dateStr.slice(0,4) + '-' + dateStr.slice(4,6) + '-' + dateStr.slice(6,8);
+
+    const today = new Date();
+    const todayFormatted = today.toISOString().split('T')[0];
+    const rowDateFormatted = formatDate(data.DATE);
+
+    if (rowDateFormatted.replace(/-/g, '') !== todayFormatted.replace(/-/g, '')) {
+        showDateBlockedModal({
+            rowDateFormatted: rowDateFormatted,
+            color: 'warning'
+        });
+        return;
     }
-    
-    // Set hidden values
+
+    currentNSData = data;
+    nsSelectedHours = {};
+
     $('#add-ns-date').val(data.DATE);
     $('#add-ns-supplier').val(data.SUPPLIER_CODE);
     $('#add-ns-partno').val(data.PART_NO);
-    
-    // Set display values
-    $('#txt-ns-date').text(dateStr);
-    $('#txt-ns-supplier').text(data.SUPPLIER_CODE);
-    $('#txt-ns-partno').text(data.PART_NO);
+
+    $('#txt-ns-date').text(rowDateFormatted);
+    $('#txt-ns-supplier').text(data.SUPPLIER_CODE || '');
+    $('#txt-ns-partno').text(data.PART_NO || '');
     $('#txt-ns-partname').text(data.PART_NAME || data.PART_DESC || '');
-    
-    // Reset form
-    $('#txt-ns-addqty').val(0);
+
     $('#txt-ns-remark').val('');
     $('#ns-action').val('add');
-    
-    // Hide alerts
+    $('#ns-total-qty').text('0');
+    $('#ns-no-hour-selected').show();
+
+    const now = new Date();
+    $('#ns-current-time-display').text(
+        now.getHours().toString().padStart(2, '0') + ':' +
+        now.getMinutes().toString().padStart(2, '0')
+    );
+
     $('#ns-error-alert, #ns-success-alert').addClass('d-none');
-    
-    // Load current status
+
+    generateNSHourSelection();
     loadCurrentNSStatus(data.DATE, data.SUPPLIER_CODE, data.PART_NO);
-    
-    // Load history
-    loadNSHistory(data.DATE, data.SUPPLIER_CODE, data.PART_NO);
-    
+
     $('#modal-add-ns').modal('show');
+}
+
+
+
+// Update fungsi generateDSHourSelection:
+function generateDSHourSelection() {
+    const $container = $('#ds-hour-selection');
+    $container.empty();
+    
+    const currentHour = new Date().getHours();
+    const currentDate = new Date();
+    
+    // PERBAIKAN: Handle orderDateStr dengan lebih aman
+    let orderDate = new Date(); // default ke hari ini
+    let orderDateRaw = currentDSData?.DATE;
+    let orderDateStr = '';
+
+    if (orderDateRaw !== null && orderDateRaw !== undefined) {
+        orderDateStr = String(orderDateRaw); // 🔥 PENTING
+    }
+
+    
+    // Convert orderDateStr ke Date object dengan aman
+    if (orderDateStr) {
+        // Cek format: jika string 8 digit (YYYYMMDD)
+        if (/^\d{8}$/.test(orderDateStr)) {
+            const year = orderDateStr.slice(0, 4);
+            const month = orderDateStr.slice(4, 6);
+            const day = orderDateStr.slice(6, 8);
+            orderDate = new Date(`${year}-${month}-${day}`);
+        } else if (orderDateStr instanceof Date) {
+            // Jika sudah Date object
+            orderDate = orderDateStr;
+        } else if (typeof orderDateStr === 'string' && orderDateStr.includes('-')) {
+            // Format YYYY-MM-DD
+            orderDate = new Date(orderDateStr);
+        }
+    }
+    
+    // Cek apakah order date sama dengan hari ini
+    const isToday = orderDate.toDateString() === currentDate.toDateString();
+    
+    console.log('🔍 Debug generateDSHourSelection:', {
+        orderDateStr: orderDateStr,
+        orderDate: orderDate,
+        currentDate: currentDate,
+        isToday: isToday,
+        currentHour: currentHour
+    });
+    
+    for (let hour = 7; hour <= 20; hour++) {
+        const $col = $('<div class="col-2 col-md-1 mb-2"></div>');
+        const $btn = $('<button type="button" class="btn btn-outline-primary hour-btn"></button>');
+        
+        $btn.text(hour.toString().padStart(2, '0'));
+        $btn.data('hour', hour);
+        
+        // Disable jika jam sudah lewat (untuk hari ini)
+        if (isToday && hour < currentHour) {
+            $btn.addClass('disabled');
+            $btn.prop('disabled', true);
+            $btn.addClass('btn-secondary');
+            $btn.removeClass('btn-outline-primary');
+            $btn.attr('title', 'Jam sudah lewat');
+        } else {
+            $btn.on('click', function() {
+                toggleDSHourSelection($(this));
+            });
+            $btn.attr('title', `Klik untuk tambah order jam ${hour}:00`);
+        }
+        
+        $col.append($btn);
+        $container.append($col);
+    }
+}
+
+// Update fungsi generateNSHourSelection:
+function generateNSHourSelection() {
+    const $container = $('#ns-hour-selection');
+    $container.empty();
+    
+    const currentHour = new Date().getHours();
+    const currentDate = new Date();
+    
+    // PERBAIKAN: Handle orderDateStr dengan lebih aman
+    let orderDate = new Date(); // default ke hari ini
+    let orderDateRaw = currentNSData?.DATE;
+    let orderDateStr = '';
+
+    if (orderDateRaw !== null && orderDateRaw !== undefined) {
+        orderDateStr = String(orderDateRaw); // 🔥 PENTING
+    }
+
+    
+    // Convert orderDateStr ke Date object dengan aman
+    if (orderDateStr) {
+        // Cek format: jika string 8 digit (YYYYMMDD)
+        if (/^\d{8}$/.test(orderDateStr)) {
+            const year = orderDateStr.slice(0, 4);
+            const month = orderDateStr.slice(4, 6);
+            const day = orderDateStr.slice(6, 8);
+            orderDate = new Date(`${year}-${month}-${day}`);
+        } else if (orderDateStr instanceof Date) {
+            // Jika sudah Date object
+            orderDate = orderDateStr;
+        } else if (typeof orderDateStr === 'string' && orderDateStr.includes('-')) {
+            // Format YYYY-MM-DD
+            orderDate = new Date(orderDateStr);
+        }
+    }
+    
+    // Cek apakah order date sama dengan hari ini
+    const isToday = orderDate.toDateString() === currentDate.toDateString();
+    
+    console.log('🔍 Debug generateNSHourSelection:', {
+        orderDateStr: orderDateStr,
+        orderDate: orderDate,
+        currentDate: currentDate,
+        isToday: isToday,
+        currentHour: currentHour
+    });
+    
+    // Jam night shift: 21, 22, 23, 0, 1, 2, 3, 4, 5, 6
+    const nsHours = [21, 22, 23, 0, 1, 2, 3, 4, 5, 6];
+    
+    nsHours.forEach(hour => {
+        const $col = $('<div class="col-2 col-md-1 mb-2"></div>');
+        const $btn = $('<button type="button" class="btn btn-outline-warning hour-btn"></button>');
+        
+        $btn.text(hour.toString().padStart(2, '0'));
+        $btn.data('hour', hour);
+        
+        // Logic untuk disable jam yang sudah lewat lebih kompleks untuk night shift
+        let shouldDisable = false;
+        let disableReason = '';
+        
+        if (isToday) {
+            // Untuk night shift, perlu perhitungan khusus
+            // Jika order hari ini, jam 21-23 di hari ini
+            // Jika order besok, jam 0-6 di hari berikutnya
+            
+            if (hour >= 21) {
+                // Jam 21-23: disable jika < current hour (di hari yang sama)
+                shouldDisable = hour < currentHour;
+                if (shouldDisable) {
+                    disableReason = 'Jam sudah lewat (hari ini)';
+                }
+            } else {
+                // Jam 0-6: disable untuk hari ini karena harusnya untuk besok
+                // Kecuali jika currentHour >= 21 (sudah malam, bisa pilih jam 0-6 untuk besok)
+                shouldDisable = currentHour < 21;
+                if (shouldDisable) {
+                    disableReason = 'Jam 0-6 hanya tersedia setelah jam 21:00 untuk hari berikutnya';
+                }
+            }
+        }
+        
+        if (shouldDisable) {
+            $btn.addClass('disabled');
+            $btn.prop('disabled', true);
+            $btn.addClass('btn-secondary');
+            $btn.removeClass('btn-outline-warning');
+            if (disableReason) {
+                $btn.attr('title', disableReason);
+            }
+        } else {
+            $btn.on('click', function() {
+                toggleNSHourSelection($(this));
+            });
+            $btn.attr('title', `Klik untuk tambah order jam ${hour.toString().padStart(2, '0')}:00`);
+        }
+        
+        $col.append($btn);
+        $container.append($col);
+    });
+}
+
+// Toggle selection untuk D/S
+function toggleDSHourSelection($btn) {
+    const hour = $btn.data('hour');
+    
+    if ($btn.hasClass('selected')) {
+        // Unselect
+        $btn.removeClass('selected');
+        $btn.removeClass('btn-primary');
+        $btn.addClass('btn-outline-primary');
+        delete dsSelectedHours[hour];
+    } else {
+        // Select
+        $btn.addClass('selected');
+        $btn.removeClass('btn-outline-primary');
+        $btn.addClass('btn-primary');
+        dsSelectedHours[hour] = 0; // Default quantity 0
+    }
+    
+    updateDSQuantityInputs();
+}
+
+// Toggle selection untuk N/S
+function toggleNSHourSelection($btn) {
+    const hour = $btn.data('hour');
+    
+    if ($btn.hasClass('selected')) {
+        // Unselect
+        $btn.removeClass('selected');
+        $btn.removeClass('btn-warning');
+        $btn.addClass('btn-outline-warning');
+        delete nsSelectedHours[hour];
+    } else {
+        // Select
+        $btn.addClass('selected');
+        $btn.removeClass('btn-outline-warning');
+        $btn.addClass('btn-warning');
+        nsSelectedHours[hour] = 0; // Default quantity 0
+    }
+    
+    updateNSQuantityInputs();
+}
+
+// Update quantity inputs untuk D/S
+function updateDSQuantityInputs() {
+    const $container = $('#ds-quantity-container');
+    
+    if (Object.keys(dsSelectedHours).length === 0) {
+        $container.html('<div class="alert alert-info" id="ds-no-hour-selected">' +
+                       '<i class="bi bi-info-circle me-2"></i>' +
+                       'Pilih jam terlebih dahulu di atas' +
+                       '</div>');
+        $('#ds-total-qty').text('0');
+        return;
+    }
+    
+    $container.empty();
+    let totalQty = 0;
+    
+    // Sort hours
+    const sortedHours = Object.keys(dsSelectedHours).sort((a, b) => a - b);
+    
+    sortedHours.forEach(hour => {
+        const hourStr = hour.toString().padStart(2, '0');
+        const currentQty = dsSelectedHours[hour];
+        
+        const $group = $(`
+            <div class="quantity-input-group">
+                <div class="row align-items-center">
+                    <div class="col-md-3 mb-2 mb-md-0">
+                        <label class="form-label mb-0">
+                            <i class="bi bi-clock me-1"></i>
+                            Jam ${hourStr}:00
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ds-hour-decrease" data-hour="${hour}">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number" class="form-control text-center ds-hour-qty" 
+                                   data-hour="${hour}" value="${currentQty}" min="0" max="9999">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ds-hour-increase" data-hour="${hour}">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                            <span class="input-group-text">pcs</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mt-2 mt-md-0 text-md-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger ds-hour-remove" data-hour="${hour}">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        $container.append($group);
+        totalQty += parseInt(currentQty) || 0;
+    });
+    
+    $('#ds-total-qty').text(totalQty);
+    
+    // Bind events
+    $('.ds-hour-increase').on('click', function() {
+        const hour = $(this).data('hour');
+        dsSelectedHours[hour] = (parseInt(dsSelectedHours[hour]) || 0) + 1;
+        updateDSQuantityInputs();
+    });
+    
+    $('.ds-hour-decrease').on('click', function() {
+        const hour = $(this).data('hour');
+        const current = parseInt(dsSelectedHours[hour]) || 0;
+        if (current > 0) {
+            dsSelectedHours[hour] = current - 1;
+            updateDSQuantityInputs();
+        }
+    });
+    
+    $('.ds-hour-qty').on('input', function() {
+        const hour = $(this).data('hour');
+        const value = parseInt($(this).val()) || 0;
+        dsSelectedHours[hour] = Math.max(0, Math.min(9999, value));
+        updateDSQuantityInputs();
+    });
+    
+    $('.ds-hour-remove').on('click', function() {
+        const hour = $(this).data('hour');
+        // Remove from selection
+        $(`#ds-hour-selection button[data-hour="${hour}"]`).removeClass('selected btn-primary').addClass('btn-outline-primary');
+        delete dsSelectedHours[hour];
+        updateDSQuantityInputs();
+    });
+}
+
+// Update quantity inputs untuk N/S
+function updateNSQuantityInputs() {
+    const $container = $('#ns-quantity-container');
+    
+    if (Object.keys(nsSelectedHours).length === 0) {
+        $container.html('<div class="alert alert-info" id="ns-no-hour-selected">' +
+                       '<i class="bi bi-info-circle me-2"></i>' +
+                       'Pilih jam terlebih dahulu di atas' +
+                       '</div>');
+        $('#ns-total-qty').text('0');
+        return;
+    }
+    
+    $container.empty();
+    let totalQty = 0;
+    
+    // Sort hours khusus untuk NS (21-23, 0-6)
+    const sortedHours = Object.keys(nsSelectedHours).sort((a, b) => {
+        const aNum = parseInt(a);
+        const bNum = parseInt(b);
+        // Urutkan: 21-23 dulu, lalu 0-6
+        if (aNum >= 21 && bNum >= 21) return aNum - bNum;
+        if (aNum < 21 && bNum < 21) return aNum - bNum;
+        return aNum >= 21 ? -1 : 1;
+    });
+    
+    sortedHours.forEach(hour => {
+        const hourStr = hour.toString().padStart(2, '0');
+        const currentQty = nsSelectedHours[hour];
+        
+        const $group = $(`
+            <div class="quantity-input-group">
+                <div class="row align-items-center">
+                    <div class="col-md-3 mb-2 mb-md-0">
+                        <label class="form-label mb-0">
+                            <i class="bi bi-clock me-1"></i>
+                            Jam ${hourStr}:00
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ns-hour-decrease" data-hour="${hour}">
+                                <i class="bi bi-dash"></i>
+                            </button>
+                            <input type="number" class="form-control text-center ns-hour-qty" 
+                                   data-hour="${hour}" value="${currentQty}" min="0" max="9999">
+                            <button type="button" class="btn btn-outline-secondary btn-sm ns-hour-increase" data-hour="${hour}">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                            <span class="input-group-text">pcs</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mt-2 mt-md-0 text-md-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger ns-hour-remove" data-hour="${hour}">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        $container.append($group);
+        totalQty += parseInt(currentQty) || 0;
+    });
+    
+    $('#ns-total-qty').text(totalQty);
+    
+    // Bind events
+    $('.ns-hour-increase').on('click', function() {
+        const hour = $(this).data('hour');
+        nsSelectedHours[hour] = (parseInt(nsSelectedHours[hour]) || 0) + 1;
+        updateNSQuantityInputs();
+    });
+    
+    $('.ns-hour-decrease').on('click', function() {
+        const hour = $(this).data('hour');
+        const current = parseInt(nsSelectedHours[hour]) || 0;
+        if (current > 0) {
+            nsSelectedHours[hour] = current - 1;
+            updateNSQuantityInputs();
+        }
+    });
+    
+    $('.ns-hour-qty').on('input', function() {
+        const hour = $(this).data('hour');
+        const value = parseInt($(this).val()) || 0;
+        nsSelectedHours[hour] = Math.max(0, Math.min(9999, value));
+        updateNSQuantityInputs();
+    });
+    
+    $('.ns-hour-remove').on('click', function() {
+        const hour = $(this).data('hour');
+        // Remove from selection
+        $(`#ns-hour-selection button[data-hour="${hour}"]`).removeClass('selected btn-warning').addClass('btn-outline-warning');
+        delete nsSelectedHours[hour];
+        updateNSQuantityInputs();
+    });
 }
 
 function loadCurrentDSStatus(date, supplier, partNo) {
@@ -95,10 +628,13 @@ function loadCurrentDSStatus(date, supplier, partNo) {
             type: 'ds'
         },
         success: function(response) {
+            console.log('Current DS Status:', response);
+            
             if (response.success) {
                 const currentQty = response.current_qty || 0;
                 const lastUpdated = response.last_updated || '';
                 const lastBy = response.last_by || '';
+                const hoursData = response.hours_data || {};
                 
                 if (currentQty > 0) {
                     $('#ds-status-text').html(`
@@ -106,14 +642,30 @@ function loadCurrentDSStatus(date, supplier, partNo) {
                         ${lastBy ? `<br><small class="text-muted">Last by ${lastBy} on ${lastUpdated}</small>` : ''}
                     `);
                     $('#btn-reset-ds').show();
-                    $('#txt-ds-addqty').val(currentQty);
                     $('#txt-ds-remark').val(response.remark || '');
                     $('#ds-action').val('update');
+                    
+                    // Load hours data
+                    dsSelectedHours = hoursData;
+                    
+                    // Select the hours in UI
+                    Object.keys(hoursData).forEach(hour => {
+                        $(`#ds-hour-selection button[data-hour="${hour}"]`).each(function() {
+                            if (!$(this).hasClass('disabled')) {
+                                $(this).addClass('selected btn-primary').removeClass('btn-outline-primary');
+                            }
+                        });
+                    });
+                    
+                    updateDSQuantityInputs();
                 } else {
                     $('#ds-status-text').text('No add order yet');
                     $('#btn-reset-ds').hide();
                 }
             }
+        },
+        error: function(xhr) {
+            console.error('Error loading DS status:', xhr);
         }
     });
 }
@@ -129,10 +681,13 @@ function loadCurrentNSStatus(date, supplier, partNo) {
             type: 'ns'
         },
         success: function(response) {
+            console.log('Current NS Status:', response);
+            
             if (response.success) {
                 const currentQty = response.current_qty || 0;
                 const lastUpdated = response.last_updated || '';
                 const lastBy = response.last_by || '';
+                const hoursData = response.hours_data || {};
                 
                 if (currentQty > 0) {
                     $('#ns-status-text').html(`
@@ -140,17 +695,34 @@ function loadCurrentNSStatus(date, supplier, partNo) {
                         ${lastBy ? `<br><small class="text-muted">Last by ${lastBy} on ${lastUpdated}</small>` : ''}
                     `);
                     $('#btn-reset-ns').show();
-                    $('#txt-ns-addqty').val(currentQty);
                     $('#txt-ns-remark').val(response.remark || '');
                     $('#ns-action').val('update');
+                    
+                    // Load hours data
+                    nsSelectedHours = hoursData;
+                    
+                    // Select the hours in UI
+                    Object.keys(hoursData).forEach(hour => {
+                        $(`#ns-hour-selection button[data-hour="${hour}"]`).each(function() {
+                            if (!$(this).hasClass('disabled')) {
+                                $(this).addClass('selected btn-warning').removeClass('btn-outline-warning');
+                            }
+                        });
+                    });
+                    
+                    updateNSQuantityInputs();
                 } else {
                     $('#ns-status-text').text('No add order yet');
                     $('#btn-reset-ns').hide();
                 }
             }
+        },
+        error: function(xhr) {
+            console.error('Error loading NS status:', xhr);
         }
     });
 }
+
 
 // ================= CONFIGURATION =================
 const picSupplierMap = {
@@ -336,35 +908,48 @@ function clearDateRange() {
     fetchDataInformation();
 }
 
-// ================= EVENT HANDLER FOR DATE CHANGES =================
+let dateChangeTimeout = null;
+
 function handleDateChange() {
     const date1 = $('#range-date1').val();
     const date2 = $('#range-date2').val();
     
-    if (!date1 && !date2) {
-        updateDateInputStyles(true);
+    if (window.isDateLoading) {
         return;
     }
     
-    if (date1 && date2) {
-        const isValid = validateDateRange(date1, date2);
-        
-        if (!isValid) {
-            showDateRangeError('End date cannot be earlier than start date');
-            updateDateInputStyles(false);
+    if (dateChangeTimeout) {
+        clearTimeout(dateChangeTimeout);
+    }
+    
+    dateChangeTimeout = setTimeout(() => {
+        if (!date1 || !date2) {
             return;
-        } else {
-            updateDateInputStyles(true);
         }
-    }
-    
-    rangeDate1 = date1;
-    rangeDate2 = date2;
-    
-    if (date1 && date2 && validateDateRange(date1, date2)) {
+        
+        const d1 = new Date(date1);
+        const d2 = new Date(date2);
+        
+        if (d2 < d1) {
+            showDateRangeError('End date cannot be earlier than start date');
+            return;
+        }
+        
+        window.isDateLoading = true;
+        
+        rangeDate1 = date1;
+        rangeDate2 = date2;
+        
+        console.log(`📅 Loading data for ${date1} to ${date2}`);
+        
         loadTableDetailProgress();
-        fetchDataInformation();
-    }
+        
+        setTimeout(() => {
+            fetchDataInformation();
+            window.isDateLoading = false;
+        }, 800);
+        
+    }, 600); // 600ms debounce
 }
 
 // ================= UTILITY FUNCTIONS =================
@@ -445,28 +1030,33 @@ function calculateNSTotal(data, type, row) {
 // ================= FUNGSI STATUS BARU - PAKE LOGIKA SERVER =================
 function renderStatusBadge(status) {
     const statusMap = {
-        'OK': '<span class="badge bg-success">OK</span>',
-        'ON_PROGRESS': '<span class="badge bg-primary">ON PROGRESS</span>',
-        'DELAY': '<span class="badge bg-danger">DELAY</span>',
-        'OVER': '<span class="badge bg-warning">OVER</span>'
+        'OK': '<span class="badge bg-success">✅ COMPLETED</span>',
+        'ON_PROGRESS': '<span class="badge bg-primary">🔄 ON PROGRESS</span>',
+        'DELAY': '<span class="badge bg-danger">⚠️ DELAY</span>',
+        'OVER': '<span class="badge bg-warning">📈 OVER</span>'
     };
     
     return statusMap[status] || '<span class="badge bg-secondary">-</span>';
 }
 
-// Fungsi render status tetap sama, karena sekarang SERVER sudah ngirim status yang benar
+// Fungsi render status D/S (pakai DS_STATUS dari server)
 function getDSStatus(data, type, row) {
-    var status = row.STATUS || '';
+    var status = row.DS_STATUS || row.STATUS || '';
+    
     return renderStatusBadge(status);
 }
 
+// Fungsi render status N/S (pakai NS_STATUS dari server)
 function getNSStatus(data, type, row) {
-    var status = row.STATUS || '';
+    var status = row.NS_STATUS || row.STATUS || '';
+    
     return renderStatusBadge(status);
 }
 
+// Fungsi render status total
 function getTotalStatus(data, type, row) {
     var status = row.STATUS || '';
+    
     return renderStatusBadge(status);
 }
 
@@ -730,15 +1320,26 @@ function refreshActualMaps() {
 }
 
 function loadTableDetailProgress() {  
+    if (window.isTableLoading) {
+        console.log('⚠️ Table already loading, skipping');
+        return;
+    }
+    
+    window.isTableLoading = true;
+    
     let date1 = $('#range-date1').val();  
     let date2 = $('#range-date2').val();  
+    
+    if (!date1 || !date2) {
+        window.isTableLoading = false;
+        return;
+    }
+    
     let sendDate1 = date1 ? date1.replace(/-/g, '') : '';  
     let sendDate2 = date2 ? date2.replace(/-/g, '') : '';  
     
     let supplierCodeArr = $('#select-supplier-code').val();
     let supplierCode = supplierCodeArr ? supplierCodeArr.join(',') : '';  
-    
-    console.log('Kirim date1:', sendDate1, 'date2:', sendDate2, 'supplier_code:', supplierCode);  
     
     showTableSkeleton('#table-detail-progress tbody', 10);
     
@@ -759,37 +1360,30 @@ function loadTableDetailProgress() {
                 : (response?.data || []);
 
             if (!Array.isArray(data)) {
-                console.warn("Format response data_progress_by_pn salah:", response);
                 hideTableSkeleton('#table-detail-progress tbody');
+                window.isTableLoading = false;
                 return;
             }
             
-            console.log("Data progress loaded:", data.length, "rows");
-            
             let displayData = data;
             if (data.length > 500) {
-                console.warn("Data terlalu banyak (" + data.length + " rows), limiting to 500 rows");
                 displayData = data.slice(0, 500);
                 
                 if ($('#table-detail-progress_wrapper .alert-warning').length === 0) {
                     $('#table-detail-progress_wrapper').prepend(
-                        '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
-                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                        'Data terlalu besar (' + data.length + ' rows). Menampilkan 500 rows pertama. Gunakan filter yang lebih spesifik.' +
-                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
-                        '</div>'
+                        '<div class="alert alert-warning">Showing 500 of ' + data.length + ' rows</div>'
                     );
                 }
-            } else {
-                $('#table-detail-progress_wrapper .alert-warning').remove();
             }
             
             tableDetailProgress.clear().rows.add(displayData).draw();
             hideTableSkeleton('#table-detail-progress tbody');
+            window.isTableLoading = false;
         },  
         error: function(xhr) {  
-            console.log("Error request modules/data_progress_by_pn.php", xhr.status);  
+            console.log("Error loading data");
             hideTableSkeleton('#table-detail-progress tbody');
+            window.isTableLoading = false;
         }  
     });  
 }
@@ -1674,12 +2268,24 @@ function showNSModal() {
 
 // Tambahkan fungsi ini di app.js atau update yang existing
 
+// Di dalam $(document).ready() di app.js, tambahkan:
+
+// Initialize Information System
+if (typeof InformationSystem !== 'undefined') {
+    console.log('📋 Loading InformationSystem from app.js');
+    setTimeout(() => {
+        if (!window.informationSystem) {
+            window.informationSystem = new InformationSystem();
+        }
+    }, 1000);
+}
+
+// Pastikan fetchDataInformation berfungsi
 function fetchDataInformation() {
+    console.log('📋 Fetching information data...');
+    
     var date1 = $('#range-date1').val() || new Date().toISOString().split('T')[0];
     var date2 = $('#range-date2').val() || date1;
-    var currentUser = '<?php echo $_SESSION["name"] ?? ""; ?>';
-    
-    console.log("📡 Fetching information data for user:", currentUser);
     
     $.ajax({
         type: 'GET',
@@ -1687,67 +2293,66 @@ function fetchDataInformation() {
         data: { 
             type: "fetch",
             date1: date1,
-            date2: date2
+            date2: date2,
+            _t: new Date().getTime() // Prevent caching
         },
         dataType: 'json',
+        beforeSend: () => {
+            // Show loading indicator
+            $('#table-information tbody').html(`
+                <tr>
+                    <td colspan="12" class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <span class="ms-2">Memuat data informasi...</span>
+                    </td>
+                </tr>
+            `);
+        },
         success: function(response) {
-            console.log("📨 Data information response:", response);
+            console.log('📋 Information fetch response:', response);
             
             if (response.success) {
-                // DataTable akan otomatis merender karena sudah ada konfigurasi columns
-                tableInformation.clear();
-                
-                if (response.data && response.data.length > 0) {
-                    tableInformation.rows.add(response.data).draw();
+                // Update DataTable
+                if (window.tableInformation) {
+                    window.tableInformation.clear();
                     
-                    // Debug: log data untuk memastikan field ada
-                    console.log("🔍 Sample data:", response.data[0]);
-                    console.log("🔍 Request field:", response.data[0].REQUEST);
-                    console.log("🔍 Remark field:", response.data[0].REMARK);
-                    
-                    // Update badge
-                    const openCount = response.data.filter(item => 
-                        item.STATUS === 'Open' && item.user_role === 'recipient'
-                    ).length;
-                    
-                    updateInfoBadge(openCount);
-                    
-                } else {
-                    // Tampilkan pesan jika tidak ada data
-                    tableInformation.clear().draw();
+                    if (response.data && response.data.length > 0) {
+                        window.tableInformation.rows.add(response.data).draw();
+                        
+                        // Update badge
+                        const openCount = response.data.filter(item => 
+                            item.STATUS === 'Open' && item.user_role === 'recipient'
+                        ).length;
+                        
+                        updateInfoBadge(openCount);
+                        
+                    } else {
+                        window.tableInformation.clear().draw();
+                    }
                 }
-                
             } else {
-                console.error("❌ Failed to fetch data:", response.message);
-                tableInformation.clear().draw();
+                console.error('❌ Failed to fetch data:', response.message);
+                if (window.tableInformation) {
+                    window.tableInformation.clear().draw();
+                }
             }
         },
         error: function(xhr, status, error) {
-            console.error("❌ Error fetching data information:", xhr.responseText);
-            tableInformation.clear().draw();
+            console.error('❌ Error fetching data information:', error);
+            if (window.tableInformation) {
+                window.tableInformation.clear().draw();
+            }
         }
     });
 }
 
-function updateInfoBadge() {
-    var openCount = 0;
+// Function to update info badge
+function updateInfoBadge(count) {
+    const $badge = $('#info-badge');
     
-    tableInformation.rows().every(function(rowIdx, tableLoop, rowLoop) {
-        var data = this.data();
-        
-        if (data[9] && typeof data[9] === 'string') {
-            var statusHtml = data[9];
-            if (statusHtml.includes('bg-danger') || statusHtml.includes('OPEN')) {
-                openCount++;
-            }
-        }
-    });
-    
-    var $badge = $('#info-badge');
-    
-    if (openCount > 0) {
-        $badge.text(openCount).show().addClass('bg-danger');
-        document.title = `(${openCount}) Progress BO Control`;
+    if (count > 0) {
+        $badge.text(count > 99 ? '99+' : count).show().addClass('bg-danger');
+        document.title = `(${count}) Progress BO Control`;
     } else {
         $badge.hide();
         document.title = "Progress BO Control";
@@ -2276,26 +2881,74 @@ function initAccumDragScroll() {
     $container.css('cursor', 'grab');
 }
 
-// ================= ADD ORDER EVENT HANDLERS =================
 function handleAddDS(e) {
     e.preventDefault();
     
     const $form = $(this);
     const $submitBtn = $('#ds-submit-btn');
     const $spinner = $('#ds-spinner');
-    const originalText = $submitBtn.html();
+    
+    console.log('=== DS ADD ORDER START ===');
+    
+    // Validasi jam
+    if (Object.keys(dsSelectedHours).length === 0) {
+        showDSAlert('error', 'Pilih minimal 1 jam untuk add order');
+        return false;
+    }
+    
+    // Filter hanya jam yang quantity > 0
+    let totalQty = 0;
+    let validHours = {};
+    
+    Object.keys(dsSelectedHours).forEach(hour => {
+        const qty = parseInt(dsSelectedHours[hour]) || 0;
+        if (qty > 0) {
+            validHours[hour] = qty;
+            totalQty += qty;
+        }
+    });
+    
+    if (totalQty <= 0) {
+        showDSAlert('error', 'Total quantity harus lebih dari 0');
+        return false;
+    }
+    
+    console.log('Valid hours:', validHours);
+    console.log('Total qty:', totalQty);
     
     $submitBtn.prop('disabled', true);
     $spinner.removeClass('d-none');
     $submitBtn.find('span:not(.spinner-border)').text('Saving...');
     
-    const formData = $form.serialize();
+    // Buat FormData secara manual
+    const formData = new FormData();
+    formData.append('date', $('#add-ds-date').val());
+    formData.append('supplier_code', $('#add-ds-supplier').val());
+    formData.append('part_no', $('#add-ds-partno').val());
+    formData.append('type', 'ds');
+    formData.append('action', $('#ds-action').val());
+    formData.append('remark', $('#txt-ds-remark').val().trim());
+    formData.append('hours_data', JSON.stringify(validHours));
+    
+    console.log('FormData:', {
+        date: $('#add-ds-date').val(),
+        supplier: $('#add-ds-supplier').val(),
+        part_no: $('#add-ds-partno').val(),
+        hours_data: JSON.stringify(validHours),
+        total_qty: totalQty
+    });
     
     $.ajax({
         url: 'api/update_add_order.php',
         type: 'POST',
         data: formData,
+        processData: false,
+        contentType: false,
         dataType: 'json',
+        timeout: 10000, // 10 detik timeout
+        beforeSend: function() {
+            console.log('Sending DS add order request...');
+        },
         success: function(response) {
             console.log('DS Add Response:', response);
             
@@ -2304,91 +2957,217 @@ function handleAddDS(e) {
             $submitBtn.find('span:not(.spinner-border)').text('Save Changes');
             
             if (response.success) {
-                $('#ds-success-alert').removeClass('d-none');
-                $('#ds-success-message').text(response.message);
-                $('#ds-error-alert').addClass('d-none');
+                showDSAlert('success', response.message || 'Data berhasil disimpan!');
                 
+                // Auto close modal setelah 2 detik
                 setTimeout(() => {
                     $('#modal-add-ds').modal('hide');
                     
+                    // Refresh data setelah modal tutup
                     setTimeout(() => {
                         refreshActualMaps();
                         loadTableDetailProgress();
-                        toastSuccess('DS Add Order updated successfully!');
+                        
+                        // Show success toast
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'DS Add Order berhasil disimpan: ' + (response.total_qty || totalQty) + ' pcs',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
                     }, 500);
                     
                 }, 2000);
                 
             } else {
-                $('#ds-error-alert').removeClass('d-none');
-                $('#ds-error-message').text(response.message);
-                $('#ds-success-alert').addClass('d-none');
+                showDSAlert('error', response.message || 'Gagal menyimpan data');
+                console.error('Error response:', response);
             }
         },
-        error: function(xhr) {
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                error: error,
+                response: xhr.responseText
+            });
+            
             $submitBtn.prop('disabled', false);
             $spinner.addClass('d-none');
             $submitBtn.find('span:not(.spinner-border)').text('Save Changes');
             
-            $('#ds-error-alert').removeClass('d-none');
-            $('#ds-error-message').text('Server error: ' + xhr.statusText);
+            let errorMsg = 'Server error: ';
+            try {
+                const err = JSON.parse(xhr.responseText);
+                errorMsg += err.message || err.error || error;
+            } catch (e) {
+                errorMsg += xhr.statusText || error;
+            }
+            
+            showDSAlert('error', errorMsg);
         }
     });
+    
+    return false;
 }
 
+// Helper untuk show alert di modal DS
+function showDSAlert(type, message) {
+    if (type === 'success') {
+        $('#ds-error-alert').addClass('d-none');
+        $('#ds-success-alert').removeClass('d-none');
+        $('#ds-success-message').text(message);
+    } else {
+        $('#ds-success-alert').addClass('d-none');
+        $('#ds-error-alert').removeClass('d-none');
+        $('#ds-error-message').html('<i class="bi bi-exclamation-triangle me-2"></i>' + message);
+    }
+}
+
+// Update handleAddNS untuk include hours data
 function handleAddNS(e) {
     e.preventDefault();
     
     const $form = $(this);
     const $submitBtn = $('#ns-submit-btn');
-    const originalText = $submitBtn.html();
+    const $spinner = $('#ns-spinner');
+    
+    console.log('=== NS ADD ORDER START ===');
+    
+    // Validasi jam
+    if (Object.keys(nsSelectedHours).length === 0) {
+        showNSAlert('error', 'Pilih minimal 1 jam untuk add order');
+        return false;
+    }
+    
+    // Filter hanya jam yang quantity > 0
+    let totalQty = 0;
+    let validHours = {};
+    
+    Object.keys(nsSelectedHours).forEach(hour => {
+        const qty = parseInt(nsSelectedHours[hour]) || 0;
+        if (qty > 0) {
+            validHours[hour] = qty;
+            totalQty += qty;
+        }
+    });
+    
+    if (totalQty <= 0) {
+        showNSAlert('error', 'Total quantity harus lebih dari 0');
+        return false;
+    }
+    
+    console.log('Valid hours:', validHours);
+    console.log('Total qty:', totalQty);
     
     $submitBtn.prop('disabled', true);
-    $submitBtn.html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+    $spinner.removeClass('d-none');
+    $submitBtn.find('span:not(.spinner-border)').text('Saving...');
     
-    const formData = $form.serialize();
+    // Buat FormData secara manual
+    const formData = new FormData();
+    formData.append('date', $('#add-ns-date').val());
+    formData.append('supplier_code', $('#add-ns-supplier').val());
+    formData.append('part_no', $('#add-ns-partno').val());
+    formData.append('type', 'ns');
+    formData.append('action', $('#ns-action').val());
+    formData.append('remark', $('#txt-ns-remark').val().trim());
+    formData.append('hours_data', JSON.stringify(validHours));
+    
+    console.log('FormData:', {
+        date: $('#add-ns-date').val(),
+        supplier: $('#add-ns-supplier').val(),
+        part_no: $('#add-ns-partno').val(),
+        hours_data: JSON.stringify(validHours),
+        total_qty: totalQty
+    });
     
     $.ajax({
         url: 'api/update_add_order.php',
         type: 'POST',
         data: formData,
+        processData: false,
+        contentType: false,
         dataType: 'json',
+        timeout: 10000,
+        beforeSend: function() {
+            console.log('Sending NS add order request...');
+        },
         success: function(response) {
             console.log('NS Add Response:', response);
             
             $submitBtn.prop('disabled', false);
-            $submitBtn.html(originalText);
+            $spinner.addClass('d-none');
+            $submitBtn.find('span:not(.spinner-border)').text('Save Changes');
             
             if (response.success) {
-                $('#ns-success-alert').removeClass('d-none');
-                $('#ns-success-message').text(response.message);
-                $('#ns-error-alert').addClass('d-none');
+                showNSAlert('success', response.message || 'Data berhasil disimpan!');
                 
+                // Auto close modal setelah 2 detik
                 setTimeout(() => {
                     $('#modal-add-ns').modal('hide');
                     
+                    // Refresh data setelah modal tutup
                     setTimeout(() => {
                         refreshActualMaps();
                         loadTableDetailProgress();
-                        toastSuccess('NS Add Order updated successfully!');
+                        
+                        // Show success toast
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'NS Add Order berhasil disimpan: ' + (response.total_qty || totalQty) + ' pcs',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
                     }, 500);
                     
                 }, 2000);
                 
             } else {
-                $('#ns-error-alert').removeClass('d-none');
-                $('#ns-error-message').text(response.message);
-                $('#ns-success-alert').addClass('d-none');
+                showNSAlert('error', response.message || 'Gagal menyimpan data');
+                console.error('Error response:', response);
             }
         },
-        error: function(xhr) {
-            $submitBtn.prop('disabled', false);
-            $submitBtn.html(originalText);
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                error: error,
+                response: xhr.responseText
+            });
             
-            $('#ns-error-alert').removeClass('d-none');
-            $('#ns-error-message').text('Server error: ' + xhr.statusText);
+            $submitBtn.prop('disabled', false);
+            $spinner.addClass('d-none');
+            $submitBtn.find('span:not(.spinner-border)').text('Save Changes');
+            
+            let errorMsg = 'Server error: ';
+            try {
+                const err = JSON.parse(xhr.responseText);
+                errorMsg += err.message || err.error || error;
+            } catch (e) {
+                errorMsg += xhr.statusText || error;
+            }
+            
+            showNSAlert('error', errorMsg);
         }
     });
+    
+    return false;
+}
+
+// Helper untuk show alert di modal NS
+function showNSAlert(type, message) {
+    if (type === 'success') {
+        $('#ns-error-alert').addClass('d-none');
+        $('#ns-success-alert').removeClass('d-none');
+        $('#ns-success-message').text(message);
+    } else {
+        $('#ns-success-alert').addClass('d-none');
+        $('#ns-error-alert').removeClass('d-none');
+        $('#ns-error-message').html('<i class="bi bi-exclamation-triangle me-2"></i>' + message);
+    }
 }
 
 // ================= INFORMATION FORM SUBMISSION =================
@@ -3876,24 +4655,35 @@ tableInformation = $('#table-information').DataTable({
         $input.val(currentVal + addValue);
     });
     
-    // Reset buttons
-    $('#btn-reset-ds').on('click', function() {
-        if (confirm('Are you sure you want to reset DS add order to 0?')) {
-            $('#txt-ds-addqty').val(0);
-            $('#txt-ds-remark').val('');
-            $('#ds-action').val('delete');
-            $('#form-add-ds').submit();
-        }
-    });
-    
-    $('#btn-reset-ns').on('click', function() {
-        if (confirm('Are you sure you want to reset NS add order to 0?')) {
-            $('#txt-ns-addqty').val(0);
-            $('#txt-ns-remark').val('');
-            $('#ns-action').val('delete');
-            $('#form-add-ns').submit();
-        }
-    });
+// Reset buttons
+$('#btn-reset-ds').on('click', function() {
+    if (confirm('Are you sure you want to reset ALL DS add orders to 0?\nThis action cannot be undone.')) {
+        // Prepare reset
+        dsSelectedHours = {};
+        $('#ds-action').val('reset');
+        $('#form-add-ds').submit();
+    }
+});
+
+$('#btn-reset-ns').on('click', function() {
+    if (confirm('Are you sure you want to reset ALL NS add orders to 0?\nThis action cannot be undone.')) {
+        // Prepare reset
+        nsSelectedHours = {};
+        $('#ns-action').val('reset');
+        $('#form-add-ns').submit();
+    }
+});
+
+// Modal close reset
+$('#modal-add-ds').on('hidden.bs.modal', function() {
+    dsSelectedHours = {};
+    dsCurrentPage = 1;
+});
+
+$('#modal-add-ns').on('hidden.bs.modal', function() {
+    nsSelectedHours = {};
+    nsCurrentPage = 1;
+});
     
     // ================= EVENT HANDLERS BARU UNTUK DS/NS =================
     
@@ -4182,42 +4972,27 @@ tableInformation = $('#table-information').DataTable({
         }, 1500);
     }, 1000);
     
-    // Auto-check new info every 30 seconds
-    setInterval(function() {
-        if (!$('.modal-add-information').is(':visible') && 
-            !$('.modal-update-information-from').is(':visible') && 
-            !$('.modal-update-information-to').is(':visible')) {
+setInterval(function() {
+    if (!$('.modal-add-information').is(':visible') && 
+        !$('.modal-update-information-from').is(':visible') && 
+        !$('.modal-update-information-to').is(':visible')) {
+        
+        if (!window.isNotificationChecking) {
+            window.isNotificationChecking = true;
             
             $.ajax({
                 url: 'api/check_new_info.php',
                 type: 'GET',
                 success: function(response) {
-                    console.log('🔔 Notif check:', response);
-                    if (response.success && (response.assigned_to_me > 0 || response.urgent_count > 0)) {
-                        // Play sound notification
-                        try {
-                            var audio = new Audio('assets/sound/notification.mp3');
-                            audio.volume = 0.3;
-                            audio.play().catch(e => console.log("Audio error:", e));
-                        } catch (e) {
-                            console.log("Audio not supported");
-                        }
-                        
-                        // Refresh information table if there are urgent items
-                        if (response.urgent_count > 0) {
-                            console.log('🔄 Refreshing info table due to new urgent items');
-                            fetchDataInformation();
-                        }
-                        
-                        // Update notification badge
-                        if (typeof updateNotificationBadge === 'function') {
-                            updateNotificationBadge(response.count);
-                        }
-                    }
+                    window.isNotificationChecking = false;
+                },
+                error: function() {
+                    window.isNotificationChecking = false;
                 }
             });
         }
-    }, 30000); // 30 seconds
+    }
+}, 60000); // 60 detik bukan 30 detik
 
     // Function to update notification badge
     function updateNotificationBadge(count) {
@@ -4228,4 +5003,42 @@ tableInformation = $('#table-information').DataTable({
             $badge.hide();
         }
     }
+
+    // Trigger notification check ketika ada update informasi
+    $(document).ajaxSuccess(function(event, xhr, settings) {
+        if (settings.url && (
+            settings.url.includes('data_information.php') ||
+            settings.url.includes('update_add_order.php') ||
+            settings.url.includes('upload_data.php')
+        )) {
+            console.log('📡 Data updated, triggering notification check...');
+            
+            // Trigger notification check setelah 2 detik
+            setTimeout(() => {
+                if (window.notificationSystem && typeof window.notificationSystem.forceCheck === 'function') {
+                    window.notificationSystem.forceCheck();
+                }
+            }, 2000);
+        }
+    });
+
+    // Check notifications saat page menjadi visible
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('👀 Page visible, checking notifications...');
+            if (window.notificationSystem) {
+                window.notificationSystem.forceCheck();
+            }
+        }
+    });
+
+    // Initial check setelah semua load
+    window.addEventListener('load', function() {
+        console.log('🚀 Page fully loaded, initial notification check...');
+        setTimeout(() => {
+            if (window.notificationSystem) {
+                window.notificationSystem.forceCheck();
+            }
+        }, 3000);
+    });
 });

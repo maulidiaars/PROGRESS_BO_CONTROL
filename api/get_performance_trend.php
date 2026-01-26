@@ -45,9 +45,9 @@ for ($i = $days; $i >= 0; $i--) {
         $totalOrder = (int)($rowOrder['total_order'] ?? 0);
         sqlsrv_free_stmt($stmtOrder);
         
-        // Total Incoming for the date (all hours)
+        // Total Incoming for the date (all hours) - PAKAI MAX BUKAN SUM
         $sqlIncoming = "
-        SELECT ISNULL(SUM(TRAN_QTY), 0) as total_incoming 
+        SELECT ISNULL(MAX(TRAN_QTY), 0) as total_incoming 
         FROM T_UPDATE_BO 
         WHERE DATE = ?
         ";

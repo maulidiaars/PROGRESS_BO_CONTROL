@@ -1,55 +1,7 @@
-<!-- Modal By Cycle -->
-<div class="modal fade detail-ds" id="modal-by-cycle" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-table">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <span style="font-size: 25px; font-weight: bold">Process By Cycle</span>
-          <br>
-          <span style="font-size: 14px; font-weight: bold; color: blue" id="txt-rangedate-cycle"></span>
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" style="font-size: 14px;" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="table-drag-container">
-          <table class="table-hover w-100" id="table-by-cycle">
-            <thead style="text-align: center; background-color: #f8f9fa; position: sticky; top: 0; z-index: 1;"> 
-              <tr>
-                <th style="width: 40px;">No.</th>
-                <th style="min-width: 80px;">Date</th>
-                <th style="min-width: 100px;">Supplier Code</th>
-                <th style="min-width: 100px;">Part No</th>
-                <th style="min-width: 150px;">Part Name</th>
-                <th style="min-width: 50px;">C1</th>
-                <th style="min-width: 50px;">C2</th>
-                <th style="min-width: 50px;">C3</th>
-                <th style="min-width: 50px;">C4</th>
-                <th style="min-width: 50px;">C5</th>
-                <th style="min-width: 50px;">C6</th>
-                <th style="min-width: 50px;">C7</th>
-                <th style="min-width: 50px;">C8</th>
-                <th style="min-width: 50px;">C9</th>
-                <th style="min-width: 50px;">C10</th>
-                <th style="min-width: 50px;">C11</th>
-                <th style="min-width: 50px;">C12</th>
-                <th style="min-width: 60px;">Total</th>
-              </tr>
-            </thead>
-            <tbody style="text-align: center;"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <img src="./assets/img/logo-denso.png" width="90px" height="40px" class="me-auto">
-        <button type="button" style="font-size: 15px;" class="btn btn-warning btn-back-component" data-bs-dismiss="modal">Back</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Modal By Accum -->
 <div class="modal fade detail-ds" id="modalByAccum" tabindex="-1">  
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-table">  
+  <div class="modal-dialog modal-wide modal-dialog-centered modal-table">  
     <div class="modal-content">  
       <div class="modal-header">  
         <h5 class="modal-title">  
@@ -103,7 +55,7 @@
 
 <!-- Modal Detail D/S (REVISI) -->
 <div class="modal fade detail-ds" id="modal-detail-ds" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-table">
+  <div class="modal-dialog modal-wide modal-dialog-centered modal-table">
     <div class="modal-content">
 
       <div class="modal-header">
@@ -219,7 +171,7 @@
 
 <!-- Modal Detail N/S (REVISI) -->
 <div class="modal fade detail-ns" id="modal-detail-ns" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-table">
+  <div class="modal-dialog modal-wide modal-dialog-centered modal-table">
     <div class="modal-content">
 
       <div class="modal-header">
@@ -457,5 +409,10 @@
         font-size: 12px;
         padding: 6px !important;
     }
+}
+
+.modal-wide {
+    max-width: 93vw;   /* atau 90vw bebas */
+    width: 93vw;
 }
 </style>

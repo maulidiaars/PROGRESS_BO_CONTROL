@@ -42,12 +42,18 @@ WITH TRAN_DATA AS (
             ub.HOUR,
             SUM(ub.TRAN_QTY) AS TRAN_QTY
         FROM T_UPDATE_BO ub
+        -- PERBAIKAN: HANYA MATCH PART_NO DAN DATE, TANPA SUPPLIER CODE!
         WHERE ub.HOUR BETWEEN 8 AND 20
         AND EXISTS (
             SELECT 1 FROM T_ORDER o 
-            WHERE o.PART_NO = ub.PART_NO 
-            AND o.DELV_DATE = ub.DATE
+            WHERE o.DELV_DATE = ub.DATE 
+            AND (
+                o.PART_NO = ub.PART_NO
+                OR REPLACE(o.PART_NO, ' ', '') = REPLACE(ub.PART_NO, ' ', '')
+                OR UPPER(RTRIM(LTRIM(o.PART_NO))) = UPPER(RTRIM(LTRIM(ub.PART_NO)))
+            )
         )
+        AND ub.DATE BETWEEN '$DATE1' AND '$DATE2'
         GROUP BY ub.DATE, ub.PART_NO, ub.PART_DESC, ub.HOUR
     ) AS SourceTable
     PIVOT (
@@ -80,7 +86,6 @@ ORD_DATA AS (
             PART_NO,
             PART_NAME,
             SUPPLIER_CODE,
-            -- PERHITUNGAN TOTAL PER JAM (SUM semua cycle)
             SUM(CASE 
                 WHEN TRY_CAST(ETA AS TIME) BETWEEN '08:00:00' AND '08:59:59' THEN ORD_QTY 
                 ELSE 0 
@@ -138,7 +143,8 @@ ORD_DATA AS (
         AND ETA != ''
         AND TRY_CAST(ETA AS TIME) IS NOT NULL
         AND TRY_CAST(ETA AS TIME) BETWEEN '08:00:00' AND '20:00:00'
-        GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE  -- TANPA ETA_HOUR!
+        AND DELV_DATE BETWEEN '$DATE1' AND '$DATE2'
+        GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE
     ) AS SourceTable
 )
 SELECT 

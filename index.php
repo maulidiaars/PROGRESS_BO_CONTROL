@@ -141,5 +141,33 @@ $(document).ready(function() {
 });
 </script>
 
+<!-- Notification Auto-init Script -->
+<script>
+// Force initialize notification system immediately
+$(document).ready(function() {
+    console.log('🎯 Main page loaded, ensuring notification system...');
+    
+    // Double-check initialization setelah 2 detik
+    setTimeout(() => {
+        if (!window.notificationSystem) {
+            console.log('⚠️ NotificationSystem not found, creating...');
+            window.notificationSystem = new NotificationSystem();
+        } else {
+            console.log('✅ NotificationSystem already initialized');
+            // Force check sekarang juga
+            window.notificationSystem.forceCheck();
+        }
+    }, 2000);
+    
+    // Check setiap 5 detik untuk memastikan polling aktif
+    setInterval(() => {
+        if (window.notificationSystem && !window.notificationSystem.pollingActive) {
+            console.log('🔄 Polling seems inactive, forcing check...');
+            window.notificationSystem.forceCheck();
+        }
+    }, 5000);
+});
+</script>
+
 </body>
 </html>

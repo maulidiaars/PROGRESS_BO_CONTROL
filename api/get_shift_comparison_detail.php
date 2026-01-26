@@ -22,13 +22,13 @@ try {
         SUM(ISNULL(o.ORD_QTY, 0)) as total_order_qty,
         ISNULL(MAX(o.ADD_DS), 0) as add_ds,
         ISNULL((
-            SELECT SUM(t.TRAN_QTY)
+            SELECT MAX(t.TRAN_QTY)  -- PAKAI MAX BUKAN SUM
             FROM T_UPDATE_BO t
             WHERE t.DATE = o.DELV_DATE
             AND t.PART_NO = o.PART_NO
             AND t.HOUR BETWEEN 7 AND 20
         ), 0) as ds_actual,
-        o.CURRENT_STATUS as status
+        MAX(o.CURRENT_STATUS) as status
     FROM T_ORDER o
     WHERE o.DELV_DATE >= ? 
     AND o.DELV_DATE <= ?
@@ -39,7 +39,7 @@ try {
         (o.ETA LIKE '0[0-9]:%' OR o.ETA LIKE '1[0-9]:%') OR
         (CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
     )
-    GROUP BY o.DELV_DATE, o.PART_NO, o.SUPPLIER_CODE, o.CURRENT_STATUS
+    GROUP BY o.DELV_DATE, o.PART_NO, o.SUPPLIER_CODE
     HAVING SUM(ISNULL(o.ORD_QTY, 0)) > 0
     ";
     
@@ -68,43 +68,30 @@ try {
             $ds_total_incoming += $ds_actual;
             $ds_total_delivery++;
             
-            // Klasifikasi berdasarkan status
-            switch ($status) {
-                case 'OK':
-                    $ds_ok_count++;
-                    break;
-                case 'ON_PROGRESS':
-                    $ds_on_progress_count++;
-                    break;
-                case 'OVER':
-                    $ds_over_count++;
-                    break;
-                case 'DELAY':
+            // Hitung status berdasarkan data actual vs order
+            $completion_rate = $total_order > 0 ? ($ds_actual / $total_order * 100) : 0;
+            
+            if ($ds_actual > $total_order) {
+                $ds_over_count++;
+            } else if ($ds_actual >= $total_order) {
+                $ds_ok_count++;
+            } else {
+                // Masih kurang, cek apakah delay atau on progress
+                $currentHour = date('H');
+                $delvDate = intval($row['DELV_DATE']);
+                
+                if ($delvDate < intval($today)) {
                     $ds_delay_count++;
-                    break;
-                default:
-                    // Jika status tidak valid, hitung berdasarkan logika
-                    if ($ds_actual > $total_order) {
-                        $ds_over_count++;
-                    } else if ($ds_actual >= $total_order) {
-                        $ds_ok_count++;
+                } else if ($delvDate > intval($today)) {
+                    $ds_on_progress_count++;
+                } else {
+                    // Hari ini, cek checkpoint (16:00 untuk DS)
+                    if ($currentHour >= 16) {
+                        $ds_delay_count++;
                     } else {
-                        $currentHour = date('H');
-                        $delvDate = intval($row['DELV_DATE']);
-                        
-                        if ($delvDate < intval($today)) {
-                            $ds_delay_count++;
-                        } else if ($delvDate > intval($today)) {
-                            $ds_on_progress_count++;
-                        } else {
-                            // Hari ini, cek checkpoint
-                            if ($currentHour >= 16) {
-                                $ds_delay_count++;
-                            } else {
-                                $ds_on_progress_count++;
-                            }
-                        }
+                        $ds_on_progress_count++;
                     }
+                }
             }
         }
         sqlsrv_free_stmt($stmtDS);
@@ -118,6 +105,7 @@ try {
     
     // Completion rate overall untuk DS
     $ds_completion_rate = $ds_total_order > 0 ? round(($ds_total_incoming / $ds_total_order) * 100, 1) : 0;
+    $ds_has_data = $ds_total_delivery > 0;
     
     // ==================== NIGHT SHIFT (21:00 - 06:00) ====================
     $sqlNS = "
@@ -128,13 +116,13 @@ try {
         SUM(ISNULL(o.ORD_QTY, 0)) as total_order_qty,
         ISNULL(MAX(o.ADD_NS), 0) as add_ns,
         ISNULL((
-            SELECT SUM(t.TRAN_QTY)
+            SELECT MAX(t.TRAN_QTY)  -- PAKAI MAX BUKAN SUM
             FROM T_UPDATE_BO t
             WHERE t.DATE = o.DELV_DATE
             AND t.PART_NO = o.PART_NO
             AND (t.HOUR BETWEEN 21 AND 23 OR t.HOUR BETWEEN 0 AND 6)
         ), 0) as ns_actual,
-        o.CURRENT_STATUS as status
+        MAX(o.CURRENT_STATUS) as status
     FROM T_ORDER o
     WHERE o.DELV_DATE >= ? 
     AND o.DELV_DATE <= ?
@@ -145,7 +133,7 @@ try {
         (o.ETA LIKE '0[0-9]:%' OR o.ETA LIKE '1[0-9]:%') OR
         (CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
     )
-    GROUP BY o.DELV_DATE, o.PART_NO, o.SUPPLIER_CODE, o.CURRENT_STATUS
+    GROUP BY o.DELV_DATE, o.PART_NO, o.SUPPLIER_CODE
     HAVING SUM(ISNULL(o.ORD_QTY, 0)) > 0
     ";
     
@@ -173,43 +161,30 @@ try {
             $ns_total_incoming += $ns_actual;
             $ns_total_delivery++;
             
-            // Klasifikasi berdasarkan status
-            switch ($status) {
-                case 'OK':
-                    $ns_ok_count++;
-                    break;
-                case 'ON_PROGRESS':
-                    $ns_on_progress_count++;
-                    break;
-                case 'OVER':
-                    $ns_over_count++;
-                    break;
-                case 'DELAY':
+            // Hitung status berdasarkan data actual vs order
+            $completion_rate = $total_order > 0 ? ($ns_actual / $total_order * 100) : 0;
+            
+            if ($ns_actual > $total_order) {
+                $ns_over_count++;
+            } else if ($ns_actual >= $total_order) {
+                $ns_ok_count++;
+            } else {
+                // Masih kurang, cek apakah delay atau on progress
+                $currentHour = date('H');
+                $delvDate = intval($row['DELV_DATE']);
+                
+                if ($delvDate < intval($today)) {
                     $ns_delay_count++;
-                    break;
-                default:
-                    // Jika status tidak valid, hitung berdasarkan logika
-                    if ($ns_actual > $total_order) {
-                        $ns_over_count++;
-                    } else if ($ns_actual >= $total_order) {
-                        $ns_ok_count++;
+                } else if ($delvDate > intval($today)) {
+                    $ns_on_progress_count++;
+                } else {
+                    // Hari ini, cek checkpoint untuk NS (04:00)
+                    if ($currentHour >= 4 && $currentHour < 21) {
+                        $ns_delay_count++;
                     } else {
-                        $currentHour = date('H');
-                        $delvDate = intval($row['DELV_DATE']);
-                        
-                        if ($delvDate < intval($today)) {
-                            $ns_delay_count++;
-                        } else if ($delvDate > intval($today)) {
-                            $ns_on_progress_count++;
-                        } else {
-                            // Hari ini, cek checkpoint untuk NS (04:00)
-                            if ($currentHour >= 4 && $currentHour < 21) {
-                                $ns_delay_count++;
-                            } else {
-                                $ns_on_progress_count++;
-                            }
-                        }
+                        $ns_on_progress_count++;
                     }
+                }
             }
         }
         sqlsrv_free_stmt($stmtNS);
@@ -223,6 +198,7 @@ try {
     
     // Completion rate overall untuk NS
     $ns_completion_rate = $ns_total_order > 0 ? round(($ns_total_incoming / $ns_total_order) * 100, 1) : 0;
+    $ns_has_data = $ns_total_delivery > 0;
     
     // ==================== RESPONSE FORMAT ====================
     $result = [
@@ -238,7 +214,8 @@ try {
             'delay_percentage' => $ds_delay_percentage,
             'total_delivery' => $ds_total_delivery,
             'total_order' => $ds_total_order,
-            'total_incoming' => $ds_total_incoming
+            'total_incoming' => $ds_total_incoming,
+            'has_data' => $ds_has_data
         ],
         'ns' => [
             'completion_rate' => $ns_completion_rate,
@@ -252,7 +229,8 @@ try {
             'delay_percentage' => $ns_delay_percentage,
             'total_delivery' => $ns_total_delivery,
             'total_order' => $ns_total_order,
-            'total_incoming' => $ns_total_incoming
+            'total_incoming' => $ns_total_incoming,
+            'has_data' => $ns_has_data
         ],
         'period' => date('M Y'),
         'date_range' => date('d M', strtotime($currentMonth)) . ' - ' . date('d M', strtotime($today))
@@ -275,7 +253,8 @@ try {
             'delay_percentage' => 0,
             'total_delivery' => 0,
             'total_order' => 0,
-            'total_incoming' => 0
+            'total_incoming' => 0,
+            'has_data' => false
         ],
         'ns' => [
             'completion_rate' => 0,
@@ -289,7 +268,8 @@ try {
             'delay_percentage' => 0,
             'total_delivery' => 0,
             'total_order' => 0,
-            'total_incoming' => 0
+            'total_incoming' => 0,
+            'has_data' => false
         ]
     ]);
 }

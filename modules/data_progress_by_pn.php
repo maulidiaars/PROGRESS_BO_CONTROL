@@ -37,7 +37,7 @@ try {
     $date1 = ($date1 !== '' && is_numeric($date1)) ? intval($date1) : '';
     $date2 = ($date2 !== '' && is_numeric($date2)) ? intval($date2) : '';
 
-    // QUERY YANG DIPERBAIKI: GROUP BY TANPA ETA, AGREGASI SEMUA CYCLE
+    // QUERY YANG DIPERBAIKI
     $sql = "SELECT
         CONVERT(varchar, o.DELV_DATE) AS DATE,  
         ISNULL(o.SUPPLIER_CODE, '') AS SUPPLIER_CODE,  
@@ -88,10 +88,9 @@ try {
         -- ETA: untuk perhitungan status, ambil ETA pertama
         MAX(o.ETA) AS ETA,
         
-
         -- Actual incoming (REAL-TIME QUERY) - PAKAI MAX BUKAN SUM!
         ISNULL((
-            SELECT MAX(ub.TRAN_QTY)  -- PAKAI MAX, BUKAN SUM!
+            SELECT MAX(ub.TRAN_QTY)
             FROM T_UPDATE_BO ub 
             WHERE (
                 ub.PART_NO = o.PART_NO 
@@ -102,7 +101,7 @@ try {
         ), 0) AS DS_ACTUAL,
 
         ISNULL((
-            SELECT MAX(ub.TRAN_QTY)  -- PAKAI MAX, BUKAN SUM!
+            SELECT MAX(ub.TRAN_QTY)
             FROM T_UPDATE_BO ub 
             WHERE (
                 ub.PART_NO = o.PART_NO 
@@ -136,7 +135,6 @@ try {
         }
     }
 
-    // PERHATIAN: GROUP BY TANPA ETA!
     $sql .= " GROUP BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO, o.PART_NAME
               ORDER BY o.DELV_DATE DESC, o.SUPPLIER_CODE, o.PART_NO";
 
@@ -154,6 +152,8 @@ try {
     }
 
     $rowCount = 0;
+    $currentHour = intval(date('H'));
+    
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         // Format data dasar
         $row['DATE'] = isset($row['DATE']) ? strval($row['DATE']) : '';
@@ -169,17 +169,44 @@ try {
         $row['ORD_QTY_TOTAL'] = $row['TOTAL_REGULAR_ORDER'] + $row['ADD_DS'] + $row['ADD_NS'];
         $row['TOTAL_INCOMING'] = $row['DS_ACTUAL'] + $row['NS_ACTUAL'];
         
-        // ========== PAKE FUNGSI STATUS UNIVERSAL ==========
-        $row['STATUS'] = calculateOrderStatus(
-            $row['DATE'],           // tanggal order
-            $row['ETA'],            // ETA (ambil yang pertama)
-            $row['REGULER_DS'],     // DS reguler
-            $row['ADD_DS'],         // DS add
-            $row['REGULER_NS'],     // NS reguler
-            $row['ADD_NS'],         // NS add
-            $row['DS_ACTUAL'],      // actual DS
-            $row['NS_ACTUAL']       // actual NS
+        // ========== PAKE FUNGSI STATUS BARU DENGAN CURRENT HOUR ==========
+        // Hitung status D/S terpisah
+        $row['DS_STATUS'] = calculateDSStatus(
+            $row['DATE'],
+            $row['ETA'],
+            $row['REGULER_DS'],
+            $row['ADD_DS'],
+            $row['DS_ACTUAL'],
+            $currentHour
         );
+        
+        // Hitung status N/S terpisah
+        $row['NS_STATUS'] = calculateNSStatus(
+            $row['DATE'],
+            $row['ETA'],
+            $row['REGULER_NS'],
+            $row['ADD_NS'],
+            $row['NS_ACTUAL'],
+            $currentHour
+        );
+        
+        // Status total (overall) dengan current hour
+        $row['STATUS'] = calculateOrderStatus(
+            $row['DATE'],
+            $row['ETA'],
+            $row['REGULER_DS'],
+            $row['ADD_DS'],
+            $row['REGULER_NS'],
+            $row['ADD_NS'],
+            $row['DS_ACTUAL'],
+            $row['NS_ACTUAL'],
+            $currentHour
+        );
+        
+        // Tambahkan debug info
+        $row['IS_TODAY'] = isToday($row['DATE']) ? 'YES' : 'NO';
+        $row['CURRENT_HOUR'] = $currentHour;
+        $row['AFTER_16'] = ($currentHour >= 16) ? 'YES' : 'NO';
         
         $row['REMARK_DS'] = isset($row['REMARK_DS']) ? strval($row['REMARK_DS']) : '';
         $row['REMARK_NS'] = isset($row['REMARK_NS']) ? strval($row['REMARK_NS']) : '';
@@ -190,12 +217,14 @@ try {
 
     sqlsrv_free_stmt($stmt);
 
-    error_log("Data returned: " . $rowCount . " rows (WITH GROUPING FIX - NO DUPLICATE)");
+    error_log("Data returned: " . $rowCount . " rows (WITH NEW TAMENG LOGIC - Only today)");
     
     $response["success"] = true;
     $response["data"] = $data;
     $response["message"] = "Data loaded successfully";
     $response["count"] = $rowCount;
+    $response["current_hour"] = $currentHour;
+    $response["after_16"] = ($currentHour >= 16);
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
     

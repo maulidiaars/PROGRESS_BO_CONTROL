@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/status_logic.php'; // INCLUDE BARU
+require_once __DIR__ . '/../config/status_logic.php';
 
 if (!$conn) {
     echo json_encode(['error' => 'Database connection failed']);
@@ -9,10 +9,11 @@ if (!$conn) {
 }
 
 try {
-    $currentHour = date('H');
+    $currentHour = intval(date('H'));
     $today = date('Ymd');
+    $yesterday = date('Ymd', strtotime('-1 day'));
     
-    // Ambil semua order hari ini yang belum OK/OVER
+    // Ambil semua order hari ini dan kemarin yang belum OK/OVER
     $sql = "SELECT 
         o.DELV_DATE,
         o.SUPPLIER_CODE,
@@ -24,41 +25,64 @@ try {
         o.ADD_NS,
         o.CURRENT_STATUS,
         ISNULL((
-            SELECT SUM(ub.TRAN_QTY) 
+            SELECT MAX(ub.TRAN_QTY) 
             FROM T_UPDATE_BO ub 
             WHERE ub.PART_NO = o.PART_NO 
             AND ub.DATE = o.DELV_DATE
             AND ub.HOUR BETWEEN 7 AND 20
         ), 0) AS DS_ACTUAL,
         ISNULL((
-            SELECT SUM(ub.TRAN_QTY) 
+            SELECT MAX(ub.TRAN_QTY) 
             FROM T_UPDATE_BO ub 
             WHERE ub.PART_NO = o.PART_NO 
             AND ub.DATE = o.DELV_DATE
             AND (ub.HOUR BETWEEN 21 AND 23 OR ub.HOUR BETWEEN 0 AND 6)
         ), 0) AS NS_ACTUAL
     FROM T_ORDER o
-    WHERE o.DELV_DATE = ?
+    WHERE (o.DELV_DATE = ? OR o.DELV_DATE = ?)
     AND o.CURRENT_STATUS NOT IN ('OK', 'OVER')
     GROUP BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO, o.ETA,
              o.REGULER_DS, o.ADD_DS, o.REGULER_NS, o.ADD_NS, o.CURRENT_STATUS";
     
-    $stmt = sqlsrv_query($conn, $sql, [$today]);
+    $stmt = sqlsrv_query($conn, $sql, [$today, $yesterday]);
     $updates = [];
     
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        $orderDate = intval($row['DELV_DATE']);
+        $orderDate = strval($row['DELV_DATE']);
+        $isToday = isToday($orderDate);
         
-        // ========== PAKE FUNGSI STATUS UNIVERSAL ==========
+        // ========== PAKE FUNGSI STATUS BARU ==========
+        // Hitung status D/S terpisah
+        $dsStatus = calculateDSStatus(
+            $row['DELV_DATE'],
+            $row['ETA'],
+            $row['REGULER_DS'],
+            $row['ADD_DS'],
+            $row['DS_ACTUAL'],
+            $currentHour
+        );
+        
+        // Hitung status N/S terpisah
+        $nsStatus = calculateNSStatus(
+            $row['DELV_DATE'],
+            $row['ETA'],
+            $row['REGULER_NS'],
+            $row['ADD_NS'],
+            $row['NS_ACTUAL'],
+            $currentHour
+        );
+        
+        // Status total
         $newStatus = calculateOrderStatus(
-            $row['DELV_DATE'],      // tanggal order
-            $row['ETA'],            // ETA
-            $row['REGULER_DS'],     // DS reguler
-            $row['ADD_DS'],         // DS add
-            $row['REGULER_NS'],     // NS reguler
-            $row['ADD_NS'],         // NS add
-            $row['DS_ACTUAL'],      // actual DS
-            $row['NS_ACTUAL']       // actual NS
+            $row['DELV_DATE'],
+            $row['ETA'],
+            $row['REGULER_DS'],
+            $row['ADD_DS'],
+            $row['REGULER_NS'],
+            $row['ADD_NS'],
+            $row['DS_ACTUAL'],
+            $row['NS_ACTUAL'],
+            $currentHour
         );
         
         // Update jika status berubah
@@ -75,8 +99,14 @@ try {
             
             $updates[] = [
                 'part_no' => $row['PART_NO'],
+                'date' => $orderDate,
+                'is_today' => $isToday,
                 'old_status' => $row['CURRENT_STATUS'],
-                'new_status' => $newStatus
+                'new_status' => $newStatus,
+                'ds_status' => $dsStatus,
+                'ns_status' => $nsStatus,
+                'current_hour' => $currentHour,
+                'after_16' => ($currentHour >= 16)
             ];
         }
     }
@@ -85,7 +115,10 @@ try {
         'success' => true,
         'message' => 'Status updated successfully',
         'updates' => $updates,
-        'count' => count($updates)
+        'count' => count($updates),
+        'current_hour' => $currentHour,
+        'today' => $today,
+        'yesterday' => $yesterday
     ]);
     
 } catch (Exception $e) {

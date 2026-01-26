@@ -33,7 +33,7 @@
         </div>
 
         <!-- KONTEN UTAMA YANG BISA DI-COLLAPSE -->
-        <div class="analytics-content" id="analyticsContent">
+        <div class="analytics-content collapsed" id="analyticsContent">
           
           <!-- TABS NAVIGATION -->
           <div class="analytics-tabs">
@@ -148,7 +148,6 @@
 
             <!-- TAB 2: SHIFT COMPARISON -->
             <div class="tab-pane fade" id="shift-content" role="tabpanel">
-              <!-- (Konten Shift Comparison sama seperti sebelumnya) -->
               <div class="row">
                 <div class="col-lg-12">
                   <!-- FILTER SHIFT -->
@@ -416,7 +415,6 @@
 
 <!-- BEAUTIFUL TOOLTIP -->
 <div id="chartTooltip" class="chart-tooltip">
-  <!-- (Tooltip sama seperti sebelumnya) -->
   <div class="tooltip-header">
     <div class="tooltip-title">
       <span class="tooltip-icon" id="tooltipIcon"></span>
@@ -543,7 +541,7 @@
 
 /* ICON COLLAPSE – WARNA LEBIH CAKEP */
 .collapse-section-icon {
-  color: #4c51bf; /* warna utama (tetep) */
+  color: #4c51bf;
   background: linear-gradient(
     135deg,
     rgba(76, 81, 191, 0.15),
@@ -554,7 +552,6 @@
   transition: transform 0.35s ease, background 0.3s ease;
 }
 
-/* hover dikit biar hidup */
 .collapse-section-icon:hover {
   background: linear-gradient(
     135deg,
@@ -563,12 +560,9 @@
   );
 }
 
-/* ROTASI DOANG — WARNA TETEP */
 .collapse-section-icon.collapsed {
   transform: rotate(180deg);
 }
-
-
 
 .analytics-subtitle {
   color: #718096;
@@ -1185,6 +1179,7 @@
   transform: translateY(10px);
   transition: all 0.3s ease;
   pointer-events: none;
+  display: none;
 }
 
 .chart-tooltip.visible {
@@ -1543,8 +1538,8 @@ let currentShiftData = null;
 let currentTrendData = null;
 let isPercentageView = true;
 
-// State untuk section collapse
-let isSectionCollapsed = false;
+// State untuk section collapse - Default: TRUE (tertutup)
+let isSectionCollapsed = true;
 
 // Toggle seluruh section collapse
 function toggleSectionCollapse(event) {
@@ -1569,6 +1564,9 @@ function toggleSectionCollapse(event) {
     
     // Stop auto-refresh jika collapsed
     clearAllIntervals();
+    
+    // Hapus chart yang aktif untuk hemat memory
+    destroyAllCharts();
   } else {
     // Expand section
     content.removeClass('collapsed');
@@ -1578,14 +1576,40 @@ function toggleSectionCollapse(event) {
     // Kembalikan border radius
     $('.analytics-card').css('border-radius', '16px');
     
-    // Load chart yang aktif
+    // Load chart yang aktif setelah delay untuk smooth animation
     setTimeout(() => {
       if ($('#trend-tab').hasClass('active')) {
         loadTrendChart();
       } else {
         loadShiftComparison();
       }
+      
+      // Mulai auto-refresh lagi
+      startAutoRefresh();
     }, 300);
+  }
+  
+  // Simpan state ke localStorage
+  localStorage.setItem('chartSectionCollapsed', isSectionCollapsed);
+}
+
+// Fungsi untuk menghancurkan semua chart
+function destroyAllCharts() {
+  if (trendChart) {
+    trendChart.destroy();
+    trendChart = null;
+  }
+  if (dsComparisonChart) {
+    dsComparisonChart.destroy();
+    dsComparisonChart = null;
+  }
+  if (nsComparisonChart) {
+    nsComparisonChart.destroy();
+    nsComparisonChart = null;
+  }
+  if (totalComparisonChart) {
+    totalComparisonChart.destroy();
+    totalComparisonChart = null;
   }
 }
 
@@ -1600,13 +1624,28 @@ $(document).ready(function() {
   });
 });
 
-// Clear semua interval ketika section collapsed
+// Clear semua interval
 function clearAllIntervals() {
   // Clear interval auto-refresh
   const intervalId = window.setInterval(function(){}, 9999);
   for (let i = 1; i < intervalId; i++) {
     window.clearInterval(i);
   }
+}
+
+// Start auto refresh
+function startAutoRefresh() {
+  // Auto-refresh setiap 2 menit
+  setInterval(() => {
+    if (!isSectionCollapsed) {
+      if ($('#trend-tab').hasClass('active')) {
+        loadTrendChart();
+      } else if ($('#shift-tab').hasClass('active')) {
+        loadShiftComparison();
+      }
+      updateLastUpdated();
+    }
+  }, 120000);
 }
 
 // Format bulan Indonesia
@@ -2004,191 +2043,6 @@ function loadTrendChart() {
         ];
       }
       
-      const options = {
-        series: seriesConfig,
-        chart: {
-          height: 380,
-          toolbar: {
-            show: true,
-            tools: {
-              download: true,
-              selection: true,
-              zoom: true,
-              zoomin: true,
-              zoomout: true,
-              pan: true,
-              reset: true
-            }
-          },
-          zoom: {
-            enabled: true,
-            type: 'x'
-          },
-          animations: {
-            enabled: true,
-            easing: 'easeinout',
-            speed: 800,
-            animateGradually: {
-              enabled: true,
-              delay: 150
-            },
-            dynamicAnimation: {
-              enabled: true,
-              speed: 350
-            }
-          }
-        },
-        plotOptions: {
-          bar: {
-            columnWidth: '60%',
-            dataLabels: {
-              position: 'top'
-            }
-          }
-        },
-        dataLabels: {
-          enabled: chartType === 'bar',
-          offsetY: -20,
-          style: {
-            fontSize: '11px',
-            colors: [planColor, actualColor]
-          },
-          formatter: function(val) {
-            return val.toLocaleString('id-ID', { 
-              minimumFractionDigits: 0, 
-              maximumFractionDigits: 0 
-            });
-          },
-          background: {
-            enabled: true,
-            foreColor: '#ffffff',
-            padding: 4,
-            borderRadius: 4,
-            borderWidth: 1,
-            borderColor: '#e2e8f0',
-            opacity: 0.9
-          }
-        },
-        stroke: {
-          curve: 'smooth',
-          width: chartType === 'bar' ? [0, 4] : 4,
-          dashArray: chartType === 'line' ? [0, 0] : 0
-        },
-        xaxis: {
-          categories: dates,
-          labels: {
-            style: {
-              colors: '#64748b',
-              fontSize: '11px',
-              fontFamily: 'Segoe UI, Inter, sans-serif'
-            },
-            rotate: -45
-          },
-          axisBorder: {
-            show: true,
-            color: '#e2e8f0'
-          },
-          axisTicks: {
-            show: true,
-            color: '#e2e8f0'
-          },
-          tooltip: {
-            enabled: true
-          }
-        },
-        yaxis: {
-          title: {
-            text: 'Quantity (pcs)',
-            style: {
-              color: '#64748b',
-              fontSize: '12px',
-              fontWeight: 500
-            }
-          },
-          labels: {
-            style: {
-              colors: '#64748b',
-              fontSize: '11px'
-            },
-            formatter: function(val) {
-              return val.toLocaleString('id-ID', { 
-                minimumFractionDigits: 0, 
-                maximumFractionDigits: 0 
-              });
-            }
-          },
-          min: 0
-        },
-        fill: {
-          type: 'gradient',
-          gradient: {
-            shadeIntensity: 1,
-            opacityFrom: 0.7,
-            opacityTo: 0.2,
-            stops: [0, 90, 100]
-          }
-        },
-        tooltip: {
-          theme: 'light',
-          style: {
-            fontSize: '12px',
-            fontFamily: 'Segoe UI, Inter, sans-serif'
-          },
-          y: {
-            formatter: function(val, { seriesIndex }) {
-              const suffix = seriesIndex === 0 ? ' (Plan)' : ' (Actual)';
-              return val.toLocaleString('id-ID', { 
-                minimumFractionDigits: 0, 
-                maximumFractionDigits: 0 
-              }) + ' pcs' + suffix;
-            }
-          },
-          marker: {
-            show: true
-          },
-          shared: true,
-          intersect: false
-        },
-        legend: {
-          position: 'top',
-          horizontalAlign: 'right',
-          fontSize: '12px',
-          fontFamily: 'Segoe UI, Inter, sans-serif',
-          markers: {
-            width: 12,
-            height: 12,
-            radius: 6,
-            strokeWidth: 2,
-            strokeColors: ['#ffffff', '#ffffff'],
-            colors: [planColor, actualColor]
-          },
-          itemMargin: {
-            horizontal: 15,
-            vertical: 5
-          }
-        },
-        grid: {
-          borderColor: '#e2e8f0',
-          strokeDashArray: 4,
-          padding: {
-            top: 20,
-            right: 20,
-            bottom: 10,
-            left: 20
-          },
-          yaxis: {
-            lines: {
-              show: true
-            }
-          },
-          xaxis: {
-            lines: {
-              show: true
-            }
-          }
-        },
-        colors: [planColor, actualColor]
-      };
       
       trendChart = new ApexCharts(document.querySelector("#trendChart"), options);
       trendChart.render();
@@ -2219,7 +2073,7 @@ function resetTrendStats() {
   $('#totalVariance').text('0%').removeClass('positive negative');
 }
 
-// Load shift comparison data
+// Load shift comparison data - FIXED untuk sinkron dengan data
 function loadShiftComparison() {
   // Jika section collapsed, jangan load chart
   if (isSectionCollapsed) return;
@@ -2251,7 +2105,8 @@ function loadShiftComparison() {
         ok_percentage: 0,
         on_progress_percentage: 0,
         over_percentage: 0,
-        delay_percentage: 0
+        delay_percentage: 0,
+        has_data: (ds.total_delivery || 0) > 0 || (ns.total_delivery || 0) > 0
       };
       
       // Calculate percentages for total
@@ -2262,7 +2117,7 @@ function loadShiftComparison() {
         total.delay_percentage = (total.delay_count / total.total_delivery * 100);
       }
       
-      // Calculate completion rates
+      // Calculate completion rates berdasarkan data yang sebenarnya
       ds.completion_rate = ds.total_order > 0 ? (ds.total_incoming / ds.total_order * 100) : 0;
       ns.completion_rate = ns.total_order > 0 ? (ns.total_incoming / ns.total_order * 100) : 0;
       total.completion_rate = total.total_order > 0 ? (total.total_incoming / total.total_order * 100) : 0;
@@ -2282,22 +2137,24 @@ function loadShiftComparison() {
       $('#currentMonth').text(monthYear);
       $('#shiftDateRange').text(response.date_range || '');
       
-      // Update overall status
-      let overallStatus = 'LOADING';
-      let statusColor = '#1a365d';
+      // Update overall status berdasarkan data yang sebenarnya
+      let overallStatus = 'NO DATA';
+      let statusColor = '#718096';
       
-      if (total.completion_rate >= 90) {
-        overallStatus = 'EXCELLENT';
-        statusColor = '#38a169';
-      } else if (total.completion_rate >= 70) {
-        overallStatus = 'GOOD';
-        statusColor = '#4299e1';
-      } else if (total.completion_rate >= 50) {
-        overallStatus = 'NEEDS ATTENTION';
-        statusColor = '#d69e2e';
-      } else {
-        overallStatus = 'CRITICAL';
-        statusColor = '#e53e3e';
+      if (total.total_delivery > 0) {
+        if (total.completion_rate >= 90) {
+          overallStatus = 'EXCELLENT';
+          statusColor = '#38a169';
+        } else if (total.completion_rate >= 70) {
+          overallStatus = 'GOOD';
+          statusColor = '#4299e1';
+        } else if (total.completion_rate >= 50) {
+          overallStatus = 'NEEDS ATTENTION';
+          statusColor = '#d69e2e';
+        } else {
+          overallStatus = 'CRITICAL';
+          statusColor = '#e53e3e';
+        }
       }
       
       $('#overallStatus').text(overallStatus).css('background', `linear-gradient(135deg, ${statusColor} 0%, ${darkenColor(statusColor, 20)} 100%)`);
@@ -2352,7 +2209,7 @@ function updateShiftDisplay(prefix, data) {
   $(`#${prefix}Efficiency`).text(hasData ? data.efficiency.toFixed(1) + '%' : '0%');
 }
 
-// Create shift chart
+// Create shift chart dengan 4 warna yang benar
 function createShiftChart(shiftType, data) {
   const ctx = document.getElementById(shiftType + 'ComparisonChart');
   if (!ctx) return;
@@ -2397,6 +2254,22 @@ function createShiftChart(shiftType, data) {
   // Prepare data based on view mode
   let chartData;
   let labels;
+  let colors;
+  
+  // 4 Status dengan warna yang benar
+  const statusColors = {
+    ok: 'rgba(56, 161, 105, 0.9)',
+    on_progress: 'rgba(66, 153, 225, 0.9)',
+    over: 'rgba(214, 158, 46, 0.9)',
+    delay: 'rgba(229, 62, 62, 0.9)'
+  };
+  
+  const hoverColors = {
+    ok: 'rgba(56, 161, 105, 1)',
+    on_progress: 'rgba(66, 153, 225, 1)',
+    over: 'rgba(214, 158, 46, 1)',
+    delay: 'rgba(229, 62, 62, 1)'
+  };
   
   if (isPercentageView) {
     chartData = [
@@ -2406,6 +2279,12 @@ function createShiftChart(shiftType, data) {
       data.delay_percentage || 0
     ];
     labels = ['OK', 'ON PROGRESS', 'OVER', 'DELAY'];
+    colors = [
+      statusColors.ok,
+      statusColors.on_progress,
+      statusColors.over,
+      statusColors.delay
+    ];
   } else {
     chartData = [
       data.ok_count || 0,
@@ -2414,6 +2293,12 @@ function createShiftChart(shiftType, data) {
       data.delay_count || 0
     ];
     labels = ['OK', 'ON', 'OVER', 'DELAY'];
+    colors = [
+      statusColors.ok,
+      statusColors.on_progress,
+      statusColors.over,
+      statusColors.delay
+    ];
   }
   
   const chart = new Chart(ctx, {
@@ -2422,19 +2307,14 @@ function createShiftChart(shiftType, data) {
       labels: labels,
       datasets: [{
         data: chartData,
-        backgroundColor: [
-          'rgba(56, 161, 105, 0.9)',
-          'rgba(66, 153, 225, 0.9)',
-          'rgba(214, 158, 46, 0.9)',
-          'rgba(229, 62, 62, 0.9)'
-        ],
+        backgroundColor: colors,
         borderColor: '#ffffff',
         borderWidth: 3,
         hoverBackgroundColor: [
-          'rgba(56, 161, 105, 1)',
-          'rgba(66, 153, 225, 1)',
-          'rgba(214, 158, 46, 1)',
-          'rgba(229, 62, 62, 1)'
+          hoverColors.ok,
+          hoverColors.on_progress,
+          hoverColors.over,
+          hoverColors.delay
         ],
         hoverBorderWidth: 4,
         hoverOffset: 10
@@ -2460,7 +2340,10 @@ function getChartOptions(hasData, shiftType) {
     },
     plugins: {
       tooltip: {
-        enabled: false
+        enabled: false,
+        external: function(context) {
+          // Custom tooltip handling
+        }
       },
       legend: {
         display: false
@@ -2531,36 +2414,44 @@ function darkenColor(color, percent) {
 
 // Initialize when document is ready
 $(document).ready(function() {
-  // Load initial charts
-  setTimeout(() => {
-    if (!isSectionCollapsed) {
+  // Load state dari localStorage
+  const savedState = localStorage.getItem('chartSectionCollapsed');
+  if (savedState !== null) {
+    isSectionCollapsed = savedState === 'true';
+  }
+  
+  // Apply initial state
+  const content = $('#analyticsContent');
+  const icon = $('#sectionCollapseIcon');
+  
+  if (isSectionCollapsed) {
+    content.addClass('collapsed');
+    icon.addClass('collapsed');
+    $('.analytics-card').css('border-radius', '16px 16px 16px 16px');
+    $('.analytics-header').css('border-bottom', 'none');
+  } else {
+    // Load initial charts jika expanded
+    setTimeout(() => {
       loadTrendChart();
       loadShiftComparison();
-    }
-    updateLastUpdated();
-  }, 1000);
+      updateLastUpdated();
+      startAutoRefresh();
+    }, 1000);
+  }
   
   // Event listeners
   $('#trendRange, #chartType').on('change', function() {
-    loadTrendChart();
+    if (!isSectionCollapsed) {
+      loadTrendChart();
+    }
   });
   
   $('#viewPercentage, #viewCount').on('change', function() {
     isPercentageView = $('#viewPercentage').is(':checked');
-    loadShiftComparison();
-  });
-  
-  // Auto-refresh setiap 2 menit (hanya jika section tidak collapsed)
-  setInterval(() => {
     if (!isSectionCollapsed) {
-      if ($('#trend-tab').hasClass('active')) {
-        loadTrendChart();
-      } else if ($('#shift-tab').hasClass('active')) {
-        loadShiftComparison();
-      }
-      updateLastUpdated();
+      loadShiftComparison();
     }
-  }, 120000);
+  });
   
   // Update time every minute
   setInterval(updateLastUpdated, 60000);
