@@ -1,5 +1,5 @@
-// modules/data_information.php - PERBAIKAN BAGIAN GET RECIPIENTS
 <?php
+// modules/data_information.php - VERSION LENGKAP DENGAN 7 HARI RETENTION & NO NOTIF UNTUK USER SENDIRI
 session_start();
 ob_clean();
 header('Content-Type: application/json; charset=utf-8');
@@ -19,92 +19,8 @@ $type = isset($_POST["type"]) ? strtolower(trim($_POST["type"])) :
 $response = ["success" => false, "message" => "Aksi tidak dikenal"];
 $currentUser = $_SESSION['name'] ?? '';
 
-// Helper function for success response
-function successResponse($message, $data = []) {
-    $response = [
-        "success" => true,
-        "message" => $message,
-        "timestamp" => date('Y-m-d H:i:s'),
-        "data" => $data
-    ];
-    return $response;
-}
-
-// Helper function for error response
-function errorResponse($message, $errorData = null) {
-    $response = [
-        "success" => false,
-        "message" => $message,
-        "timestamp" => date('Y-m-d H:i:s')
-    ];
-    
-    if ($errorData) {
-        $response['error'] = $errorData;
-    }
-    
-    return $response;
-}
-
 try {
-    // ========================= GET RECIPIENTS (UNTUK DROPDOWN) =========================
-    if ($type === "get-recipients") {
-        
-        // QUERY YANG LEBIH AMAN DAN LENGKAP
-        $sql = "SELECT DISTINCT 
-                    UPPER(LTRIM(RTRIM(name))) as name,
-                    UPPER(LTRIM(RTRIM(name))) as value,
-                    CASE 
-                        WHEN department IS NOT NULL AND LTRIM(RTRIM(department)) != '' 
-                        THEN UPPER(LTRIM(RTRIM(department)))
-                        ELSE 'UNKNOWN'
-                    END as department
-                FROM M_USER 
-                WHERE name IS NOT NULL 
-                AND LTRIM(RTRIM(name)) != ''
-                AND UPPER(LTRIM(RTRIM(name))) NOT IN ('SYSTEM', 'ADMIN', '')
-                AND UPPER(LTRIM(RTRIM(name))) != UPPER(LTRIM(RTRIM(?)))
-                ORDER BY name ASC";
-        
-        $stmt = sqlsrv_query($conn, $sql, [$currentUser]);
-        
-        $users = [];
-        if ($stmt) {
-            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                if (!empty($row['name'])) {
-                    $users[] = [
-                        'name' => trim($row['name']),
-                        'value' => trim($row['name']),
-                        'department' => $row['department'] ?? 'UNKNOWN'
-                    ];
-                }
-            }
-            sqlsrv_free_stmt($stmt);
-        }
-        
-        // Debug log untuk melihat user yang ditemukan
-        error_log("Found " . count($users) . " users for recipient selection");
-        
-        // Add "ALL" option
-        array_unshift($users, [
-            'name' => 'SEMUA USER (Semua Orang)',
-            'value' => 'ALL',
-            'department' => 'ALL_USERS'
-        ]);
-        
-        $response = [
-            "success" => true,
-            "message" => 'Daftar penerima berhasil diambil',
-            "users" => $users,
-            "count" => count($users),
-            "current_user" => $currentUser,
-            "timestamp" => date('Y-m-d H:i:s')
-        ];
-        
-        echo json_encode($response, JSON_UNESCAPED_UNICODE);
-        exit;
-    }
-    
-    // ========================= INPUT DATA INFORMATION =========================
+    // ========================= INPUT DATA INFORMATION (SINGLE ROW) =========================
     if ($type === "input") {
         
         $DATE      = $_POST["date"] ?? date('Ymd');
@@ -112,16 +28,18 @@ try {
         $PIC_FROM  = $currentUser;
         $ITEM      = trim($_POST["txt-item"] ?? '');
         $REQUEST   = trim($_POST["txt-request"] ?? '');
-        $recipients = $_POST["recipients"] ?? '';
+        $recipients = $_POST["recipients"] ?? ''; // Format: JSON string array
         
         // Validasi
         if (empty($ITEM) || empty($REQUEST)) {
-            echo json_encode(errorResponse('Item dan Request tidak boleh kosong'));
+            $response["message"] = 'Item dan Request tidak boleh kosong';
+            echo json_encode($response);
             exit;
         }
         
         if (empty($recipients)) {
-            echo json_encode(errorResponse('Pilih minimal satu penerima'));
+            $response["message"] = 'Pilih minimal satu penerima';
+            echo json_encode($response);
             exit;
         }
         
@@ -134,7 +52,6 @@ try {
                             WHERE name IS NOT NULL 
                             AND LTRIM(RTRIM(name)) != ''
                             AND name != ?
-                            AND name != 'SYSTEM'
                             ORDER BY name";
                 $stmtUsers = sqlsrv_query($conn, $sqlUsers, [$currentUser]);
                 if ($stmtUsers) {
@@ -174,7 +91,8 @@ try {
         $recipientArray = array_unique($recipientArray);
         
         if (empty($recipientArray)) {
-            echo json_encode(errorResponse('Tidak ada penerima yang valid'));
+            $response["message"] = 'Tidak ada penerima yang valid';
+            echo json_encode($response);
             exit;
         }
         
@@ -182,7 +100,7 @@ try {
         sort($recipientArray);
         $PIC_TO_COMBINED = implode(', ', $recipientArray);
             
-        // CEK DUPLIKASI: Only check for 7 days
+        // CEK DUPLIKASI: Hanya cek untuk 7 hari terakhir
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
         $checkSql = "SELECT COUNT(*) as count FROM T_INFORMATION 
                      WHERE DATE >= ? 
@@ -199,13 +117,16 @@ try {
             sqlsrv_free_stmt($checkStmt);
         }
         
-        // If duplicate exists within 7 days, show warning
+        // Jika sudah ada data sama dalam 7 hari terakhir, beri warning
         if ($duplicateCount > 0) {
-            echo json_encode(errorResponse('Anda sudah mengirim informasi ini dalam 7 hari terakhir.'));
+            $response["success"] = false;
+            $response["message"] = 'Anda sudah mengirim informasi ini dalam 7 hari terakhir.';
+            $response["duplicate"] = true;
+            echo json_encode($response);
             exit;
         }
         
-        // Insert into T_INFORMATION
+        // Simpan ke T_INFORMATION (HANYA SATU BARIS)
         $sql = "INSERT INTO T_INFORMATION 
                 (DATE, TIME_FROM, PIC_FROM, PIC_TO, ITEM, REQUEST, STATUS) 
                 VALUES (?, ?, ?, ?, ?, ?, 'Open')";
@@ -226,7 +147,7 @@ try {
                 sqlsrv_free_stmt($idStmt);
             }
             
-            // Insert into user_notification_read for each recipient
+            // Insert ke user_notification_read untuk setiap recipient (untuk notifikasi)
             foreach ($recipientArray as $recipient) {
                 if (empty($recipient)) continue;
                 
@@ -235,34 +156,24 @@ try {
                 sqlsrv_query($conn, $notifSql, [$recipient, $new_id]);
             }
             
-            // Trigger custom event for frontend
-            $response = successResponse(
-                'Informasi berhasil dikirim ke ' . count($recipientArray) . ' penerima',
-                [
-                    "id" => $new_id,
-                    "recipient_count" => count($recipientArray),
-                    "recipients" => $recipientArray,
-                    "retention_days" => 7,
-                    "visible_until" => date('Y-m-d', strtotime('+7 days'))
-                ]
-            );
-            
-            // Add event trigger
-            $response['trigger_event'] = 'informationAdded';
+            $response["success"] = true;
+            $response["message"] = 'Data berhasil dikirim ke ' . count($recipientArray) . ' penerima';
+            $response["id"] = $new_id;
+            $response["recipient_count"] = count($recipientArray);
+            $response["recipients"] = $recipientArray;
+            $response["retention_days"] = 7;
+            $response["visible_until"] = date('Y-m-d', strtotime('+7 days'));
             
         } else {
             $errors = sqlsrv_errors();
-            $response = errorResponse(
-                "Gagal menyimpan informasi",
-                ["sql_error" => print_r($errors, true)]
-            );
+            $response["message"] = "SQL Error: " . print_r($errors, true);
         }
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= UPDATE FROM (SENDER) =========================
+    // ========================= UPDATE FROM (PENGIRIM) =========================
     else if ($type === "update-from") {
         
         $ID_INFORMATION = (int)($_POST["txt-id-information"] ?? 0);
@@ -271,45 +182,51 @@ try {
         $ITEM = trim($_POST["txt-item-update"] ?? '');
         $REQUEST = trim($_POST["txt-request-update"] ?? '');
         
-        // Validation
+        // Validasi
         if ($ID_INFORMATION <= 0) {
-            echo json_encode(errorResponse('ID Information tidak valid'));
+            $response["message"] = 'ID Information tidak valid';
+            echo json_encode($response);
             exit;
         }
         
         if (empty($ITEM) || empty($REQUEST)) {
-            echo json_encode(errorResponse('Item dan Request tidak boleh kosong'));
+            $response["message"] = 'Item dan Request tidak boleh kosong';
+            echo json_encode($response);
             exit;
         }
         
-        // Check if user is the sender
+        // Cek apakah user adalah pengirim
         $checkSql = "SELECT PIC_FROM, STATUS FROM T_INFORMATION WHERE ID_INFORMATION = ?";
         $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION]);
         
         if (!$checkStmt) {
-            echo json_encode(errorResponse('Data tidak ditemukan'));
+            $response["message"] = 'Data tidak ditemukan';
+            echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            echo json_encode(errorResponse('Data tidak ditemukan'));
+            $response["message"] = 'Data tidak ditemukan';
+            echo json_encode($response);
             exit;
         }
         
-        // Validate: only PIC_FROM can update
+        // Validasi: hanya PIC_FROM yang bisa update
         if ($info['PIC_FROM'] !== $currentUser) {
-            echo json_encode(errorResponse('Anda tidak berhak mengedit informasi ini'));
+            $response["message"] = 'Anda tidak berhak mengedit informasi ini';
+            echo json_encode($response);
             exit;
         }
         
-        // Validate: cannot edit if status is On Progress or Closed
+        // Validasi: tidak bisa edit jika status sudah On Progress atau Closed
         if ($info['STATUS'] === 'On Progress' || $info['STATUS'] === 'Closed') {
-            echo json_encode(errorResponse('Tidak bisa mengedit informasi yang sudah diproses atau ditutup'));
+            $response["message"] = 'Tidak bisa mengedit informasi yang sudah diproses atau ditutup';
+            echo json_encode($response);
             exit;
         }
         
-        // Update information
+        // Update informasi
         $updateSql = "UPDATE T_INFORMATION 
                       SET TIME_FROM = ?, 
                           ITEM = ?, 
@@ -320,34 +237,33 @@ try {
         $updateStmt = sqlsrv_query($conn, $updateSql, $params);
         
         if ($updateStmt) {
-            $response = successResponse('Informasi berhasil diupdate', [
-                "id" => $ID_INFORMATION,
-                "trigger_event" => "informationUpdated"
-            ]);
+            $response["success"] = true;
+            $response["message"] = 'Informasi berhasil diupdate';
         } else {
-            $response = errorResponse('Gagal update informasi');
+            $response["message"] = 'Gagal update informasi';
         }
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= UPDATE TO (RECIPIENT) =========================
+    // ========================= UPDATE TO (PENERIMA) - DENGAN STATUS ON_PROGRESS/CLOSED =========================
     else if ($type === "update-to") {
         
         $ID_INFORMATION = (int)($_POST["txt-id-information2"] ?? 0);
         $TIME_TO = $_POST["txt-timeto-update"] ?? date('H:i');
         $PIC_TO = $_POST["txt-picto-update"] ?? $currentUser;
         $REMARK = trim($_POST["txt-remark-update"] ?? '');
-        $ACTION_TYPE = $_POST["action_type"] ?? 'on_progress';
+        $ACTION_TYPE = $_POST["action_type"] ?? 'on_progress'; // 'on_progress' atau 'closed'
         
-        // Validation
+        // Validasi
         if ($ID_INFORMATION <= 0) {
-            echo json_encode(errorResponse('ID Information tidak valid'));
+            $response["message"] = 'ID Information tidak valid';
+            echo json_encode($response);
             exit;
         }
         
-        // Check data (ONLY LAST 7 DAYS)
+        // Cek data informasi (HANYA 7 HARI TERAKHIR)
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
         $checkSql = "SELECT PIC_TO, STATUS, ITEM, REQUEST, PIC_FROM, DATE 
                      FROM T_INFORMATION 
@@ -356,41 +272,46 @@ try {
         $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $sevenDaysAgo]);
         
         if (!$checkStmt) {
-            echo json_encode(errorResponse('Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)'));
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            echo json_encode(errorResponse('Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)'));
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            echo json_encode($response);
             exit;
         }
         
-        // Check if user is a recipient
+        // Cek apakah user adalah salah satu penerima
         $recipients = explode(', ', $info['PIC_TO']);
         $isRecipient = in_array($currentUser, $recipients);
         
         if (!$isRecipient) {
-            echo json_encode(errorResponse('Anda tidak berhak mengupdate informasi ini'));
+            $response["message"] = 'Anda tidak berhak mengupdate informasi ini';
+            echo json_encode($response);
             exit;
         }
         
-        // Check current status - cannot update if already Closed
+        // Cek status saat ini - tidak bisa update jika sudah Closed
         if ($info['STATUS'] === 'Closed') {
-            echo json_encode(errorResponse('Informasi ini sudah ditutup'));
+            $response["message"] = 'Informasi ini sudah ditutup';
+            echo json_encode($response);
             exit;
         }
         
-        // Determine new status
+        // Tentukan status baru
         $new_status = ($ACTION_TYPE === 'closed') ? 'Closed' : 'On Progress';
         
-        // Validation: for Closed, remark is required
+        // Validasi: untuk Closed, remark wajib diisi
         if ($ACTION_TYPE === 'closed' && empty($REMARK)) {
-            echo json_encode(errorResponse('Remark wajib diisi untuk menutup informasi'));
+            $response["message"] = 'Remark wajib diisi untuk menutup informasi';
+            echo json_encode($response);
             exit;
         }
         
-        // Update information
+        // Update informasi
         $updateSql = "UPDATE T_INFORMATION 
                       SET TIME_TO = ?, 
                           REMARK = ?, 
@@ -401,12 +322,12 @@ try {
         $updateStmt = sqlsrv_query($conn, $updateSql, $params);
         
         if ($updateStmt) {
-            // Update notification for this user as read
+            // Update notifikasi untuk user ini sebagai sudah dibaca
             $notifSql = "UPDATE user_notification_read SET read_at = GETDATE() 
                          WHERE user_id = ? AND notification_id = ?";
             sqlsrv_query($conn, $notifSql, [$currentUser, $ID_INFORMATION]);
             
-            // If status Closed, update notifications for all other recipients
+            // Jika status Closed, update notifikasi untuk semua recipient lainnya
             if ($new_status === 'Closed') {
                 foreach ($recipients as $recipient) {
                     if ($recipient !== $currentUser) {
@@ -417,13 +338,11 @@ try {
                 }
             }
             
-            $response = successResponse("Status berhasil diupdate ke " . $new_status, [
-                "id" => $ID_INFORMATION,
-                "new_status" => $new_status,
-                "trigger_event" => "informationStatusChanged"
-            ]);
+            $response["success"] = true;
+            $response["message"] = "Status berhasil diupdate ke " . $new_status;
+            $response["new_status"] = $new_status;
         } else {
-            $response = errorResponse('Gagal update status');
+            $response["message"] = 'Gagal update status';
         }
         
         echo json_encode($response);
@@ -436,11 +355,12 @@ try {
         $ID_INFORMATION = (int)($_POST["id_information"] ?? 0);
         
         if ($ID_INFORMATION <= 0) {
-            echo json_encode(errorResponse('ID Information tidak valid'));
+            $response["message"] = 'ID Information tidak valid';
+            echo json_encode($response);
             exit;
         }
         
-        // Check if user is the sender (ONLY LAST 7 DAYS)
+        // Cek apakah user adalah pengirim (HANYA 7 HARI TERAKHIR)
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
         $checkSql = "SELECT PIC_FROM, DATE FROM T_INFORMATION 
                      WHERE ID_INFORMATION = ? 
@@ -448,44 +368,45 @@ try {
         $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $sevenDaysAgo]);
         
         if (!$checkStmt) {
-            echo json_encode(errorResponse('Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)'));
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            echo json_encode(errorResponse('Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)'));
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            echo json_encode($response);
             exit;
         }
         
-        // Validate: only PIC_FROM can delete
+        // Validasi: hanya PIC_FROM yang bisa delete
         if ($info['PIC_FROM'] !== $currentUser) {
-            echo json_encode(errorResponse('Anda tidak berhak menghapus informasi ini'));
+            $response["message"] = 'Anda tidak berhak menghapus informasi ini';
+            echo json_encode($response);
             exit;
         }
         
-        // Delete from user_notification_read first (foreign key constraint)
+        // Delete dari user_notification_read dulu (foreign key constraint)
         $deleteNotifSql = "DELETE FROM user_notification_read WHERE notification_id = ?";
         sqlsrv_query($conn, $deleteNotifSql, [$ID_INFORMATION]);
         
-        // Delete information
+        // Delete informasi
         $deleteSql = "DELETE FROM T_INFORMATION WHERE ID_INFORMATION = ?";
         $deleteStmt = sqlsrv_query($conn, $deleteSql, [$ID_INFORMATION]);
         
         if ($deleteStmt) {
-            $response = successResponse('Informasi berhasil dihapus', [
-                "id" => $ID_INFORMATION,
-                "trigger_event" => "informationDeleted"
-            ]);
+            $response["success"] = true;
+            $response["message"] = 'Informasi berhasil dihapus';
         } else {
-            $response = errorResponse('Gagal menghapus informasi');
+            $response["message"] = 'Gagal menghapus informasi';
         }
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= FETCH DATA =========================
+    // ========================= FETCH DATA - HANYA 7 HARI TERAKHIR & NO NOTIF USER SENDIRI =========================
     else if ($type === "fetch") {
         
         $DATE1 = $_GET["date1"] ?? date('Y-m-d');
@@ -493,9 +414,10 @@ try {
         $date1_sql = str_replace('-', '', $DATE1);
         $date2_sql = str_replace('-', '', $DATE2);
         
-        // Only show last 7 days
+        // ==================== REVISI: HANYA TAMPILKAN 7 HARI TERAKHIR ====================
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
         
+        // Jika date range yang diminta lebih dari 7 hari, batasi ke 7 hari terakhir
         if ($date1_sql < $sevenDaysAgo) {
             $date1_sql = $sevenDaysAgo;
         }
@@ -511,27 +433,24 @@ try {
                     TIME_TO, 
                     STATUS, 
                     REMARK,
-                    -- Determine user role
+                    -- Tentukan user role
                     CASE
                         WHEN CHARINDEX(?, PIC_TO) > 0 THEN 'recipient'
                         WHEN PIC_FROM = ? THEN 'sender'
                         ELSE 'viewer'
                     END as user_role,
-                    -- Check if read by this user
+                    -- Cek apakah sudah dibaca oleh user ini
                     (SELECT TOP 1 read_at FROM user_notification_read 
-                     WHERE user_id = ? AND notification_id = ID_INFORMATION) as read_at,
-                    -- Calculate days since created
-                    DATEDIFF(day, CONVERT(date, CONVERT(varchar, DATE)), GETDATE()) as days_old
+                     WHERE user_id = ? AND notification_id = ID_INFORMATION) as read_at
                 FROM T_INFORMATION
                 WHERE DATE BETWEEN ? AND ?
-                AND DATE >= ?
+                AND DATE >= ?  -- FILTER TAMBAHAN: HANYA 7 HARI TERAKHIR
                 ORDER BY DATE DESC, TIME_FROM DESC";
         
         $params = [$currentUser, $currentUser, $currentUser, $date1_sql, $date2_sql, $sevenDaysAgo];
         $stmt = sqlsrv_prepare($conn, $sql, $params);
         
         $data = [];
-        
         if ($stmt && sqlsrv_execute($stmt)) {
             while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                 // Format date
@@ -546,57 +465,85 @@ try {
                 $row['TIME_TO'] = $row['TIME_TO'] ?: '-';
                 $row['REMARK'] = $row['REMARK'] ?: '-';
                 
-                // Calculate retention status
-                $row['DAYS_OLD'] = $row['days_old'] ?? 0;
-                $row['IS_WITHIN_7_DAYS'] = ($row['DAYS_OLD'] <= 7) ? 1 : 0;
-                
-                // Determine expired status
-                if ($row['DAYS_OLD'] > 7) {
-                    $row['EXPIRED'] = true;
-                    $row['EXPIRED_SINCE'] = $row['DAYS_OLD'] - 7;
-                } else {
-                    $row['EXPIRED'] = false;
-                    $row['REMAINING_DAYS'] = 7 - $row['DAYS_OLD'];
-                }
-                
-                // Is unread? - Only for recipients AND NOT from user self
+                // Is unread? - Hanya untuk penerima DAN BUKAN dari user sendiri
                 $isRecipient = ($row['user_role'] === 'recipient');
                 $isFromSelf = ($row['PIC_FROM'] === $currentUser);
+                
+                // REVISI: Tidak ada notifikasi untuk informasi dari user sendiri
                 $row['IS_UNREAD'] = ($row['read_at'] === null && $isRecipient && !$isFromSelf && $row['STATUS'] !== 'Closed') ? 1 : 0;
+                
+                // Tambah info 7 hari
+                $rowDate = isset($row['DATE']) ? str_replace('-', '', $row['DATE']) : '';
+                $row['IS_ACTIVE'] = ($rowDate >= $sevenDaysAgo) ? 1 : 0;
+                $row['DAYS_SINCE'] = $rowDate ? floor((time() - strtotime($row['DATE'])) / (60 * 60 * 24)) : 0;
                 
                 $data[] = $row;
             }
         }
         
-        $response = successResponse('Data berhasil diambil', [
-            "data" => $data,
-            "count" => count($data),
-            "current_user" => $currentUser,
-            "retention" => [
-                "policy" => "7_days_display_only",
-                "display_range" => [
-                    "from" => date('Y-m-d', strtotime('-7 days')),
-                    "to" => date('Y-m-d'),
-                    "message" => "Menampilkan data 7 hari terakhir saja"
-                ]
-            ]
-        ]);
+        $response["success"] = true;
+        $response["data"] = $data;
+        $response["count"] = count($data);
+        $response["current_user"] = $currentUser;
+        $response["date_range"] = [
+            "from" => $DATE1,
+            "to" => $DATE2,
+            "seven_days_ago" => date('Y-m-d', strtotime('-7 days')),
+            "filter_applied" => ($date1_sql < $sevenDaysAgo) ? '7_days_limit' : 'normal'
+        ];
         
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
         exit;
     }
     
-    // ========================= GET SINGLE INFORMATION =========================
+    // ========================= GET RECIPIENTS (UNTUK DROPDOWN) =========================
+    else if ($type === "get-recipients") {
+        
+        $sql = "SELECT DISTINCT name FROM M_USER 
+                WHERE name IS NOT NULL 
+                AND LTRIM(RTRIM(name)) != ''
+                AND name != ?
+                ORDER BY name";
+        
+        $stmt = sqlsrv_query($conn, $sql, [$currentUser]);
+        
+        $users = [];
+        if ($stmt) {
+            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $users[] = [
+                    'name' => trim($row['name']),
+                    'value' => trim($row['name'])
+                ];
+            }
+            sqlsrv_free_stmt($stmt);
+        }
+        
+        // Add "ALL" option
+        array_unshift($users, [
+            'name' => 'SEMUA USER (Semua Orang)',
+            'value' => 'ALL'
+        ]);
+        
+        $response["success"] = true;
+        $response["users"] = $users;
+        $response["count"] = count($users);
+        
+        echo json_encode($response);
+        exit;
+    }
+    
+    // ========================= GET SINGLE INFORMATION (7 HARI SAJA) =========================
     else if ($type === "get-single") {
         
         $id = (int)($_GET["id"] ?? 0);
         
         if ($id <= 0) {
-            echo json_encode(errorResponse('ID tidak valid'));
+            $response["message"] = 'ID tidak valid';
+            echo json_encode($response);
             exit;
         }
         
-        // Only get data from last 7 days
+        // Hanya ambil data 7 hari terakhir
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
         $sql = "SELECT * FROM T_INFORMATION 
                 WHERE ID_INFORMATION = ? 
@@ -610,7 +557,8 @@ try {
         }
         
         if (!$info) {
-            echo json_encode(errorResponse('Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)'));
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            echo json_encode($response);
             exit;
         }
         
@@ -622,30 +570,29 @@ try {
             }
         }
         
-        // Check user role
+        // Cek user role
         $recipients = explode(', ', $info['PIC_TO']);
         $info['user_role'] = in_array($currentUser, $recipients) ? 'recipient' : 
                            ($info['PIC_FROM'] === $currentUser ? 'sender' : 'viewer');
         
-        // Add activation info
+        // Tambah info aktivasi
         $info['IS_ACTIVE'] = 1;
         $info['ACTIVE_UNTIL'] = date('Y-m-d', strtotime($info['DATE'] . ' +7 days'));
         $info['DAYS_REMAINING'] = floor((strtotime($info['ACTIVE_UNTIL']) - time()) / (60 * 60 * 24));
         
-        $response = successResponse('Data berhasil diambil', [
-            "data" => $info,
-            "retention_info" => [
-                "active_days" => 7,
-                "remaining_days" => max(0, $info['DAYS_REMAINING']),
-                "status" => $info['DAYS_REMAINING'] > 0 ? "active" : "expired"
-            ]
-        ]);
+        $response["success"] = true;
+        $response["data"] = $info;
+        $response["retention_info"] = [
+            "active_days" => 7,
+            "remaining_days" => max(0, $info['DAYS_REMAINING']),
+            "status" => $info['DAYS_REMAINING'] > 0 ? "active" : "expired"
+        ];
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= GET ALL INFORMATION FOR ADMIN =========================
+    // ========================= GET ALL INFORMATION FOR ADMIN (7 HARI) =========================
     else if ($type === "get-all") {
         
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
@@ -666,7 +613,7 @@ try {
                     }
                 }
                 
-                // Add activation info
+                // Tambah info aktivasi
                 $rowDate = isset($row['DATE']) ? str_replace('-', '', $row['DATE']) : '';
                 $row['IS_ACTIVE'] = ($rowDate >= $sevenDaysAgo) ? 1 : 0;
                 $row['ACTIVE_UNTIL'] = date('Y-m-d', strtotime($row['DATE'] . ' +7 days'));
@@ -676,21 +623,20 @@ try {
             sqlsrv_free_stmt($stmt);
         }
         
-        $response = successResponse('Data berhasil diambil', [
-            "data" => $data,
-            "count" => count($data),
-            "retention_info" => [
-                "seven_days_ago" => $sevenDaysAgo,
-                "active_count" => count(array_filter($data, function($item) { return $item['IS_ACTIVE'] == 1; })),
-                "expired_count" => count(array_filter($data, function($item) { return $item['IS_ACTIVE'] == 0; }))
-            ]
-        ]);
+        $response["success"] = true;
+        $response["data"] = $data;
+        $response["count"] = count($data);
+        $response["retention_info"] = [
+            "seven_days_ago" => $sevenDaysAgo,
+            "active_count" => count(array_filter($data, function($item) { return $item['IS_ACTIVE'] == 1; })),
+            "expired_count" => count(array_filter($data, function($item) { return $item['IS_ACTIVE'] == 0; }))
+        ];
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= GET NOTIFICATION COUNT =========================
+    // ========================= GET NOTIFICATION COUNT FOR CURRENT USER =========================
     else if ($type === "get-notification-count") {
         
         $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
@@ -701,7 +647,7 @@ try {
                 LEFT JOIN user_notification_read unr ON ti.ID_INFORMATION = unr.notification_id 
                     AND unr.user_id = ?
                 WHERE ti.DATE >= ?
-                AND ti.PIC_FROM != ?
+                AND ti.PIC_FROM != ?  -- FILTER: BUKAN DARI USER SENDIRI
                 AND ti.PIC_TO LIKE '%' + ? + '%'
                 AND ti.STATUS = 'Open'
                 AND unr.read_at IS NULL";
@@ -716,21 +662,21 @@ try {
             sqlsrv_free_stmt($stmt);
         }
         
-        $response = successResponse('Count berhasil diambil', [
-            "unread_count" => $unread_count,
-            "current_user" => $currentUser,
-            "retention_days" => 7
-        ]);
+        $response["success"] = true;
+        $response["unread_count"] = $unread_count;
+        $response["current_user"] = $currentUser;
+        $response["retention_days"] = 7;
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= CLEAN OLD DATA =========================
+    // ========================= CLEAN OLD DATA (lebih dari 7 hari) =========================
     else if ($type === "clean-old-data") {
         // Hanya untuk admin
         if ($currentUser !== 'ADMIN' && !in_array($currentUser, ['ALBERTO', 'EKO', 'EKA'])) {
-            echo json_encode(errorResponse('Akses ditolak'));
+            $response["message"] = 'Akses ditolak';
+            echo json_encode($response);
             exit;
         }
         
@@ -749,11 +695,11 @@ try {
         $deleteStmt = sqlsrv_query($conn, $deleteInfoSql, [$sevenDaysAgo]);
         
         if ($deleteStmt) {
-            $response = successResponse('Data lama (lebih dari 7 hari) berhasil dibersihkan', [
-                "cutoff_date" => $sevenDaysAgo
-            ]);
+            $response["success"] = true;
+            $response["message"] = 'Data lama (lebih dari 7 hari) berhasil dibersihkan';
+            $response["cutoff_date"] = $sevenDaysAgo;
         } else {
-            $response = errorResponse('Gagal membersihkan data lama');
+            $response["message"] = 'Gagal membersihkan data lama';
         }
         
         echo json_encode($response);
@@ -821,36 +767,33 @@ try {
         
         $stats['unread_count'] = $unread_count;
         
-        $response = successResponse('Stats berhasil diambil', [
-            "stats" => $stats,
-            "retention_days" => 7,
-            "date_range" => [
-                "from" => date('Y-m-d', strtotime('-7 days')),
-                "to" => date('Y-m-d')
-            ]
-        ]);
+        $response["success"] = true;
+        $response["stats"] = $stats;
+        $response["retention_days"] = 7;
+        $response["date_range"] = [
+            "from" => date('Y-m-d', strtotime('-7 days')),
+            "to" => date('Y-m-d')
+        ];
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= DEFAULT RESPONSE =========================
     else {
-        echo json_encode(errorResponse("Tipe aksi tidak dikenal: $type"));
+        $response["message"] = "Tipe aksi tidak dikenal: $type";
+        echo json_encode($response);
         exit;
     }
 
 } catch (Exception $e) {
-    $response = errorResponse(
-        'Server error: ' . $e->getMessage(),
-        ["trace" => $e->getTraceAsString()]
-    );
+    $response["message"] = 'Server error: ' . $e->getMessage();
+    $response["trace"] = $e->getTraceAsString();
     echo json_encode($response);
     exit;
 }
 
 // Close connection
 if ($conn) {
-    sqlsrv_close($conn);
+    sqlsrv_close($conn);                                        
 }
 ?>

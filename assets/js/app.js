@@ -908,48 +908,35 @@ function clearDateRange() {
     fetchDataInformation();
 }
 
-let dateChangeTimeout = null;
-
+// ================= EVENT HANDLER FOR DATE CHANGES =================
 function handleDateChange() {
     const date1 = $('#range-date1').val();
     const date2 = $('#range-date2').val();
     
-    if (window.isDateLoading) {
+    if (!date1 && !date2) {
+        updateDateInputStyles(true);
         return;
     }
     
-    if (dateChangeTimeout) {
-        clearTimeout(dateChangeTimeout);
+    if (date1 && date2) {
+        const isValid = validateDateRange(date1, date2);
+        
+        if (!isValid) {
+            showDateRangeError('End date cannot be earlier than start date');
+            updateDateInputStyles(false);
+            return;
+        } else {
+            updateDateInputStyles(true);
+        }
     }
     
-    dateChangeTimeout = setTimeout(() => {
-        if (!date1 || !date2) {
-            return;
-        }
-        
-        const d1 = new Date(date1);
-        const d2 = new Date(date2);
-        
-        if (d2 < d1) {
-            showDateRangeError('End date cannot be earlier than start date');
-            return;
-        }
-        
-        window.isDateLoading = true;
-        
-        rangeDate1 = date1;
-        rangeDate2 = date2;
-        
-        console.log(`📅 Loading data for ${date1} to ${date2}`);
-        
+    rangeDate1 = date1;
+    rangeDate2 = date2;
+    
+    if (date1 && date2 && validateDateRange(date1, date2)) {
         loadTableDetailProgress();
-        
-        setTimeout(() => {
-            fetchDataInformation();
-            window.isDateLoading = false;
-        }, 800);
-        
-    }, 600); // 600ms debounce
+        fetchDataInformation();
+    }
 }
 
 // ================= UTILITY FUNCTIONS =================
@@ -1320,26 +1307,15 @@ function refreshActualMaps() {
 }
 
 function loadTableDetailProgress() {  
-    if (window.isTableLoading) {
-        console.log('⚠️ Table already loading, skipping');
-        return;
-    }
-    
-    window.isTableLoading = true;
-    
     let date1 = $('#range-date1').val();  
     let date2 = $('#range-date2').val();  
-    
-    if (!date1 || !date2) {
-        window.isTableLoading = false;
-        return;
-    }
-    
     let sendDate1 = date1 ? date1.replace(/-/g, '') : '';  
     let sendDate2 = date2 ? date2.replace(/-/g, '') : '';  
     
     let supplierCodeArr = $('#select-supplier-code').val();
     let supplierCode = supplierCodeArr ? supplierCodeArr.join(',') : '';  
+    
+    console.log('Kirim date1:', sendDate1, 'date2:', sendDate2, 'supplier_code:', supplierCode);  
     
     showTableSkeleton('#table-detail-progress tbody', 10);
     
@@ -1360,30 +1336,37 @@ function loadTableDetailProgress() {
                 : (response?.data || []);
 
             if (!Array.isArray(data)) {
+                console.warn("Format response data_progress_by_pn salah:", response);
                 hideTableSkeleton('#table-detail-progress tbody');
-                window.isTableLoading = false;
                 return;
             }
             
+            console.log("Data progress loaded:", data.length, "rows");
+            
             let displayData = data;
             if (data.length > 500) {
+                console.warn("Data terlalu banyak (" + data.length + " rows), limiting to 500 rows");
                 displayData = data.slice(0, 500);
                 
                 if ($('#table-detail-progress_wrapper .alert-warning').length === 0) {
                     $('#table-detail-progress_wrapper').prepend(
-                        '<div class="alert alert-warning">Showing 500 of ' + data.length + ' rows</div>'
+                        '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
+                        '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                        'Data terlalu besar (' + data.length + ' rows). Menampilkan 500 rows pertama. Gunakan filter yang lebih spesifik.' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                        '</div>'
                     );
                 }
+            } else {
+                $('#table-detail-progress_wrapper .alert-warning').remove();
             }
             
             tableDetailProgress.clear().rows.add(displayData).draw();
             hideTableSkeleton('#table-detail-progress tbody');
-            window.isTableLoading = false;
         },  
         error: function(xhr) {  
-            console.log("Error loading data");
+            console.log("Error request modules/data_progress_by_pn.php", xhr.status);  
             hideTableSkeleton('#table-detail-progress tbody');
-            window.isTableLoading = false;
         }  
     });  
 }
@@ -2268,24 +2251,12 @@ function showNSModal() {
 
 // Tambahkan fungsi ini di app.js atau update yang existing
 
-// Di dalam $(document).ready() di app.js, tambahkan:
-
-// Initialize Information System
-if (typeof InformationSystem !== 'undefined') {
-    console.log('📋 Loading InformationSystem from app.js');
-    setTimeout(() => {
-        if (!window.informationSystem) {
-            window.informationSystem = new InformationSystem();
-        }
-    }, 1000);
-}
-
-// Pastikan fetchDataInformation berfungsi
 function fetchDataInformation() {
-    console.log('📋 Fetching information data...');
-    
     var date1 = $('#range-date1').val() || new Date().toISOString().split('T')[0];
     var date2 = $('#range-date2').val() || date1;
+    var currentUser = '<?php echo $_SESSION["name"] ?? ""; ?>';
+    
+    console.log("📡 Fetching information data for user:", currentUser);
     
     $.ajax({
         type: 'GET',
@@ -2293,66 +2264,67 @@ function fetchDataInformation() {
         data: { 
             type: "fetch",
             date1: date1,
-            date2: date2,
-            _t: new Date().getTime() // Prevent caching
+            date2: date2
         },
         dataType: 'json',
-        beforeSend: () => {
-            // Show loading indicator
-            $('#table-information tbody').html(`
-                <tr>
-                    <td colspan="12" class="text-center py-4">
-                        <div class="spinner-border spinner-border-sm text-primary"></div>
-                        <span class="ms-2">Memuat data informasi...</span>
-                    </td>
-                </tr>
-            `);
-        },
         success: function(response) {
-            console.log('📋 Information fetch response:', response);
+            console.log("📨 Data information response:", response);
             
             if (response.success) {
-                // Update DataTable
-                if (window.tableInformation) {
-                    window.tableInformation.clear();
+                // DataTable akan otomatis merender karena sudah ada konfigurasi columns
+                tableInformation.clear();
+                
+                if (response.data && response.data.length > 0) {
+                    tableInformation.rows.add(response.data).draw();
                     
-                    if (response.data && response.data.length > 0) {
-                        window.tableInformation.rows.add(response.data).draw();
-                        
-                        // Update badge
-                        const openCount = response.data.filter(item => 
-                            item.STATUS === 'Open' && item.user_role === 'recipient'
-                        ).length;
-                        
-                        updateInfoBadge(openCount);
-                        
-                    } else {
-                        window.tableInformation.clear().draw();
-                    }
+                    // Debug: log data untuk memastikan field ada
+                    console.log("🔍 Sample data:", response.data[0]);
+                    console.log("🔍 Request field:", response.data[0].REQUEST);
+                    console.log("🔍 Remark field:", response.data[0].REMARK);
+                    
+                    // Update badge
+                    const openCount = response.data.filter(item => 
+                        item.STATUS === 'Open' && item.user_role === 'recipient'
+                    ).length;
+                    
+                    updateInfoBadge(openCount);
+                    
+                } else {
+                    // Tampilkan pesan jika tidak ada data
+                    tableInformation.clear().draw();
                 }
+                
             } else {
-                console.error('❌ Failed to fetch data:', response.message);
-                if (window.tableInformation) {
-                    window.tableInformation.clear().draw();
-                }
+                console.error("❌ Failed to fetch data:", response.message);
+                tableInformation.clear().draw();
             }
         },
         error: function(xhr, status, error) {
-            console.error('❌ Error fetching data information:', error);
-            if (window.tableInformation) {
-                window.tableInformation.clear().draw();
-            }
+            console.error("❌ Error fetching data information:", xhr.responseText);
+            tableInformation.clear().draw();
         }
     });
 }
 
-// Function to update info badge
-function updateInfoBadge(count) {
-    const $badge = $('#info-badge');
+function updateInfoBadge() {
+    var openCount = 0;
     
-    if (count > 0) {
-        $badge.text(count > 99 ? '99+' : count).show().addClass('bg-danger');
-        document.title = `(${count}) Progress BO Control`;
+    tableInformation.rows().every(function(rowIdx, tableLoop, rowLoop) {
+        var data = this.data();
+        
+        if (data[9] && typeof data[9] === 'string') {
+            var statusHtml = data[9];
+            if (statusHtml.includes('bg-danger') || statusHtml.includes('OPEN')) {
+                openCount++;
+            }
+        }
+    });
+    
+    var $badge = $('#info-badge');
+    
+    if (openCount > 0) {
+        $badge.text(openCount).show().addClass('bg-danger');
+        document.title = `(${openCount}) Progress BO Control`;
     } else {
         $badge.hide();
         document.title = "Progress BO Control";
@@ -4972,27 +4944,42 @@ $('#modal-add-ns').on('hidden.bs.modal', function() {
         }, 1500);
     }, 1000);
     
-setInterval(function() {
-    if (!$('.modal-add-information').is(':visible') && 
-        !$('.modal-update-information-from').is(':visible') && 
-        !$('.modal-update-information-to').is(':visible')) {
-        
-        if (!window.isNotificationChecking) {
-            window.isNotificationChecking = true;
+    // Auto-check new info every 30 seconds
+    setInterval(function() {
+        if (!$('.modal-add-information').is(':visible') && 
+            !$('.modal-update-information-from').is(':visible') && 
+            !$('.modal-update-information-to').is(':visible')) {
             
             $.ajax({
                 url: 'api/check_new_info.php',
                 type: 'GET',
                 success: function(response) {
-                    window.isNotificationChecking = false;
-                },
-                error: function() {
-                    window.isNotificationChecking = false;
+                    console.log('🔔 Notif check:', response);
+                    if (response.success && (response.assigned_to_me > 0 || response.urgent_count > 0)) {
+                        // Play sound notification
+                        try {
+                            var audio = new Audio('assets/sound/notification.mp3');
+                            audio.volume = 0.3;
+                            audio.play().catch(e => console.log("Audio error:", e));
+                        } catch (e) {
+                            console.log("Audio not supported");
+                        }
+                        
+                        // Refresh information table if there are urgent items
+                        if (response.urgent_count > 0) {
+                            console.log('🔄 Refreshing info table due to new urgent items');
+                            fetchDataInformation();
+                        }
+                        
+                        // Update notification badge
+                        if (typeof updateNotificationBadge === 'function') {
+                            updateNotificationBadge(response.count);
+                        }
+                    }
                 }
             });
         }
-    }
-}, 60000); // 60 detik bukan 30 detik
+    }, 30000); // 30 seconds
 
     // Function to update notification badge
     function updateNotificationBadge(count) {

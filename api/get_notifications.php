@@ -1,5 +1,4 @@
 <?php
-// api/get_notifications.php - OPTIMIZED VERSION
 session_start();
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -12,8 +11,7 @@ $response = [
     'success' => true,
     'notifications' => [],
     'unread_count' => 0,
-    'has_more' => false,
-    'timestamp' => time()
+    'debug' => []
 ];
 
 if (!isset($_SESSION['name'])) {
@@ -26,8 +24,10 @@ if (!isset($_SESSION['name'])) {
 $currentUser = $_SESSION['name'];
 $today = date('Ymd');
 $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 20;
-$offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+
+$response['debug']['user'] = $currentUser;
+$response['debug']['today'] = $today;
+$response['debug']['seven_days_ago'] = $sevenDaysAgo;
 
 if (!$conn) {
     $response['success'] = false;
@@ -37,14 +37,14 @@ if (!$conn) {
 }
 
 try {
-    // ==================== OPTIMIZED QUERY WITH LIMIT ====================
+    // ==================== REVISI UTAMA: HANYA NOTIFIKASI DARI USER LAIN ====================
     $sql = "
-        SELECT TOP {$limit}
+        SELECT 
             ti.ID_INFORMATION as id,
             'information' as type,
             CASE 
                 WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 'PENTING: Ditugaskan ke Anda'
-                WHEN ti.PIC_FROM = ? THEN 'Informasi Anda'
+                WHEN ti.PIC_FROM = ? THEN 'Informasi Anda' -- INI AKAN DI-FILTER KELUAR
                 ELSE 'Informasi Baru'
             END as title,
             CASE 
@@ -77,14 +77,15 @@ try {
                 ELSE 'info'
             END as badge_color,
             CONVERT(varchar(19), CAST(ti.DATE + ' ' + ti.TIME_FROM as datetime), 120) as datetime_full,
+            -- Tambahan untuk logic display
             CASE 
                 WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 'assigned_to_you'
                 WHEN ti.PIC_FROM = ? THEN 'your_information'
                 ELSE 'other_information'
             END as notification_type
         FROM T_INFORMATION ti
-        WHERE ti.DATE >= ?
-        AND ti.PIC_FROM != ?  -- FILTER: NOT FROM SELF
+        WHERE ti.DATE >= ?  -- FILTER: 7 HARI TERAKHIR
+        AND ti.PIC_FROM != ?  -- FILTER PENTING: BUKAN DARI USER SENDIRI
         AND NOT EXISTS (
             SELECT 1 FROM user_notification_read unr 
             WHERE unr.notification_id = ti.ID_INFORMATION 
@@ -92,8 +93,8 @@ try {
             AND unr.read_at IS NOT NULL
         )
         AND (
-            ti.PIC_TO LIKE '%' + ? + '%'
-            OR ti.PIC_FROM = ?
+            ti.PIC_TO LIKE '%' + ? + '%'  -- User adalah penerima
+            OR ti.PIC_FROM = ?  -- User adalah pengirim (TAPI AKAN DI-FILTER KELUAR)
         )
         ORDER BY CAST(ti.DATE as int) DESC, ti.TIME_FROM DESC
     ";
@@ -105,8 +106,10 @@ try {
         $currentUser,   // AND PIC_FROM != currentUser
         $currentUser,   // NOT EXISTS user_notification_read
         $currentUser,   // PIC_TO LIKE currentUser
-        $currentUser    // PIC_FROM = currentUser
+        $currentUser    // PIC_FROM = currentUser (akan difilter)
     ];
+    
+    $response['debug']['sql_params'] = $params;
     
     $stmt = sqlsrv_query($conn, $sql, $params);
     
@@ -126,12 +129,12 @@ try {
                 }
             }
             
-            // Skip notifications from self
+            // Filter: HAPUS NOTIFIKASI "Informasi Anda" (dari user sendiri)
             if ($row['notification_type'] === 'your_information') {
-                continue;
+                continue; // SKIP notifikasi dari user sendiri
             }
             
-            // Format message based on notification type
+            // Format message berdasarkan tipe notifikasi
             if ($row['notification_type'] === 'assigned_to_you') {
                 $row['display_message'] = 'Ditugaskan kepada Anda: ' . $row['ITEM'];
             } else {
@@ -141,8 +144,12 @@ try {
             $row['is_unread'] = 1;
             $unread_count++;
             $notifications[] = $row;
+            
+            $response['debug']['found_ids'][] = $row['id'];
         }
         sqlsrv_free_stmt($stmt);
+    } else {
+        $response['debug']['sql_error'] = sqlsrv_errors();
     }
     
     // ==================== DELAY NOTIFICATIONS ====================
@@ -150,7 +157,7 @@ try {
     
     if (in_array($currentUser, $supervisors)) {
         $sql_delay = "
-            SELECT DISTINCT TOP 5
+            SELECT DISTINCT TOP 3
                 CONCAT('DELAY_', o.PART_NO, '_', o.SUPPLIER_CODE) as id,
                 'delay' as type,
                 'Keterlambatan Pengiriman' as title,
@@ -202,57 +209,17 @@ try {
                 $row['is_unread'] = 1;
                 $unread_count++;
                 $notifications[] = $row;
+                
+                $response['debug']['delay_ids'][] = $row['id'];
             }
             sqlsrv_free_stmt($stmt_delay);
         }
     }
     
-    // Sort notifications by date (newest first)
-    usort($notifications, function($a, $b) {
-        return strtotime($b['datetime_full']) - strtotime($a['datetime_full']);
-    });
-    
-    // Apply offset if needed
-    if ($offset > 0 && $offset < count($notifications)) {
-        $notifications = array_slice($notifications, $offset);
-    }
-    
-    // Check if there are more notifications
-    $total_count_sql = "
-        SELECT COUNT(*) as total
-        FROM T_INFORMATION ti
-        WHERE ti.DATE >= ?
-        AND ti.PIC_FROM != ?
-        AND NOT EXISTS (
-            SELECT 1 FROM user_notification_read unr 
-            WHERE unr.notification_id = ti.ID_INFORMATION 
-            AND unr.user_id = ? 
-            AND unr.read_at IS NOT NULL
-        )
-        AND (
-            ti.PIC_TO LIKE '%' + ? + '%'
-            OR ti.PIC_FROM = ?
-        )
-    ";
-    
-    $total_stmt = sqlsrv_query($conn, $total_count_sql, [
-        $sevenDaysAgo, $currentUser, $currentUser, $currentUser, $currentUser
-    ]);
-    
-    $total_count = 0;
-    if ($total_stmt) {
-        if ($row = sqlsrv_fetch_array($total_stmt, SQLSRV_FETCH_ASSOC)) {
-            $total_count = (int)$row['total'];
-        }
-        sqlsrv_free_stmt($total_stmt);
-    }
-    
     $response['notifications'] = $notifications;
     $response['unread_count'] = $unread_count;
-    $response['has_more'] = ($offset + count($notifications)) < $total_count;
-    $response['total_count'] = $total_count;
-    $response['offset'] = $offset;
-    $response['limit'] = $limit;
+    $response['debug']['total_notifications'] = count($notifications);
+    $response['debug']['filtered_out'] = 'Removed notifications from self';
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     
