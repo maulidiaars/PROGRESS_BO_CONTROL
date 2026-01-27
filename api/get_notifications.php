@@ -6,11 +6,14 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/week_logic.php'; // Tambah ini
 
 $response = [
     'success' => true,
     'notifications' => [],
     'unread_count' => 0,
+    'weekly_info_count' => 0,
+    'week_info' => getCurrentWeekInfo(),
     'debug' => []
 ];
 
@@ -22,12 +25,12 @@ if (!isset($_SESSION['name'])) {
 }
 
 $currentUser = $_SESSION['name'];
-$today = date('Ymd');
-$sevenDaysAgo = date('Ymd', strtotime('-7 days'));
+$weekInfo = getCurrentWeekInfo();
+$weekStart = $weekInfo['start_date'];
+$weekEnd = $weekInfo['end_date'];
 
 $response['debug']['user'] = $currentUser;
-$response['debug']['today'] = $today;
-$response['debug']['seven_days_ago'] = $sevenDaysAgo;
+$response['debug']['week_info'] = $weekInfo;
 
 if (!$conn) {
     $response['success'] = false;
@@ -37,7 +40,7 @@ if (!$conn) {
 }
 
 try {
-    // ==================== REVISI UTAMA: HANYA NOTIFIKASI DARI USER LAIN ====================
+    // ==================== REVISI UTAMA: HANYA NOTIFIKASI DARI USER LAIN, HANYA MINGGU INI ====================
     $sql = "
         SELECT 
             ti.ID_INFORMATION as id,
@@ -82,9 +85,16 @@ try {
                 WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 'assigned_to_you'
                 WHEN ti.PIC_FROM = ? THEN 'your_information'
                 ELSE 'other_information'
-            END as notification_type
+            END as notification_type,
+            -- Tambahan: cek apakah dari minggu ini
+            CASE 
+                WHEN ti.DATE >= ? AND ti.DATE <= ? THEN 'current_week'
+                ELSE 'previous_week'
+            END as week_category
+            
         FROM T_INFORMATION ti
-        WHERE ti.DATE >= ?  -- FILTER: 7 HARI TERAKHIR
+        WHERE ti.DATE >= ?  -- FILTER: MULAI SENIN MINGGU INI
+        AND ti.DATE <= ?    -- FILTER: SAMPAI MINGGU MINGGU INI
         AND ti.PIC_FROM != ?  -- FILTER PENTING: BUKAN DARI USER SENDIRI
         AND NOT EXISTS (
             SELECT 1 FROM user_notification_read unr 
@@ -102,19 +112,26 @@ try {
     $params = [
         $currentUser, $currentUser,  // title
         $currentUser, $currentUser,  // notification_type
-        $sevenDaysAgo,  // WHERE DATE >=
-        $currentUser,   // AND PIC_FROM != currentUser
-        $currentUser,   // NOT EXISTS user_notification_read
-        $currentUser,   // PIC_TO LIKE currentUser
-        $currentUser    // PIC_FROM = currentUser (akan difilter)
+        $weekStart, $weekEnd,        // week_category
+        $weekStart, $weekEnd,        // WHERE DATE >= AND DATE <=
+        $currentUser,                // AND PIC_FROM != currentUser
+        $currentUser,                // NOT EXISTS user_notification_read
+        $currentUser,                // PIC_TO LIKE currentUser
+        $currentUser                 // PIC_FROM = currentUser (akan difilter)
     ];
     
     $response['debug']['sql_params'] = $params;
+    $response['debug']['week_range'] = [
+        'start' => $weekStart,
+        'end' => $weekEnd,
+        'current_date' => date('Ymd')
+    ];
     
     $stmt = sqlsrv_query($conn, $sql, $params);
     
     $notifications = [];
     $unread_count = 0;
+    $weekly_total = 0;
     
     if ($stmt) {
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
@@ -134,6 +151,11 @@ try {
                 continue; // SKIP notifikasi dari user sendiri
             }
             
+            // Filter: Hanya notifikasi dari minggu ini
+            if ($row['week_category'] !== 'current_week') {
+                continue; // SKIP notifikasi dari minggu sebelumnya
+            }
+            
             // Format message berdasarkan tipe notifikasi
             if ($row['notification_type'] === 'assigned_to_you') {
                 $row['display_message'] = 'Ditugaskan kepada Anda: ' . $row['ITEM'];
@@ -141,8 +163,16 @@ try {
                 $row['display_message'] = $row['message'];
             }
             
+            // Tambah info minggu
+            $row['week_info'] = [
+                'category' => $row['week_category'],
+                'week_number' => $weekInfo['week_number'],
+                'display_text' => $weekInfo['display_text']
+            ];
+            
             $row['is_unread'] = 1;
             $unread_count++;
+            $weekly_total++;
             $notifications[] = $row;
             
             $response['debug']['found_ids'][] = $row['id'];
@@ -156,6 +186,7 @@ try {
     $supervisors = ['ALBERTO', 'EKO', 'EKA', 'MURSID', 'SATRIO'];
     
     if (in_array($currentUser, $supervisors)) {
+        $today = date('Ymd');
         $sql_delay = "
             SELECT DISTINCT TOP 3
                 CONCAT('DELAY_', o.PART_NO, '_', o.SUPPLIER_CODE) as id,
@@ -207,6 +238,12 @@ try {
             while ($row = sqlsrv_fetch_array($stmt_delay, SQLSRV_FETCH_ASSOC)) {
                 $row['date_formatted'] = date('Y-m-d');
                 $row['is_unread'] = 1;
+                $row['week_info'] = [
+                    'category' => 'current_week',
+                    'week_number' => $weekInfo['week_number'],
+                    'display_text' => 'Hari Ini'
+                ];
+                
                 $unread_count++;
                 $notifications[] = $row;
                 
@@ -218,8 +255,16 @@ try {
     
     $response['notifications'] = $notifications;
     $response['unread_count'] = $unread_count;
+    $response['weekly_info_count'] = $weekly_total;
     $response['debug']['total_notifications'] = count($notifications);
-    $response['debug']['filtered_out'] = 'Removed notifications from self';
+    $response['debug']['filtered_out'] = 'Removed notifications from self and previous weeks';
+    
+    // ==================== CEK RESET MINGGUAN ====================
+    if (isMonday() && !($_SESSION['weekly_reset_done'] ?? false)) {
+        $resetInfo = resetWeeklyView();
+        $response['weekly_reset'] = $resetInfo;
+        $response['debug']['weekly_reset_triggered'] = true;
+    }
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     

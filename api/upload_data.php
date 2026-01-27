@@ -204,20 +204,58 @@ try {
             $HOUR = $uploadHour;
             $SHIFT = 1; // Day Shift
         } else {
-            // Jika jam 21-23 (Night Shift hari ini) atau 0-7 (Night Shift besok)
             $HOUR = $uploadHour;
             $SHIFT = 2; // Night Shift
             
-            // Jika jam 0-7, tanggal tetap hari ini (karena night shift lanjutan)
             if ($uploadHour >= 0 && $uploadHour <= 7) {
-                $currentDate = date('Ymd'); // Tetap tanggal hari ini
+                $currentDate = date('Ymd');
             }
         }
         
-        $response['debug']['upload_hour'] = $uploadHour;
-        $response['debug']['assigned_hour'] = $HOUR;
-        $response['debug']['assigned_shift'] = $SHIFT;
-        $response['debug']['assigned_date'] = $currentDate;
+        // ============ PREPARE VALID PARTS FROM PLAN ORDER ============
+        $validParts = [];
+        $rejectedParts = [];
+        $rejectedCount = 0;
+        
+        // Ambil tanggal dari file untuk validasi
+        // Cari tanggal di baris pertama untuk menentukan DELV_DATE
+        $sampleDateRow = 2;
+        $tanggalMentah = $worksheet->getCell("A" . $sampleDateRow)->getValue();
+        $tanggalObjek = DateTime::createFromFormat("d/m/y", $tanggalMentah);
+        
+        if (!$tanggalObjek) {
+            $tanggalObjek = DateTime::createFromFormat("d-m-y", $tanggalMentah);
+        }
+        
+        if ($tanggalObjek) {
+            $DATE_FOR_VALIDATION = $tanggalObjek->format("Ymd");
+            
+            // Query Plan Order untuk tanggal tersebut
+            $orderCheckQuery = "
+                SELECT DISTINCT 
+                    REPLACE(PART_NO, ' ', '') AS CLEAN_PART_NO,
+                    PART_NO AS ORIGINAL_PART_NO
+                FROM T_ORDER 
+                WHERE DELV_DATE = ?
+                AND PART_NO IS NOT NULL 
+                AND PART_NO != ''
+            ";
+            
+            $orderStmt = sqlsrv_prepare($conn, $orderCheckQuery, [$DATE_FOR_VALIDATION]);
+            
+            if ($orderStmt && sqlsrv_execute($orderStmt)) {
+                while ($row = sqlsrv_fetch_array($orderStmt, SQLSRV_FETCH_ASSOC)) {
+                    $cleanPartNo = $row['CLEAN_PART_NO'] ?? '';
+                    if (!empty($cleanPartNo)) {
+                        $validParts[$cleanPartNo] = $row['ORIGINAL_PART_NO'];
+                    }
+                }
+                sqlsrv_free_stmt($orderStmt);
+            }
+            
+            $response['debug']['validation_date'] = $DATE_FOR_VALIDATION;
+            $response['debug']['valid_parts_count'] = count($validParts);
+        }
         
         // **FIX: HAPUS HANYA DATA UNTUK JAM YANG SAMA**
         $delete_sql = "DELETE FROM T_UPDATE_BO WHERE DATE = ? AND HOUR = ?";
@@ -252,10 +290,8 @@ try {
             
             $DATE = $tanggalObjek->format("Ymd");
             
-            // **FIX: Untuk Night Shift jam 0-7, date harus sama dengan file (tidak pakai currentDate)**
-            // Karena file BO mungkin untuk tanggal kemarin (night shift lanjutan)
+            // **FIX: Untuk Night Shift jam 0-7, date harus sama dengan file**
             if ($SHIFT == 2 && ($HOUR >= 0 && $HOUR <= 7)) {
-                // Pakai tanggal dari file, bukan tanggal hari ini
                 $DATE = $tanggalObjek->format("Ymd");
             }
             
@@ -273,6 +309,26 @@ try {
             $PART_NO = '';
             if (!empty($PART_NO_RAW)) {
                 $PART_NO = str_replace(" ", "", trim($PART_NO_RAW));
+            }
+            
+            // ============ VALIDASI: CEK APAKAH PART_NO ADA DI PLAN ORDER ============
+            if (!empty($PART_NO) && !isset($validParts[$PART_NO])) {
+                $rejectedCount++;
+                $rejectedParts[] = [
+                    'row' => $row,
+                    'part_no' => $PART_NO,
+                    'date' => $DATE,
+                    'reason' => 'Not found in Plan Order'
+                ];
+                
+                // Log untuk debugging
+                $response['debug']["rejected_row_$row"] = [
+                    'part_no' => $PART_NO,
+                    'reason' => 'Not in Plan Order',
+                    'raw_part_no' => $PART_NO_RAW
+                ];
+                
+                continue; // SKIP BARIS INI!
             }
             
             // Validasi data penting
@@ -308,7 +364,19 @@ try {
             if ($stmt) sqlsrv_free_stmt($stmt);
         }
         
-        $response['message'] = "✅ Successfully uploaded $successCount BO records for hour $HOUR (Shift: $SHIFT)";
+        // Tambahkan info rejected ke response
+        $response['rejected_count'] = $rejectedCount;
+        $response['rejected_parts'] = array_slice($rejectedParts, 0, 10); // Tampilkan 10 pertama saja
+        
+        if ($rejectedCount > 0) {
+            $response['debug']['rejected_details'] = [
+                'count' => $rejectedCount,
+                'sample' => array_slice($rejectedParts, 0, 5)
+            ];
+        }
+        
+        $response['message'] = "✅ Successfully uploaded $successCount BO records for hour $HOUR (Shift: $SHIFT)" . 
+                            ($rejectedCount > 0 ? " | ❌ Rejected $rejectedCount records (not in Plan Order)" : "");
     }
     
     // ============ UPLOAD ORDER ============

@@ -88,9 +88,10 @@
             margin-top: 2px;
         }
 
-        /* Back Button */
+        /* Back Button - SATU SAJA */
         .back-container {
-            margin-right: 20px;
+            display: flex;
+            align-items: center;
         }
 
         .back-btn {
@@ -489,7 +490,7 @@
             text-align: left;
             color: #ffffff;
             font-weight: 700;
-            font-size: 11px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             border-bottom: none;
@@ -504,17 +505,17 @@
             font-size: 10px;
         }
         
-        /* Set width untuk setiap kolom */
-        .table-fixed-header th:nth-child(1) { width: 80px; }  /* CODE */
-        .table-fixed-header th:nth-child(2) { width: 180px; } /* SUPPLIER */
-        .table-fixed-header th:nth-child(3) { width: 80px; }  /* PIC */
-        .table-fixed-header th:nth-child(4) { width: 130px; } /* DAY SHIFT */
-        .table-fixed-header th:nth-child(5) { width: 130px; } /* NIGHT SHIFT */
-        .table-fixed-header th:nth-child(6) { width: 100px; } /* ORDER (pcs) */
-        .table-fixed-header th:nth-child(7) { width: 100px; } /* INCOMING (pcs) */
-        .table-fixed-header th:nth-child(8) { width: 100px; } /* REMAIN (pcs) */
-        .table-fixed-header th:nth-child(9) { width: 90px; }  /* COMPLETION */
-        .table-fixed-header th:nth-child(10) { width: 90px; } /* STATUS */
+        /* Set width untuk setiap kolom - DIPERBAIKI LEBIH KECIL */
+        .table-fixed-header th:nth-child(1) { width: 70px; }  /* CODE */
+        .table-fixed-header th:nth-child(2) { width: 160px; } /* SUPPLIER */
+        .table-fixed-header th:nth-child(3) { width: 60px; }  /* PIC */
+        .table-fixed-header th:nth-child(4) { width: 90px; }  /* DAY SHIFT */
+        .table-fixed-header th:nth-child(5) { width: 90px; }  /* NIGHT SHIFT */
+        .table-fixed-header th:nth-child(6) { width: 85px; }  /* ORDER */
+        .table-fixed-header th:nth-child(7) { width: 85px; }  /* INCOMING */
+        .table-fixed-header th:nth-child(8) { width: 85px; }  /* REMAIN */
+        .table-fixed-header th:nth-child(9) { width: 80px; }  /* COMPLETION */
+        .table-fixed-header th:nth-child(10) { width: 80px; } /* STATUS */
         
         .table-scroll-body {
             position: absolute;
@@ -539,11 +540,11 @@
         }
         
         .scrolling-content td {
-            padding: 12px 8px;
+            padding: 12px 6px;
             text-align: left;
             border-bottom: 1px solid rgba(15, 52, 96, 0.3);
             color: #e4e6eb;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 400;
             white-space: nowrap;
             overflow: hidden;
@@ -552,16 +553,16 @@
         }
         
         /* Set width yang sama dengan header */
-        .scrolling-content td:nth-child(1) { width: 80px; }
-        .scrolling-content td:nth-child(2) { width: 180px; }
-        .scrolling-content td:nth-child(3) { width: 80px; }
-        .scrolling-content td:nth-child(4) { width: 130px; }
-        .scrolling-content td:nth-child(5) { width: 130px; }
-        .scrolling-content td:nth-child(6) { width: 100px; }
-        .scrolling-content td:nth-child(7) { width: 100px; }
-        .scrolling-content td:nth-child(8) { width: 100px; }
-        .scrolling-content td:nth-child(9) { width: 90px; }
-        .scrolling-content td:nth-child(10) { width: 90px; }
+        .scrolling-content td:nth-child(1) { width: 70px; }
+        .scrolling-content td:nth-child(2) { width: 160px; }
+        .scrolling-content td:nth-child(3) { width: 60px; }
+        .scrolling-content td:nth-child(4) { width: 90px; }
+        .scrolling-content td:nth-child(5) { width: 90px; }
+        .scrolling-content td:nth-child(6) { width: 85px; }
+        .scrolling-content td:nth-child(7) { width: 85px; }
+        .scrolling-content td:nth-child(8) { width: 85px; }
+        .scrolling-content td:nth-child(9) { width: 80px; }
+        .scrolling-content td:nth-child(10) { width: 80px; }
         
         .scrolling-content tr {
             background: transparent;
@@ -580,7 +581,7 @@
         .supplier-code {
             color: #ffffff;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 11px;
             background: rgba(0, 173, 181, 0.1);
             padding: 4px 6px;
             border-radius: 4px;
@@ -597,14 +598,15 @@
             white-space: nowrap;
             font-weight: 500;
             color: #d1d9e6;
+            font-size: 11px;
         }
         
         .pic-badge {
             background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
             color: white;
-            padding: 4px 6px;
+            padding: 3px 5px;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             display: inline-block;
             text-align: center;
@@ -612,24 +614,24 @@
         }
         
         .progress-cell {
-            width: 130px;
+            width: 90px;
         }
         
         .progress-container {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         
         .progress-info {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
             width: 100%;
         }
         
         .progress-label {
-            font-size: 9px;
+            font-size: 8px;
             color: #a9b7c6;
             text-transform: uppercase;
             font-weight: 600;
@@ -639,20 +641,20 @@
         
         .progress-label span {
             color: #ffffff;
-            font-size: 9px;
+            font-size: 8px;
         }
         
         .progress-bar-horizontal {
             width: 100%;
-            height: 6px;
+            height: 5px;
             background: rgba(15, 52, 96, 0.5);
-            border-radius: 3px;
+            border-radius: 2px;
             overflow: hidden;
         }
         
         .progress-fill {
             height: 100%;
-            border-radius: 3px;
+            border-radius: 2px;
             transition: width 0.8s ease;
         }
         
@@ -665,15 +667,15 @@
         }
         
         .quantity-cell {
-            width: 100px;
+            width: 85px;
         }
         
         .quantity-display {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 6px 8px;
-            border-radius: 6px;
+            padding: 5px 6px;
+            border-radius: 5px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(255, 255, 255, 0.05);
             width: 100%;
@@ -681,13 +683,13 @@
         
         .quantity-value {
             font-weight: 800;
-            font-size: 13px;
+            font-size: 12px;
             color: #ffffff;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         
         .quantity-label {
-            font-size: 9px;
+            font-size: 8px;
             color: #a9b7c6;
             text-transform: uppercase;
         }
@@ -720,14 +722,14 @@
         }
         
         .status-badge {
-            padding: 6px 8px;
-            border-radius: 6px;
-            font-size: 10px;
+            padding: 5px 6px;
+            border-radius: 5px;
+            font-size: 9px;
             font-weight: 700;
             display: inline-block;
             text-align: center;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
             width: 100%;
         }
         
@@ -753,7 +755,7 @@
         
         .rate-display {
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             color: #ffffff;
             text-align: center;
             display: block;
@@ -848,8 +850,8 @@
             transform: translateY(-2px);
         }
         
-        /* ========== FULLSCREEN BUTTON ========== */
-        .fullscreen-button {
+        /* ========== HOME BUTTON ========== */
+        .home-button {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -861,17 +863,19 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 22px;
             box-shadow: 0 4px 12px rgba(0, 173, 181, 0.4);
             z-index: 1001;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-decoration: none;
         }
         
-        .fullscreen-button:hover {
+        .home-button:hover {
             background: linear-gradient(135deg, #00838f 0%, #006064 100%);
             transform: translateY(-3px) scale(1.1);
             box-shadow: 0 6px 16px rgba(0, 173, 181, 0.5);
+            color: white;
         }
         
         /* ========== EMPTY STATE ========== */
@@ -911,32 +915,38 @@
         @media (max-width: 768px) {
             .dashboard-header {
                 padding: 0 15px;
-                height: 70px;
+                height: auto;
+                min-height: 70px;
                 flex-wrap: wrap;
             }
             
-            .back-container {
-                order: 3;
-                width: 100%;
-                margin: 10px 0 0 0;
-                text-align: center;
-            }
-            
-            .back-btn {
+            .logo-container {
                 width: 100%;
                 justify-content: center;
+                margin-bottom: 5px;
+            }
+            
+            .back-container {
+                order: 2;
+                margin: 10px 0;
+                justify-content: center;
+            }
+            
+            .datetime-display {
+                order: 3;
+                width: 100%;
+                text-align: center;
+                margin-top: 5px;
             }
             
             .main-title {
                 font-size: 18px;
+                text-align: center;
             }
             
             .sub-title {
                 font-size: 12px;
-            }
-            
-            .datetime-display {
-                text-align: right;
+                text-align: center;
             }
             
             .date-display {
@@ -948,7 +958,7 @@
             }
             
             .dashboard-container {
-                margin-top: 100px;
+                margin-top: 120px;
                 padding: 10px;
                 gap: 10px;
             }
@@ -981,10 +991,10 @@
                 font-size: 14px;
             }
             
-            .fullscreen-button {
+            .home-button {
                 width: 40px;
                 height: 40px;
-                font-size: 16px;
+                font-size: 18px;
                 bottom: 15px;
                 right: 15px;
             }
@@ -1003,22 +1013,10 @@
             </div>
         </div>
         
-        <div class="back-container">
-            <button class="back-btn" onclick="goToMainDashboard()">
-                <i class="fas fa-arrow-left"></i> Back to Main
-            </button>
-        </div>
-        
-    <!-- Ganti bagian datetime-display -->
-    <div class="datetime-display">
-        <button class="back-btn-top" onclick="goToMainDashboard()" title="Back to Main Dashboard">
-            <i class="fas fa-arrow-left"></i>
-        </button>
-        <div>
+        <div class="datetime-display">
             <div class="date-display" id="dateDisplay"></div>
             <div class="time-display" id="timeDisplay"></div>
         </div>
-    </div>
     </header>
         
     <!-- ========== MAIN DASHBOARD ========== -->
@@ -1030,7 +1028,7 @@
             <!-- TODAY'S TARGET GAUGE -->
             <div class="live-gauge-card">
                 <div class="gauge-header">
-                    <h6><i class="fas fa-tachometer-alt"></i> TODAY'S TARGET ACHIEVEMENT</h6>
+                    <h6><i class="fas fa-tachometer-alt"></i> TODAY'S ACHIEVEMENT</h6>
                     <span class="live-time" id="lastUpdateTime">Updating...</span>
                 </div>
                 <div class="gauge-container">
@@ -1057,7 +1055,7 @@
                 </div>
             </div>
             
-            <!-- HOURLY PROGRESS -->
+            <!-- HOURLY PROGRESS - DIUBAH: AKUMULASI -->
             <div class="hourly-card">
                 <div class="hourly-header">
                     <h6><i class="fas fa-clock"></i> HOURLY INCOMING PROGRESS (pcs)</h6>
@@ -1069,12 +1067,17 @@
                         <p class="mt-2 text-white">Loading hourly data...</p>
                     </div>
                 </div>
+                <div class="text-center mt-2">
+                    <small class="text-info">
+                        <i class="fas fa-info-circle"></i> Data shows cumulative incoming per hour
+                    </small>
+                </div>
             </div>
             
             <!-- INFORMATION SECTION -->
             <div class="info-card">
                 <div class="info-header">
-                    <h6><i class="fas fa-info-circle"></i> INFORMATION</h6>
+                    <h6><i class="fas fa-info-circle"></i> LATEST INFORMATION</h6>
                     <span class="badge bg-primary" id="infoCount">0</span>
                 </div>
                 <div class="info-list" id="informationList">
@@ -1082,6 +1085,11 @@
                         <div class="spinner-border spinner-border-sm text-primary"></div>
                         <p class="mt-2 text-white small">Loading information...</p>
                     </div>
+                </div>
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-history"></i> Showing last 7 days data
+                    </small>
                 </div>
             </div>
             
@@ -1101,7 +1109,7 @@
         <div class="main-data-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <i class="fas fa-truck-loading"></i> LIVE SUPPLIER DELIVERY STATUS
+                    <i class="fas fa-truck-loading"></i> LIVE SUPPLIER DELIVERY
                     <div class="live-badge">
                         <div class="live-dot"></div>
                         LIVE • <span id="todayDate">Today</span>
@@ -1142,12 +1150,12 @@
                                     <th><i class="fas fa-barcode"></i> CODE</th>
                                     <th><i class="fas fa-warehouse"></i> SUPPLIER</th>
                                     <th><i class="fas fa-user"></i> PIC</th>
-                                    <th><i class="fas fa-sun"></i> DAY SHIFT</th>
-                                    <th><i class="fas fa-moon"></i> NIGHT SHIFT</th>
-                                    <th><i class="fas fa-truck"></i> ORDER (pcs)</th>
-                                    <th><i class="fas fa-box"></i> INCOMING (pcs)</th>
-                                    <th><i class="fas fa-balance-scale"></i> REMAIN (pcs)</th>
-                                    <th><i class="fas fa-chart-line"></i> COMPLETION</th>
+                                    <th><i class="fas fa-sun"></i> DAY</th>
+                                    <th><i class="fas fa-moon"></i> NIGHT</th>
+                                    <th><i class="fas fa-truck"></i> ORDER</th>
+                                    <th><i class="fas fa-box"></i> INCOMING</th>
+                                    <th><i class="fas fa-balance-scale"></i> REMAIN</th>
+                                    <th><i class="fas fa-chart-line"></i> RATE</th>
                                     <th><i class="fas fa-flag"></i> STATUS</th>
                                 </tr>
                             </thead>
@@ -1179,10 +1187,10 @@
         </div>
     </div>
     
-    <!-- FULLSCREEN BUTTON -->
-    <div class="fullscreen-button" onclick="toggleFullscreen()" title="Toggle Fullscreen">
-        <i class="fas fa-expand"></i>
-    </div>
+    <!-- HOME BUTTON -->
+    <a href="index.php" class="home-button" title="Back to Main Dashboard">
+        <i class="fas fa-home"></i>
+    </a>
     
     <!-- ========== JAVASCRIPT ========== -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1199,7 +1207,7 @@ let today = new Date().toISOString().split('T')[0].replace(/-/g, '');
 // ========== SCROLLING ANIMATION VARIABLES ==========
 let autoScrollInterval = null;
 let isAutoScrolling = true;
-let scrollSpeed = 1; // pixels per interval
+let scrollSpeed = 0.8; // pixels per interval (lebih pelan)
 let scrollPosition = 0;
 let scrollDirection = 1; // 1 = down, -1 = up
 
@@ -1326,7 +1334,7 @@ function updateTodayGauge() {
     });
 }
 
-// ========== HOURLY PROGRESS ==========
+// ========== HOURLY PROGRESS - DIUBAH JADI AKUMULASI ==========
 function updateHourlyChart() {
     const currentHour = new Date().getHours();
     const isDayShift = currentHour >= 7 && currentHour <= 20;
@@ -1345,16 +1353,21 @@ function updateHourlyChart() {
                 return;
             }
             
+            // DAPATKAN DATA AKUMULASI
+            let cumulative = 0;
             const hours = response.map(r => r.hour + ':00');
-            const quantities = response.map(r => r.qty);
+            const quantities = response.map(r => {
+                cumulative += r.qty;
+                return cumulative;
+            });
             
             const options = {
                 series: [{
-                    name: 'Incoming Qty',
+                    name: 'Cumulative Incoming',
                     data: quantities
                 }],
                 chart: {
-                    type: 'bar',
+                    type: 'area',
                     height: 200,
                     toolbar: { show: false },
                     animations: { 
@@ -1362,30 +1375,31 @@ function updateHourlyChart() {
                         speed: 800,
                         animateGradually: { enabled: true, delay: 150 },
                         dynamicAnimation: { enabled: true, speed: 350 }
-                    }
+                    },
+                    zoom: { enabled: false }
                 },
-                plotOptions: {
-                    bar: {
-                        columnWidth: '75%',
-                        borderRadius: 4,
-                        distributed: false,
-                        dataLabels: { position: 'top' }
+                stroke: {
+                    curve: 'smooth',
+                    width: 3
+                },
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.7,
+                        opacityTo: 0.3,
+                        stops: [0, 90, 100]
                     }
                 },
                 colors: ['#00adb5'],
                 dataLabels: {
-                    enabled: true,
-                    formatter: function(val) { return val > 0 ? val.toLocaleString() : ''; },
-                    offsetY: -10,
-                    style: {
-                        colors: ['#ffffff'],
-                        fontSize: '11px',
-                        fontWeight: 'bold'
-                    }
+                    enabled: false
                 },
                 grid: {
                     borderColor: 'rgba(255, 255, 255, 0.1)',
-                    strokeDashArray: 3
+                    strokeDashArray: 3,
+                    yaxis: { lines: { show: true } },
+                    xaxis: { lines: { show: true } }
                 },
                 xaxis: {
                     categories: hours,
@@ -1400,7 +1414,7 @@ function updateHourlyChart() {
                 },
                 yaxis: {
                     title: { 
-                        text: 'Quantity (pcs)', 
+                        text: 'Cumulative (pcs)', 
                         style: { color: '#a9b7c6', fontSize: '12px' }
                     },
                     labels: { 
@@ -1409,7 +1423,20 @@ function updateHourlyChart() {
                     }
                 },
                 tooltip: {
-                    y: { formatter: (val) => val.toLocaleString() + ' pcs' }
+                    y: { 
+                        formatter: function(val, { dataPointIndex }) {
+                            const current = quantities[dataPointIndex];
+                            const previous = dataPointIndex > 0 ? quantities[dataPointIndex-1] : 0;
+                            const increment = current - previous;
+                            return `${current.toLocaleString()} pcs (+${increment.toLocaleString()})`;
+                        }
+                    }
+                },
+                markers: {
+                    size: 4,
+                    colors: ['#ffffff'],
+                    strokeColors: '#00adb5',
+                    strokeWidth: 2
                 }
             };
             
@@ -1444,7 +1471,19 @@ function updateInformation() {
             let html = '';
             let infoCount = 0;
             
+            // Filter hanya notifikasi dari 7 hari terakhir
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
             notifications.slice(0, 5).forEach(notification => {
+                // Filter berdasarkan tanggal (jika ada)
+                if (notification.datetime_full) {
+                    const notifDate = new Date(notification.datetime_full);
+                    if (notifDate < sevenDaysAgo) {
+                        return; // Skip data lebih dari 7 hari
+                    }
+                }
+                
                 infoCount++;
                 
                 let icon = 'info-circle';
@@ -1515,84 +1554,57 @@ function updateLiveTable() {
                 renderTableWithFixedHeader(response);
             }
         },
-        error: function() {
-            console.error("❌ API failed, using demo data");
+        error: function(xhr, status, error) {
+            console.error("❌ API failed:", status, error);
             
-            const demoData = [
-                {
-                    supplier_code: 'C60',
-                    supplier_name: 'AUTOPLASTIK INDONESIA,PT.',
-                    pic_order: 'SATRIO',
-                    total_order: 176,
-                    total_incoming: 100,
-                    ds_incoming: 60,
-                    ns_incoming: 40,
-                    ds_completion: 34,
-                    ns_completion: 23,
-                    completion_rate: 57,
-                    balance: 76,
-                    STATUS: 'ON_PROGRESS'
-                },
-                {
-                    supplier_code: 'A25',
-                    supplier_name: 'CHANDRA NUGERAHCIPTA, PT.',
-                    pic_order: 'EKA',
-                    total_order: 50,
-                    total_incoming: 30,
-                    ds_incoming: 20,
-                    ns_incoming: 10,
-                    ds_completion: 40,
-                    ns_completion: 20,
-                    completion_rate: 60,
-                    balance: 20,
-                    STATUS: 'ON_PROGRESS'
-                },
-                {
-                    supplier_code: 'B79',
-                    supplier_name: 'YUJU INDONESIA, PT.',
-                    pic_order: 'SATRIO',
-                    total_order: 200,
-                    total_incoming: 250,
-                    ds_incoming: 150,
-                    ns_incoming: 100,
-                    ds_completion: 75,
-                    ns_completion: 50,
-                    completion_rate: 125,
-                    balance: -50,
-                    STATUS: 'OVER'
-                },
-                {
-                    supplier_code: 'B70',
-                    supplier_name: 'DHARMA PRECISION PARTS,PT',
-                    pic_order: 'EKO',
-                    total_order: 300,
-                    total_incoming: 300,
-                    ds_incoming: 200,
-                    ns_incoming: 100,
-                    ds_completion: 67,
-                    ns_completion: 33,
-                    completion_rate: 100,
-                    balance: 0,
-                    STATUS: 'OK'
-                },
-                {
-                    supplier_code: 'C40',
-                    supplier_name: 'CIPTAJAYA KREASINDO U.,PT',
-                    pic_order: 'EKO',
-                    total_order: 150,
-                    total_incoming: 75,
-                    ds_incoming: 50,
-                    ns_incoming: 25,
-                    ds_completion: 33,
-                    ns_completion: 17,
-                    completion_rate: 50,
-                    balance: 75,
-                    STATUS: 'DELAY'
-                }
-            ];
-            
+            // Fallback to demo data
+            const demoData = generateDemoData();
             renderTableWithFixedHeader(demoData);
         }
+    });
+}
+
+function generateDemoData() {
+    const suppliers = [
+        { code: 'C60', name: 'AUTOPLASTIK INDONESIA,PT.', pic: 'SATRIO' },
+        { code: 'A25', name: 'CHANDRA NUGERAHCIPTA, PT.', pic: 'EKA' },
+        { code: 'B79', name: 'YUJU INDONESIA, PT.', pic: 'SATRIO' },
+        { code: 'B70', name: 'DHARMA PRECISION PARTS,PT', pic: 'EKO' },
+        { code: 'C40', name: 'CIPTAJAYA KREASINDO U.,PT', pic: 'EKO' },
+        { code: 'D15', name: 'PRIMA TEKNIK INDONESIA', pic: 'ALBERTO' },
+        { code: 'E22', name: 'SUMBER MAKMUR SEJAHTERA', pic: 'MURSID' },
+        { code: 'F33', name: 'TECHNO PRECISION PARTS', pic: 'SATRIO' },
+        { code: 'G44', name: 'MITRA USAHA BERSAMA', pic: 'EKA' },
+        { code: 'H55', name: 'GLOBAL MANUFACTURING IND.', pic: 'EKO' }
+    ];
+    
+    return suppliers.map(supplier => {
+        const orderQty = Math.floor(Math.random() * 500) + 100;
+        const incomingQty = Math.floor(Math.random() * orderQty * 1.2);
+        const dsIncoming = Math.floor(incomingQty * 0.6);
+        const nsIncoming = Math.floor(incomingQty * 0.4);
+        const completionRate = Math.round((incomingQty / orderQty) * 100);
+        
+        let status = 'ON_PROGRESS';
+        if (completionRate >= 100) status = 'OK';
+        else if (completionRate >= 90) status = 'ON_PROGRESS';
+        else if (completionRate >= 70) status = 'DELAY';
+        else status = 'OVER';
+        
+        return {
+            supplier_code: supplier.code,
+            supplier_name: supplier.name,
+            pic_order: supplier.pic,
+            total_order: orderQty,
+            total_incoming: incomingQty,
+            ds_incoming: dsIncoming,
+            ns_incoming: nsIncoming,
+            ds_completion: Math.round((dsIncoming / orderQty) * 100),
+            ns_completion: Math.round((nsIncoming / orderQty) * 100),
+            completion_rate: completionRate,
+            balance: orderQty - incomingQty,
+            STATUS: status
+        };
     });
 }
 
@@ -1624,8 +1636,12 @@ function renderTableWithFixedHeader(data) {
         return statusOrder[statusA] - statusOrder[statusB];
     });
     
-    // Duplicate data untuk scrolling yang seamless
-    const duplicatedData = [...data, ...data];
+    // Duplicate data untuk scrolling yang seamless (8x untuk smooth)
+    const duplicateCount = 8;
+    let duplicatedData = [];
+    for (let i = 0; i < duplicateCount; i++) {
+        duplicatedData = duplicatedData.concat(data);
+    }
     
     let html = '<table>';
     
@@ -1635,32 +1651,31 @@ function renderTableWithFixedHeader(data) {
     let delayedCount = 0;
     let overCount = 0;
     
+    // Hanya hitung stats dari data asli
+    data.forEach((item) => {
+        totalSuppliers++;
+        const status = item.STATUS || 'ON_PROGRESS';
+        
+        switch(status) {
+            case 'OK':
+                completedCount++;
+                break;
+            case 'OVER':
+                overCount++;
+                break;
+            case 'DELAY':
+                delayedCount++;
+                break;
+            case 'ON_PROGRESS':
+            default:
+                onProgressCount++;
+                break;
+        }
+    });
+    
     duplicatedData.forEach((item, index) => {
         const completionRate = parseFloat(item.completion_rate) || 0;
         const status = item.STATUS || 'ON_PROGRESS';
-        const isOriginal = index < data.length;
-        
-        // Count untuk data asli saja
-        if (isOriginal) {
-            totalSuppliers++;
-            
-            // Hitung berdasarkan status
-            switch(status) {
-                case 'OK':
-                    completedCount++;
-                    break;
-                case 'OVER':
-                    overCount++;
-                    break;
-                case 'DELAY':
-                    delayedCount++;
-                    break;
-                case 'ON_PROGRESS':
-                default:
-                    onProgressCount++;
-                    break;
-            }
-        }
         
         // Determine status class
         let statusClass = '';
@@ -1710,6 +1725,10 @@ function renderTableWithFixedHeader(data) {
             remainClass = 'quantity-danger';
         }
         
+        // Format persentase tanpa D/S dan N/S
+        const dsPercent = Math.min(item.ds_completion || 0, 100);
+        const nsPercent = Math.min(item.ns_completion || 0, 100);
+        
         html += `
         <tr>
             <td><span class="supplier-code">${item.supplier_code || 'N/A'}</span></td>
@@ -1719,11 +1738,10 @@ function renderTableWithFixedHeader(data) {
                 <div class="progress-container">
                     <div class="progress-info">
                         <div class="progress-label">
-                            DS
-                            <span>${item.ds_completion || 0}%</span>
+                            ${dsPercent}%
                         </div>
                         <div class="progress-bar-horizontal">
-                            <div class="progress-fill ds" style="width: ${Math.min(item.ds_completion || 0, 100)}%"></div>
+                            <div class="progress-fill ds" style="width: ${dsPercent}%"></div>
                         </div>
                     </div>
                 </div>
@@ -1732,11 +1750,10 @@ function renderTableWithFixedHeader(data) {
                 <div class="progress-container">
                     <div class="progress-info">
                         <div class="progress-label">
-                            NS
-                            <span>${item.ns_completion || 0}%</span>
+                            ${nsPercent}%
                         </div>
                         <div class="progress-bar-horizontal">
-                            <div class="progress-fill ns" style="width: ${Math.min(item.ns_completion || 0, 100)}%"></div>
+                            <div class="progress-fill ns" style="width: ${nsPercent}%"></div>
                         </div>
                     </div>
                 </div>
@@ -1759,7 +1776,7 @@ function renderTableWithFixedHeader(data) {
                     <div class="quantity-label">Remain</div>
                 </div>
             </td>
-            <td><span class="rate-display ${rateClass}">${completionRate.toFixed(1)}%</span></td>
+            <td><span class="rate-display ${rateClass}">${completionRate.toFixed(0)}%</span></td>
             <td><span class="status-badge ${statusClass}">${status}</span></td>
         </tr>`;
     });
@@ -1802,18 +1819,16 @@ function startAutoScroll() {
         scrollPosition += scrollSpeed * scrollDirection;
         const contentHeight = content.scrollHeight;
         const containerHeight = scrollBody.clientHeight;
+        const maxScroll = contentHeight - containerHeight;
         
-        // Jika mencapai bawah, reset ke atas
-        if (scrollPosition >= contentHeight - containerHeight) {
+        // Jika mencapai batas, reset ke atas
+        if (scrollPosition >= maxScroll) {
             scrollPosition = 0;
+            scrollBody.scrollTop = 0;
+        } else {
+            scrollBody.scrollTop = scrollPosition;
         }
-        // Jika mencapai atas dan scrolling ke atas
-        else if (scrollPosition < 0 && scrollDirection < 0) {
-            scrollPosition = contentHeight - containerHeight;
-        }
-        
-        scrollBody.scrollTop = scrollPosition;
-    }, 50);
+    }, 16); // ~60fps
 }
 
 function stopAutoScroll() {
@@ -1839,16 +1854,16 @@ function toggleAutoScroll() {
 }
 
 function scrollFaster() {
-    scrollSpeed = Math.min(scrollSpeed + 0.5, 5);
-    console.log(`Scroll speed: ${scrollSpeed}`);
+    scrollSpeed = Math.min(scrollSpeed + 0.2, 3);
+    console.log(`Scroll speed: ${scrollSpeed.toFixed(1)}`);
 }
 
 function scrollSlower() {
-    scrollSpeed = Math.max(scrollSpeed - 0.5, 0.5);
-    console.log(`Scroll speed: ${scrollSpeed}`);
+    scrollSpeed = Math.max(scrollSpeed - 0.2, 0.5);
+    console.log(`Scroll speed: ${scrollSpeed.toFixed(1)}`);
 }
 
-// ========== HELPER FUNCTIONS ==========
+// ========== AUTO REFRESH FUNCTIONS ==========
 function refreshAllData() {
     updateTodayGauge();
     updateHourlyChart();
@@ -1879,7 +1894,7 @@ function toggleAutoRefresh() {
 
 function startAutoRefresh() {
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(refreshAllData, 7 * 60 * 1000); // 7 menit
+    autoRefreshInterval = setInterval(refreshAllData, 8 * 60 * 1000); // 8 MENIT
 }
 
 function stopAutoRefresh() {
@@ -1889,20 +1904,10 @@ function stopAutoRefresh() {
     }
 }
 
-function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-            console.log(`Error attempting to enable fullscreen: ${err.message}`);
-        });
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
-    }
-}
-
 // ========== INITIALIZATION ==========
 $(document).ready(function() {
+    console.log("🎯 LIVE DASHBOARD INITIALIZING...");
+    
     // Initial data load
     updateDateTime();
     updateTodayGauge();
@@ -1910,44 +1915,58 @@ $(document).ready(function() {
     updateInformation();
     updateLiveTable();
     
-    // Start auto refresh (7 menit)
+    // Start auto refresh (8 menit)
     startAutoRefresh();
     
     // Update time every second
     setInterval(updateDateTime, 1000);
     
-    // Fullscreen event
-    document.addEventListener('fullscreenchange', function() {
-        const icon = document.querySelector('.fullscreen-button i');
-        if (document.fullscreenElement) {
-            icon.className = 'fas fa-compress';
+    // Handle page visibility
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            console.log("📱 Page hidden, pausing updates");
+            stopAutoRefresh();
+            stopAutoScroll();
         } else {
-            icon.className = 'fas fa-expand';
+            console.log("📱 Page visible, resuming updates");
+            if (isAutoRefresh) {
+                startAutoRefresh();
+            }
+            if (isAutoScrolling) {
+                startAutoScroll();
+            }
+            // Force refresh data
+            setTimeout(refreshAllData, 500);
         }
     });
+    
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // Reset scroll position on resize
+            const scrollBody = document.getElementById('tableScrollBody');
+            if (scrollBody) {
+                scrollBody.scrollTop = 0;
+                scrollPosition = 0;
+            }
+            // Restart scroll animation
+            if (isAutoScrolling) {
+                stopAutoScroll();
+                setTimeout(startAutoScroll, 100);
+            }
+        }, 250);
+    });
+    
+    console.log("✅ LIVE DASHBOARD INITIALIZED");
 });
 
-// Handle page visibility
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        stopAutoRefresh();
-        stopAutoScroll();
-    } else {
-        if (isAutoRefresh) {
-            startAutoRefresh();
-        }
-        if (isAutoScrolling) {
-            startAutoScroll();
-        }
-    }
-});
-
-// Handle window resize
-window.addEventListener('resize', function() {
-    // Reset scroll position on resize
-    const scrollBody = document.getElementById('tableScrollBody');
-    if (scrollBody) {
-        scrollBody.scrollTop = 0;
+// Handle connection issues
+$(document).ajaxError(function(event, jqxhr, settings, thrownError) {
+    if (settings.url.includes('get_live_supplier_data')) {
+        console.warn("⚠️ Connection issue with live data, will retry...");
+        setTimeout(updateLiveTable, 3000);
     }
 });
 </script>

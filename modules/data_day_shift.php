@@ -14,6 +14,7 @@ if (!$conn) {
 
 $DATE1 = $_GET["date1"] ?? date('Ymd');
 $DATE2 = $_GET["date2"] ?? date('Ymd');
+$supplier_code = $_GET["supplier_code"] ?? '';
 
 $sql = "
 WITH TRAN_DATA AS (
@@ -165,13 +166,36 @@ SELECT
     ISNULL(T.[TRAN_18], 0) AS TRAN_18, ISNULL(O.[ORD_18], 0) AS ORD_18,
     ISNULL(T.[TRAN_19], 0) AS TRAN_19, ISNULL(O.[ORD_19], 0) AS ORD_19,
     ISNULL(T.[TRAN_20], 0) AS TRAN_20, ISNULL(O.[ORD_20], 0) AS ORD_20
-FROM TRAN_DATA T
-FULL OUTER JOIN ORD_DATA O
+FROM ORD_DATA O
+LEFT JOIN TRAN_DATA T
     ON T.PART_NO = O.PART_NO AND T.DATE = O.DELV_DATE
-WHERE COALESCE(T.DATE, O.DELV_DATE) BETWEEN '$DATE1' AND '$DATE2'
-ORDER BY COALESCE(T.DATE, O.DELV_DATE), O.SUPPLIER_CODE, COALESCE(T.PART_NO, O.PART_NO)";
+WHERE O.DELV_DATE BETWEEN '$DATE1' AND '$DATE2'
+AND O.SUPPLIER_CODE IS NOT NULL 
+AND O.SUPPLIER_CODE != ''";
 
-$stmt = sqlsrv_query($conn, $sql);
+// Tambahkan filter supplier_code jika ada
+if (!empty($supplier_code)) {
+    $supplier_codes = explode(',', $supplier_code);
+    if (count($supplier_codes) > 0) {
+        $placeholders = implode(',', array_fill(0, count($supplier_codes), '?'));
+        $sql .= " AND O.SUPPLIER_CODE IN ($placeholders)";
+        
+        // Tambahkan parameter
+        foreach ($supplier_codes as $code) {
+            $params[] = trim($code);
+        }
+    }
+}
+
+$sql .= " ORDER BY O.DELV_DATE, O.SUPPLIER_CODE, O.PART_NO";
+
+// Update query execution untuk menggunakan params
+if (isset($params) && !empty($params)) {
+    $stmt = sqlsrv_query($conn, $sql, $params);
+} else {
+    $stmt = sqlsrv_query($conn, $sql);
+}
+
 $data = array();
 
 if ($stmt === false) {

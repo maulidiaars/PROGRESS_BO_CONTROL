@@ -19,6 +19,9 @@ try {
         $bulan = date('Y-m');
     }  
     
+    // Tambahkan parameter supplier_code
+    $supplier_code = $_GET["supplier_code"] ?? '';
+    
     if (!preg_match('/^\d{4}-\d{2}$/', $bulan)) {
         throw new Exception('Format bulan tidak valid. Gunakan format: YYYY-MM');
     }
@@ -40,16 +43,32 @@ try {
         ISNULL(MAX(o.ADD_NS), 0) AS ADD_NS
     FROM T_ORDER o
     WHERE o.DELV_DATE >= ? AND o.DELV_DATE <= ?
-    GROUP BY 
+    ";
+    
+    $params = array($delvDateStart, $delvDateEnd);
+    
+    // Tambahkan filter supplier_code jika ada
+    if (!empty($supplier_code)) {
+        $supplier_codes = explode(',', $supplier_code);
+        if (count($supplier_codes) > 0) {
+            $placeholders = implode(',', array_fill(0, count($supplier_codes), '?'));
+            $sql .= " AND o.SUPPLIER_CODE IN ($placeholders)";
+            
+            // Tambahkan ke params array
+            foreach ($supplier_codes as $code) {
+                array_push($params, trim($code));
+            }
+        }
+    }
+    
+    $sql .= " GROUP BY 
         o.DELV_DATE,
         o.SUPPLIER_CODE,
         o.SUPPLIER_NAME,
         o.PART_NO,
         o.PART_NAME
-    ORDER BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO
-    ";
+    ORDER BY o.DELV_DATE, o.SUPPLIER_CODE, o.PART_NO";
     
-    $params = array($delvDateStart, $delvDateEnd);  
     $stmt = sqlsrv_query($conn, $sql, $params);  
     
     if($stmt === false){  

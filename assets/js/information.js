@@ -1,4 +1,4 @@
-// assets/js/information.js - VERSION TANPA AUDIO
+// assets/js/information.js - VERSION FINAL TANPA AUDIO & DENGAN 7 HARI RETENTION
 (function() {
     'use strict';
     
@@ -118,14 +118,14 @@
             });
             
             // Button actions di modal reply
-            $(document).on('click', '#btn-on-progress', (e) => {
+            $(document).on('click', '#btn-on-progress-action', (e) => {
                 e.preventDefault();
-                this.replyInformation('on_progress');
+                this.submitReply('on_progress');
             });
             
-            $(document).on('click', '#btn-closed', (e) => {
+            $(document).on('click', '#btn-closed-action', (e) => {
                 e.preventDefault();
-                this.replyInformation('closed');
+                this.submitReply('closed');
             });
             
             // Modal hide events
@@ -227,7 +227,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="recipient-all" value="ALL">
                         <label class="form-check-label fw-bold" for="recipient-all">
-                            <i class="bi bi-people-fill me-1"></i>ALL USERS (Everyone)
+                            <i class="bi bi-people-fill me-1"></i>SEMUA USER (Semua Orang)
                         </label>
                     </div>
                 </div>
@@ -647,44 +647,98 @@
                     statusText = info.STATUS || 'UNKNOWN';
             }
             
-            $('#current-status-badge').removeClass().addClass(`badge ${statusBadge} fw-medium px-3 py-1 me-3`);
+            $('#display-status-badge').removeClass().addClass(`badge ${statusBadge} fw-medium px-3 py-1 me-3`);
             $('#display-status-text').text(statusText);
             $('#reply-time-display').text(new Date().toTimeString().substring(0, 5));
             
-            // Update button text berdasarkan status
-            if (info.STATUS === 'Open') {
-                $('#btn-on-progress').html('<i class="bi bi-clock-history me-2"></i> Mark as On Progress');
-            } else if (info.STATUS === 'On Progress') {
-                $('#btn-on-progress').html('<i class="bi bi-arrow-clockwise me-2"></i> Update Progress');
+            // Calculate days old
+            const createdDate = new Date(info.DATE);
+            const now = new Date();
+            const daysOld = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+            const remainingDays = Math.max(0, 7 - daysOld);
+            
+            // Update retention info
+            if (daysOld > 7) {
+                $('#retention-info').html(`
+                    <span class="text-danger fw-bold">SUDAH KADALUARSA</span><br>
+                    ${daysOld - 7} hari melebihi batas retention
+                `);
+            } else {
+                $('#retention-info').html(`
+                    <span class="text-success fw-bold">MASIH AKTIF</span><br>
+                    ${remainingDays} hari tersisa
+                `);
             }
             
             // Reset remark field
             $('#txt-remark-update').val('');
+            
+            // Auto-select appropriate action
+            if (info.STATUS === 'Open') {
+                this.selectStatusAction('on_progress');
+            } else if (info.STATUS === 'On Progress') {
+                this.selectStatusAction('closed');
+            }
         }
         
-        replyInformation(actionType) {
-            console.log('📤 Replying to information with action:', actionType);
+        selectStatusAction(action) {
+            console.log('🎯 Selecting status action:', action);
             
-            const form = $('#updateToInformationForm')[0];
-            const formData = new FormData(form);
+            // Update UI
+            $('.status-action-card').removeClass('selected');
+            $(`.status-action-card[data-action="${action}"]`).addClass('selected');
             
-            // Tambah action_type ke formData
-            formData.append('action_type', actionType);
+            // Update radio button
+            $(`input.action-radio[value="${action}"]`).prop('checked', true);
+            $('#action-type').val(action);
             
-            // Validasi untuk action closed
-            if (actionType === 'closed') {
-                const remark = $('#txt-remark-update').val().trim();
-                if (!remark) {
-                    this.showToast('warning', 'Remark Required', 'Please fill Remark field for closing information');
-                    $('#txt-remark-update').focus();
-                    return;
-                }
+            // Update remark info text
+            if (action === 'closed') {
+                $('#remark-info-text').html(`
+                    <strong class="text-danger">Wajib diisi!</strong> 
+                    Harap berikan catatan detail sebelum menutup informasi ini.
+                `);
+                $('#txt-remark-update').attr('required', 'required').attr('placeholder', 'Contoh: Sudah ditindaklanjuti, masalah sudah selesai, hasilnya...');
+            } else {
+                $('#remark-info-text').html(`
+                    Opsional: Tambahkan catatan tentang progress atau update terbaru.
+                    Contoh: "Sedang dikonfirmasi ke supplier", "Menunggu respon dari bagian QC"
+                `);
+                $('#txt-remark-update').removeAttr('required').attr('placeholder', 'Tulis catatan atau tindakan yang sudah dilakukan...');
             }
             
-            const submitBtn = actionType === 'closed' ? $('#btn-closed') : $('#btn-on-progress');
-            const originalText = submitBtn.html();
-            submitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm"></span> Saving...');
+            // Update button visibility
+            if (action === 'on_progress') {
+                $('#btn-on-progress-action').show();
+                $('#btn-closed-action').hide();
+            } else {
+                $('#btn-on-progress-action').hide();
+                $('#btn-closed-action').show();
+            }
+        }
+        
+        submitReply(action) {
+            console.log('📤 Submitting reply with action:', action);
+            
+            const form = $('#updateToInformationForm');
+            const remark = $('#txt-remark-update').val().trim();
+            
+            // Validation
+            if (action === 'closed' && !remark) {
+                this.showToast('error', 'Catatan wajib diisi untuk menutup informasi');
+                $('#txt-remark-update').focus();
+                return;
+            }
+            
+            // Set action type
+            $('#action-type').val(action);
+            
+            // Disable buttons
+            $('#btn-on-progress-action, #btn-closed-action').prop('disabled', true).addClass('btn-loading');
+            
+            // Submit form via AJAX
+            const formData = new FormData(form[0]);
+            formData.append('action_type', action);
             
             $.ajax({
                 url: 'modules/data_information.php',
@@ -694,33 +748,28 @@
                 contentType: false,
                 dataType: 'json',
                 success: (response) => {
-                    console.log('✅ Reply response:', response);
-                    
-                    submitBtn.prop('disabled', false).html(originalText);
-                    
                     if (response.success) {
-                        const message = actionType === 'closed' ? 'Information closed successfully!' : 
-                                      'Status updated to On Progress!';
+                        this.showToast('success', response.message);
                         
-                        this.showToast('success', 'Success!', message);
+                        // Close modal after 1.5 seconds
+                        setTimeout(() => {
+                            $('#modal-update-information-to').modal('hide');
+                        }, 1500);
                         
-                        // Close modal
-                        $('#modal-update-information-to').modal('hide');
-                        
-                        // Refresh table and notifications
+                        // Refresh data after 2 seconds
                         setTimeout(() => {
                             this.refreshInformationTable();
                             this.checkNewNotifications();
                         }, 2000);
                         
                     } else {
-                        this.showToast('error', 'Failed!', response.message || 'Failed to save reply');
+                        this.showToast('error', response.message);
+                        $('#btn-on-progress-action, #btn-closed-action').prop('disabled', false).removeClass('btn-loading');
                     }
                 },
-                error: (xhr) => {
-                    console.error('❌ Reply error:', xhr.responseText);
-                    submitBtn.prop('disabled', false).html(originalText);
-                    this.showToast('error', 'Error!', 'Server error. Please try again.');
+                error: (xhr, status, error) => {
+                    this.showToast('error', 'Network error: ' + error);
+                    $('#btn-on-progress-action, #btn-closed-action').prop('disabled', false).removeClass('btn-loading');
                 }
             });
             

@@ -2416,3 +2416,78 @@ tbody, td, tfoot, th, thead, tr {
 }
 
 
+/* assets/css/custom-styles.css - Tambahan untuk sistem mingguan */
+
+/* Week info badge */
+.week-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.8em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Weekly reset notification */
+.weekly-reset-notification {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    color: white;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+/* Week info in modal */
+.week-info-panel {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #28a745;
+}
+
+.week-info-panel .week-title {
+    font-weight: 600;
+    color: #28a745;
+    margin-bottom: 5px;
+}
+
+.week-info-panel .week-dates {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+/* Highlight untuk data minggu ini */
+.this-week-row {
+    background-color: rgba(40, 167, 69, 0.05) !important;
+    border-left: 3px solid #28a745 !important;
+}
+
+.previous-week-row {
+    background-color: rgba(108, 117, 125, 0.05) !important;
+    opacity: 0.7;
+}
+
+/* Notification dengan week info */
+.notification-week-tag {
+    font-size: 0.7em;
+    background: #e9ecef;
+    color: #495057;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 5px;
+}
+
+/* Responsive design untuk week info */
+@media (max-width: 768px) {
+    .week-badge {
+        font-size: 0.7em;
+        padding: 3px 8px;
+    }
+    
+    .week-info-panel {
+        padding: 10px;
+        font-size: 0.9em;
+    }
+}

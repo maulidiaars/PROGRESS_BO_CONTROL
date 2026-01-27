@@ -1,5 +1,5 @@
 <?php
-// modules/data_information.php - VERSION LENGKAP DENGAN 7 HARI RETENTION & NO NOTIF UNTUK USER SENDIRI
+// modules/data_information.php - VERSION FINAL DENGAN SISTEM MINGGUAN
 session_start();
 ob_clean();
 header('Content-Type: application/json; charset=utf-8');
@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/week_logic.php'; // Tambah ini
 
 if (!$conn) {
     echo json_encode(["success" => false, "message" => "Database belum terkoneksi"]);
@@ -23,7 +24,8 @@ try {
     // ========================= INPUT DATA INFORMATION (SINGLE ROW) =========================
     if ($type === "input") {
         
-        $DATE      = $_POST["date"] ?? date('Ymd');
+        // REVISI: Gunakan tanggal hari ini (bukan kemarin)
+        $DATE      = date('Ymd'); // Selalu gunakan tanggal hari ini
         $TIME_FROM = $_POST["txt-time1"] ?? date('H:i');
         $PIC_FROM  = $currentUser;
         $ITEM      = trim($_POST["txt-item"] ?? '');
@@ -99,16 +101,18 @@ try {
         // Sort recipients
         sort($recipientArray);
         $PIC_TO_COMBINED = implode(', ', $recipientArray);
-            
-        // CEK DUPLIKASI: Hanya cek untuk 7 hari terakhir
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
+        
+        // ==================== REVISI: CEK DUPLIKASI HANYA UNTUK MINGGU INI ====================
+        $weekInfo = getCurrentWeekInfo();
+        $weekStart = $weekInfo['start_date'];
+        
         $checkSql = "SELECT COUNT(*) as count FROM T_INFORMATION 
-                     WHERE DATE >= ? 
+                     WHERE DATE >= ?  -- Hanya cek mulai Senin minggu ini
                      AND PIC_FROM = ? 
                      AND ITEM = ? 
                      AND PIC_TO = ?";
         
-        $checkStmt = sqlsrv_query($conn, $checkSql, [$sevenDaysAgo, $PIC_FROM, $ITEM, $PIC_TO_COMBINED]);
+        $checkStmt = sqlsrv_query($conn, $checkSql, [$weekStart, $PIC_FROM, $ITEM, $PIC_TO_COMBINED]);
         $duplicateCount = 0;
         
         if ($checkStmt) {
@@ -117,11 +121,12 @@ try {
             sqlsrv_free_stmt($checkStmt);
         }
         
-        // Jika sudah ada data sama dalam 7 hari terakhir, beri warning
+        // Jika sudah ada data sama dalam minggu ini, beri warning
         if ($duplicateCount > 0) {
             $response["success"] = false;
-            $response["message"] = 'Anda sudah mengirim informasi ini dalam 7 hari terakhir.';
+            $response["message"] = 'Anda sudah mengirim informasi yang sama dalam minggu ini.';
             $response["duplicate"] = true;
+            $response["week_info"] = $weekInfo;
             echo json_encode($response);
             exit;
         }
@@ -161,8 +166,13 @@ try {
             $response["id"] = $new_id;
             $response["recipient_count"] = count($recipientArray);
             $response["recipients"] = $recipientArray;
-            $response["retention_days"] = 7;
-            $response["visible_until"] = date('Y-m-d', strtotime('+7 days'));
+            $response["date_used"] = date('Y-m-d'); // Tanggal yang digunakan
+            $response["week_info"] = $weekInfo;
+            $response["retention_info"] = [
+                "week_start" => $weekInfo['start_formatted'],
+                "week_end" => $weekInfo['end_formatted'],
+                "visible_until" => $weekInfo['end_formatted'] // Sampai Minggu ini
+            ];
             
         } else {
             $errors = sqlsrv_errors();
@@ -195,19 +205,25 @@ try {
             exit;
         }
         
-        // Cek apakah user adalah pengirim
-        $checkSql = "SELECT PIC_FROM, STATUS FROM T_INFORMATION WHERE ID_INFORMATION = ?";
-        $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION]);
+        // Cek apakah informasi masih dalam minggu ini
+        $weekInfo = getCurrentWeekInfo();
+        $weekStart = $weekInfo['start_date'];
+        
+        $checkSql = "SELECT PIC_FROM, STATUS, DATE FROM T_INFORMATION 
+                     WHERE ID_INFORMATION = ? 
+                     AND DATE >= ?"; // Hanya bisa edit yang masih dalam minggu ini
+        
+        $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $weekStart]);
         
         if (!$checkStmt) {
-            $response["message"] = 'Data tidak ditemukan';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
@@ -239,6 +255,7 @@ try {
         if ($updateStmt) {
             $response["success"] = true;
             $response["message"] = 'Informasi berhasil diupdate';
+            $response["week_info"] = $weekInfo;
         } else {
             $response["message"] = 'Gagal update informasi';
         }
@@ -263,23 +280,26 @@ try {
             exit;
         }
         
-        // Cek data informasi (HANYA 7 HARI TERAKHIR)
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
+        // REVISI: Cek data informasi (HANYA MINGGU INI)
+        $weekInfo = getCurrentWeekInfo();
+        $weekStart = $weekInfo['start_date'];
+        
         $checkSql = "SELECT PIC_TO, STATUS, ITEM, REQUEST, PIC_FROM, DATE 
                      FROM T_INFORMATION 
                      WHERE ID_INFORMATION = ? 
-                     AND DATE >= ?";
-        $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $sevenDaysAgo]);
+                     AND DATE >= ?"; // Hanya untuk minggu ini
+        
+        $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $weekStart]);
         
         if (!$checkStmt) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
@@ -341,6 +361,7 @@ try {
             $response["success"] = true;
             $response["message"] = "Status berhasil diupdate ke " . $new_status;
             $response["new_status"] = $new_status;
+            $response["week_info"] = $weekInfo;
         } else {
             $response["message"] = 'Gagal update status';
         }
@@ -360,22 +381,25 @@ try {
             exit;
         }
         
-        // Cek apakah user adalah pengirim (HANYA 7 HARI TERAKHIR)
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
+        // REVISI: Cek apakah informasi masih dalam minggu ini
+        $weekInfo = getCurrentWeekInfo();
+        $weekStart = $weekInfo['start_date'];
+        
         $checkSql = "SELECT PIC_FROM, DATE FROM T_INFORMATION 
                      WHERE ID_INFORMATION = ? 
-                     AND DATE >= ?";
-        $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $sevenDaysAgo]);
+                     AND DATE >= ?"; // Hanya bisa hapus yang masih dalam minggu ini
+        
+        $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $weekStart]);
         
         if (!$checkStmt) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
@@ -398,6 +422,7 @@ try {
         if ($deleteStmt) {
             $response["success"] = true;
             $response["message"] = 'Informasi berhasil dihapus';
+            $response["week_info"] = $weekInfo;
         } else {
             $response["message"] = 'Gagal menghapus informasi';
         }
@@ -406,21 +431,16 @@ try {
         exit;
     }
     
-    // ========================= FETCH DATA - HANYA 7 HARI TERAKHIR & NO NOTIF USER SENDIRI =========================
+    // ========================= FETCH DATA - HANYA MINGGU INI =========================
     else if ($type === "fetch") {
         
         $DATE1 = $_GET["date1"] ?? date('Y-m-d');
         $DATE2 = $_GET["date2"] ?? date('Y-m-d');
-        $date1_sql = str_replace('-', '', $DATE1);
-        $date2_sql = str_replace('-', '', $DATE2);
         
-        // ==================== REVISI: HANYA TAMPILKAN 7 HARI TERAKHIR ====================
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
-        
-        // Jika date range yang diminta lebih dari 7 hari, batasi ke 7 hari terakhir
-        if ($date1_sql < $sevenDaysAgo) {
-            $date1_sql = $sevenDaysAgo;
-        }
+        // REVISI: Override dengan range minggu ini
+        $weekInfo = getCurrentWeekInfo();
+        $date1_sql = $weekInfo['start_date']; // Senin
+        $date2_sql = $weekInfo['end_date'];   // Minggu
         
         $sql = "SELECT
                     ID_INFORMATION, 
@@ -443,11 +463,10 @@ try {
                     (SELECT TOP 1 read_at FROM user_notification_read 
                      WHERE user_id = ? AND notification_id = ID_INFORMATION) as read_at
                 FROM T_INFORMATION
-                WHERE DATE BETWEEN ? AND ?
-                AND DATE >= ?  -- FILTER TAMBAHAN: HANYA 7 HARI TERAKHIR
+                WHERE DATE BETWEEN ? AND ?  -- HANYA MINGGU INI
                 ORDER BY DATE DESC, TIME_FROM DESC";
         
-        $params = [$currentUser, $currentUser, $currentUser, $date1_sql, $date2_sql, $sevenDaysAgo];
+        $params = [$currentUser, $currentUser, $currentUser, $date1_sql, $date2_sql];
         $stmt = sqlsrv_prepare($conn, $sql, $params);
         
         $data = [];
@@ -465,17 +484,17 @@ try {
                 $row['TIME_TO'] = $row['TIME_TO'] ?: '-';
                 $row['REMARK'] = $row['REMARK'] ?: '-';
                 
-                // Is unread? - Hanya untuk penerima DAN BUKAN dari user sendiri
+                // Is unread? - Hanya untuk penerima
                 $isRecipient = ($row['user_role'] === 'recipient');
                 $isFromSelf = ($row['PIC_FROM'] === $currentUser);
                 
-                // REVISI: Tidak ada notifikasi untuk informasi dari user sendiri
+                // Tidak ada notifikasi untuk informasi dari user sendiri
                 $row['IS_UNREAD'] = ($row['read_at'] === null && $isRecipient && !$isFromSelf && $row['STATUS'] !== 'Closed') ? 1 : 0;
                 
-                // Tambah info 7 hari
+                // Tambah info minggu
+                $row['WEEK_INFO'] = $weekInfo;
                 $rowDate = isset($row['DATE']) ? str_replace('-', '', $row['DATE']) : '';
-                $row['IS_ACTIVE'] = ($rowDate >= $sevenDaysAgo) ? 1 : 0;
-                $row['DAYS_SINCE'] = $rowDate ? floor((time() - strtotime($row['DATE'])) / (60 * 60 * 24)) : 0;
+                $row['IS_CURRENT_WEEK'] = ($rowDate >= $date1_sql && $rowDate <= $date2_sql) ? 1 : 0;
                 
                 $data[] = $row;
             }
@@ -485,11 +504,15 @@ try {
         $response["data"] = $data;
         $response["count"] = count($data);
         $response["current_user"] = $currentUser;
+        $response["week_info"] = $weekInfo;
         $response["date_range"] = [
-            "from" => $DATE1,
-            "to" => $DATE2,
-            "seven_days_ago" => date('Y-m-d', strtotime('-7 days')),
-            "filter_applied" => ($date1_sql < $sevenDaysAgo) ? '7_days_limit' : 'normal'
+            "from" => date('Y-m-d', strtotime($date1_sql)),
+            "to" => date('Y-m-d', strtotime($date2_sql)),
+            "original_request" => [
+                "date1" => $DATE1,
+                "date2" => $DATE2
+            ],
+            "filter_applied" => 'weekly_filter'
         ];
         
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -527,12 +550,13 @@ try {
         $response["success"] = true;
         $response["users"] = $users;
         $response["count"] = count($users);
+        $response["week_info"] = getCurrentWeekInfo();
         
         echo json_encode($response);
         exit;
     }
     
-    // ========================= GET SINGLE INFORMATION (7 HARI SAJA) =========================
+    // ========================= GET SINGLE INFORMATION (HANYA MINGGU INI) =========================
     else if ($type === "get-single") {
         
         $id = (int)($_GET["id"] ?? 0);
@@ -543,12 +567,15 @@ try {
             exit;
         }
         
-        // Hanya ambil data 7 hari terakhir
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
+        // Hanya ambil data dari minggu ini
+        $weekInfo = getCurrentWeekInfo();
+        $weekStart = $weekInfo['start_date'];
+        
         $sql = "SELECT * FROM T_INFORMATION 
                 WHERE ID_INFORMATION = ? 
-                AND DATE >= ?";
-        $stmt = sqlsrv_query($conn, $sql, [$id, $sevenDaysAgo]);
+                AND DATE >= ?"; // Hanya dari minggu ini
+        
+        $stmt = sqlsrv_query($conn, $sql, [$id, $weekStart]);
         
         $info = null;
         if ($stmt) {
@@ -557,7 +584,7 @@ try {
         }
         
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (lebih dari 7 hari)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
             echo json_encode($response);
             exit;
         }
@@ -575,204 +602,19 @@ try {
         $info['user_role'] = in_array($currentUser, $recipients) ? 'recipient' : 
                            ($info['PIC_FROM'] === $currentUser ? 'sender' : 'viewer');
         
-        // Tambah info aktivasi
-        $info['IS_ACTIVE'] = 1;
-        $info['ACTIVE_UNTIL'] = date('Y-m-d', strtotime($info['DATE'] . ' +7 days'));
-        $info['DAYS_REMAINING'] = floor((strtotime($info['ACTIVE_UNTIL']) - time()) / (60 * 60 * 24));
+        // Tambah info minggu
+        $info['WEEK_INFO'] = $weekInfo;
+        $info['IS_CURRENT_WEEK'] = true;
+        $info['ACTIVE_UNTIL'] = $weekInfo['end_formatted'];
+        $info['DAYS_REMAINING'] = floor((strtotime($weekInfo['end_formatted']) - time()) / (60 * 60 * 24));
         
         $response["success"] = true;
         $response["data"] = $info;
         $response["retention_info"] = [
-            "active_days" => 7,
+            "active_weeks" => 1,
+            "week_number" => $weekInfo['week_number'],
             "remaining_days" => max(0, $info['DAYS_REMAINING']),
             "status" => $info['DAYS_REMAINING'] > 0 ? "active" : "expired"
-        ];
-        
-        echo json_encode($response);
-        exit;
-    }
-    
-    // ========================= GET ALL INFORMATION FOR ADMIN (7 HARI) =========================
-    else if ($type === "get-all") {
-        
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
-        
-        $sql = "SELECT * FROM T_INFORMATION 
-                WHERE DATE >= ? 
-                ORDER BY DATE DESC, TIME_FROM DESC";
-        $stmt = sqlsrv_query($conn, $sql, [$sevenDaysAgo]);
-        
-        $data = [];
-        if ($stmt) {
-            while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                // Format date
-                if (isset($row['DATE']) && is_numeric($row['DATE'])) {
-                    $d = (string)$row['DATE'];
-                    if (strlen($d) === 8) {
-                        $row['DATE'] = substr($d,0,4).'-'.substr($d,4,2).'-'.substr($d,6,2);
-                    }
-                }
-                
-                // Tambah info aktivasi
-                $rowDate = isset($row['DATE']) ? str_replace('-', '', $row['DATE']) : '';
-                $row['IS_ACTIVE'] = ($rowDate >= $sevenDaysAgo) ? 1 : 0;
-                $row['ACTIVE_UNTIL'] = date('Y-m-d', strtotime($row['DATE'] . ' +7 days'));
-                
-                $data[] = $row;
-            }
-            sqlsrv_free_stmt($stmt);
-        }
-        
-        $response["success"] = true;
-        $response["data"] = $data;
-        $response["count"] = count($data);
-        $response["retention_info"] = [
-            "seven_days_ago" => $sevenDaysAgo,
-            "active_count" => count(array_filter($data, function($item) { return $item['IS_ACTIVE'] == 1; })),
-            "expired_count" => count(array_filter($data, function($item) { return $item['IS_ACTIVE'] == 0; }))
-        ];
-        
-        echo json_encode($response);
-        exit;
-    }
-    
-    // ========================= GET NOTIFICATION COUNT FOR CURRENT USER =========================
-    else if ($type === "get-notification-count") {
-        
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
-        
-        // Hitung hanya informasi dari user lain (PIC_FROM != currentUser)
-        $sql = "SELECT COUNT(*) as unread_count
-                FROM T_INFORMATION ti
-                LEFT JOIN user_notification_read unr ON ti.ID_INFORMATION = unr.notification_id 
-                    AND unr.user_id = ?
-                WHERE ti.DATE >= ?
-                AND ti.PIC_FROM != ?  -- FILTER: BUKAN DARI USER SENDIRI
-                AND ti.PIC_TO LIKE '%' + ? + '%'
-                AND ti.STATUS = 'Open'
-                AND unr.read_at IS NULL";
-        
-        $params = [$currentUser, $sevenDaysAgo, $currentUser, $currentUser];
-        $stmt = sqlsrv_query($conn, $sql, $params);
-        
-        $unread_count = 0;
-        if ($stmt) {
-            $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-            $unread_count = (int)($row['unread_count'] ?? 0);
-            sqlsrv_free_stmt($stmt);
-        }
-        
-        $response["success"] = true;
-        $response["unread_count"] = $unread_count;
-        $response["current_user"] = $currentUser;
-        $response["retention_days"] = 7;
-        
-        echo json_encode($response);
-        exit;
-    }
-    
-    // ========================= CLEAN OLD DATA (lebih dari 7 hari) =========================
-    else if ($type === "clean-old-data") {
-        // Hanya untuk admin
-        if ($currentUser !== 'ADMIN' && !in_array($currentUser, ['ALBERTO', 'EKO', 'EKA'])) {
-            $response["message"] = 'Akses ditolak';
-            echo json_encode($response);
-            exit;
-        }
-        
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
-        
-        // Hapus notifikasi untuk data lama
-        $deleteNotifSql = "DELETE FROM user_notification_read 
-                          WHERE notification_id IN (
-                              SELECT ID_INFORMATION FROM T_INFORMATION 
-                              WHERE DATE < ?
-                          )";
-        sqlsrv_query($conn, $deleteNotifSql, [$sevenDaysAgo]);
-        
-        // Hapus data informasi lama (lebih dari 7 hari)
-        $deleteInfoSql = "DELETE FROM T_INFORMATION WHERE DATE < ?";
-        $deleteStmt = sqlsrv_query($conn, $deleteInfoSql, [$sevenDaysAgo]);
-        
-        if ($deleteStmt) {
-            $response["success"] = true;
-            $response["message"] = 'Data lama (lebih dari 7 hari) berhasil dibersihkan';
-            $response["cutoff_date"] = $sevenDaysAgo;
-        } else {
-            $response["message"] = 'Gagal membersihkan data lama';
-        }
-        
-        echo json_encode($response);
-        exit;
-    }
-    
-    // ========================= GET STATISTICS =========================
-    else if ($type === "get-stats") {
-        
-        $sevenDaysAgo = date('Ymd', strtotime('-7 days'));
-        
-        $sql = "SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN STATUS = 'Open' THEN 1 ELSE 0 END) as open_count,
-                    SUM(CASE WHEN STATUS = 'On Progress' THEN 1 ELSE 0 END) as progress_count,
-                    SUM(CASE WHEN STATUS = 'Closed' THEN 1 ELSE 0 END) as closed_count,
-                    SUM(CASE WHEN PIC_FROM = ? THEN 1 ELSE 0 END) as sent_by_me,
-                    SUM(CASE WHEN PIC_TO LIKE '%' + ? + '%' THEN 1 ELSE 0 END) as received_by_me
-                FROM T_INFORMATION
-                WHERE DATE >= ?";
-        
-        $params = [$currentUser, $currentUser, $sevenDaysAgo];
-        $stmt = sqlsrv_query($conn, $sql, $params);
-        
-        $stats = [
-            'total' => 0,
-            'open_count' => 0,
-            'progress_count' => 0,
-            'closed_count' => 0,
-            'sent_by_me' => 0,
-            'received_by_me' => 0
-        ];
-        
-        if ($stmt) {
-            $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-            $stats = [
-                'total' => (int)($row['total'] ?? 0),
-                'open_count' => (int)($row['open_count'] ?? 0),
-                'progress_count' => (int)($row['progress_count'] ?? 0),
-                'closed_count' => (int)($row['closed_count'] ?? 0),
-                'sent_by_me' => (int)($row['sent_by_me'] ?? 0),
-                'received_by_me' => (int)($row['received_by_me'] ?? 0)
-            ];
-            sqlsrv_free_stmt($stmt);
-        }
-        
-        // Hitung unread notifications (hanya dari user lain)
-        $unreadSql = "SELECT COUNT(*) as unread_count
-                     FROM T_INFORMATION ti
-                     LEFT JOIN user_notification_read unr ON ti.ID_INFORMATION = unr.notification_id 
-                         AND unr.user_id = ?
-                     WHERE ti.DATE >= ?
-                     AND ti.PIC_FROM != ?
-                     AND ti.PIC_TO LIKE '%' + ? + '%'
-                     AND ti.STATUS = 'Open'
-                     AND unr.read_at IS NULL";
-        
-        $unreadStmt = sqlsrv_query($conn, $unreadSql, [$currentUser, $sevenDaysAgo, $currentUser, $currentUser]);
-        $unread_count = 0;
-        if ($unreadStmt) {
-            $row = sqlsrv_fetch_array($unreadStmt, SQLSRV_FETCH_ASSOC);
-            $unread_count = (int)($row['unread_count'] ?? 0);
-            sqlsrv_free_stmt($unreadStmt);
-        }
-        
-        $stats['unread_count'] = $unread_count;
-        
-        $response["success"] = true;
-        $response["stats"] = $stats;
-        $response["retention_days"] = 7;
-        $response["date_range"] = [
-            "from" => date('Y-m-d', strtotime('-7 days')),
-            "to" => date('Y-m-d')
         ];
         
         echo json_encode($response);

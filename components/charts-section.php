@@ -75,27 +75,6 @@
                             <i class="bi bi-chevron-down select-arrow"></i>
                           </div>
                         </div>
-                        <div class="control-group">
-                          <label class="control-label">Chart Type:</label>
-                          <div class="custom-select-wrapper">
-                            <select class="form-select form-select-sm" id="chartType">
-                              <option value="bar" selected>Bar + Line Chart</option>
-                              <option value="line">Line Chart</option>
-                              <option value="area">Area Chart</option>
-                            </select>
-                            <i class="bi bi-chevron-down select-arrow"></i>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="trend-stats">
-                        <div class="stat-item">
-                          <span class="stat-label">Average Plan:</span>
-                          <span class="stat-value" id="avgPlanOrder">0</span>
-                        </div>
-                        <div class="stat-item">
-                          <span class="stat-label">Average Actual:</span>
-                          <span class="stat-value" id="avgActualIncoming">0</span>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -103,44 +82,6 @@
                   <!-- GRAFIK UTAMA - BAR CHART MEWAH -->
                   <div class="trend-chart-container">
                     <div id="trendChart" style="height: 380px;"></div>
-                  </div>
-
-                  <!-- LEGEND & INFO -->
-                  <div class="trend-legend mt-4">
-                    <div class="row align-items-center">
-                      <div class="col-lg-6">
-                        <div class="legend-items d-flex gap-4">
-                          <div class="legend-item">
-                            <div class="legend-marker plan"></div>
-                            <div class="legend-content">
-                              <span class="legend-title">Plan Order</span>
-                              <div class="legend-sub">Target quantity per day</div>
-                            </div>
-                            <div class="legend-value" id="legendTotalPlan">0</div>
-                          </div>
-                          <div class="legend-item">
-                            <div class="legend-marker actual"></div>
-                            <div class="legend-content">
-                              <span class="legend-title">Actual Incoming</span>
-                              <div class="legend-sub">Achieved quantity per day</div>
-                            </div>
-                            <div class="legend-value" id="legendTotalActual">0</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="col-lg-6">
-                        <div class="trend-summary text-end">
-                          <div class="summary-item">
-                            <span class="summary-label">Achievement Rate:</span>
-                            <span class="summary-value" id="targetAchievement">0%</span>
-                          </div>
-                          <div class="summary-item">
-                            <span class="summary-label">Variance:</span>
-                            <span class="summary-value" id="totalVariance">0%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -159,15 +100,6 @@
                         <small class="date-range ms-2" id="shiftDateRange">(01 - 31 Jan 2024)</small>
                       </div>
                       <div class="d-flex gap-3">
-                        <div class="control-group">
-                          <label class="control-label">View:</label>
-                          <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="shiftView" id="viewPercentage" autocomplete="off" checked>
-                            <label class="btn btn-outline-primary" for="viewPercentage">Percentage</label>
-                            <input type="radio" class="btn-check" name="shiftView" id="viewCount" autocomplete="off">
-                            <label class="btn btn-outline-primary" for="viewCount">Count</label>
-                          </div>
-                        </div>
                         <button class="btn btn-sm btn-outline-primary" onclick="downloadShiftReport()">
                           <i class="bi bi-download me-1"></i> Export
                         </button>
@@ -228,10 +160,6 @@
                               <i class="bi bi-truck me-1"></i>
                               <span id="dsDeliveryCount">0</span> deliveries
                             </div>
-                            <div class="efficiency">
-                              <i class="bi bi-speedometer2 me-1"></i>
-                              <span id="dsEfficiency">0%</span> efficiency
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -286,10 +214,6 @@
                               <i class="bi bi-truck me-1"></i>
                               <span id="nsDeliveryCount">0</span> deliveries
                             </div>
-                            <div class="efficiency">
-                              <i class="bi bi-speedometer2 me-1"></i>
-                              <span id="nsEfficiency">0%</span> efficiency
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -343,10 +267,6 @@
                             <div class="delivery-info">
                               <i class="bi bi-truck me-1"></i>
                               <span id="totalDeliveryCount">0</span> total deliveries
-                            </div>
-                            <div class="efficiency">
-                              <i class="bi bi-graph-up-arrow me-1"></i>
-                              <span id="totalEfficiencyShift">0%</span> overall
                             </div>
                           </div>
                         </div>
@@ -698,28 +618,6 @@
   font-size: 0.8rem;
 }
 
-.trend-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat-item {
-  text-align: right;
-}
-
-.stat-label {
-  display: block;
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.stat-value {
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1a365d;
-}
-
 /* Chart Container */
 .trend-chart-container {
   background: white;
@@ -727,98 +625,6 @@
   padding: 15px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* Legend Styles */
-.trend-legend {
-  background: #f8fafc;
-  padding: 15px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.legend-items {
-  gap: 30px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-}
-
-.legend-marker {
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  position: relative;
-}
-
-.legend-marker.plan {
-  background: linear-gradient(90deg, #1a365d 0%, #2c5282 100%);
-  box-shadow: 0 2px 4px rgba(26, 54, 93, 0.3);
-}
-
-.legend-marker.actual {
-  background: linear-gradient(90deg, #38b2ac 0%, #0bc5ea 100%);
-  box-shadow: 0 2px 4px rgba(56, 178, 172, 0.3);
-}
-
-.legend-content {
-  flex: 1;
-}
-
-.legend-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1a365d;
-  display: block;
-}
-
-.legend-sub {
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-.legend-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1a365d;
-  min-width: 60px;
-  text-align: right;
-}
-
-.trend-summary {
-  display: flex;
-  justify-content: flex-end;
-  gap: 30px;
-}
-
-.summary-item {
-  text-align: right;
-}
-
-.summary-label {
-  display: block;
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-
-.summary-value {
-  display: block;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #1a365d;
-}
-
-.summary-value.positive {
-  color: #38a169;
-}
-
-.summary-value.negative {
-  color: #e53e3e;
 }
 
 /* ===== TAB 2: SHIFT COMPARISON STYLES ===== */
@@ -1019,10 +825,6 @@
 
 .delivery-info i {
   color: #4c51bf;
-}
-
-.efficiency i {
-  color: #38a169;
 }
 
 /* Criteria Section */
@@ -1391,20 +1193,6 @@
     font-size: 0.9rem;
   }
   
-  .trend-stats {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  .stat-item {
-    text-align: left;
-  }
-  
-  .trend-summary {
-    justify-content: flex-start;
-    margin-top: 15px;
-  }
-  
   .shift-charts-container .row > .col-lg-4 {
     margin-bottom: 20px;
   }
@@ -1438,11 +1226,6 @@
   
   .custom-select-wrapper {
     width: 100%;
-  }
-  
-  .legend-items {
-    flex-direction: column;
-    gap: 15px;
   }
   
   .shift-controls {
@@ -1673,16 +1456,6 @@ function formatMonthYear(monthYearStr) {
   return (monthMap[monthAbbr] || monthAbbr) + ' ' + year;
 }
 
-// Format tanggal untuk display
-function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('id-ID', { 
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-}
-
 // Update last updated time
 function updateLastUpdated() {
   const now = new Date();
@@ -1838,242 +1611,184 @@ function downloadShiftReport() {
   alert('Export feature would generate a report here. This can be implemented based on your requirements.');
 }
 
-// Load trend chart dengan BAR CHART yang lebih jelas
+// Load trend chart langsung tanpa loading
 function loadTrendChart() {
-  // Jika section collapsed, jangan load chart
-  if (isSectionCollapsed) return;
-  
-  const days = $('#trendRange').val();
-  const chartType = $('#chartType').val();
-  
-  if (trendChart) {
-    trendChart.destroy();
-  }
-  
-  $.ajax({
-    url: 'api/get_performance_trend.php',
-    type: 'GET',
-    data: { days: days },
-    dataType: 'json',
-    success: function(response) {
-      if (!response || response.length === 0) {
-        $('#trendChart').html(`
-          <div class="text-center py-5">
-            <i class="bi bi-graph-up text-muted" style="font-size: 3rem;"></i>
-            <p class="mt-3 text-muted">No trend data available for the selected period</p>
-          </div>
-        `);
-        resetTrendStats();
+    console.log("🔄 Loading trend chart...");
+    
+    // Jika section collapsed, jangan load chart
+    if (isSectionCollapsed) {
+        console.log("📁 Section collapsed, skipping chart load");
         return;
-      }
-      
-      currentTrendData = response;
-      
-      const dates = response.map(r => formatDate(r.date));
-      const planOrder = response.map(r => parseFloat(r.target_qty) || 0);
-      const actualIncoming = response.map(r => parseFloat(r.actual_qty) || 0);
-      
-      // Calculate statistics
-      const totalPlan = planOrder.reduce((a, b) => a + b, 0);
-      const totalActual = actualIncoming.reduce((a, b) => a + b, 0);
-      const avgPlan = totalPlan / planOrder.length;
-      const avgActual = totalActual / actualIncoming.length;
-      const efficiency = totalPlan > 0 ? (totalActual / totalPlan * 100) : 0;
-      const variance = totalPlan > 0 ? ((totalActual - totalPlan) / totalPlan * 100) : 0;
-      
-      // Update statistics
-      $('#avgPlanOrder').text(avgPlan.toLocaleString('id-ID', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-      }));
-      $('#avgActualIncoming').text(avgActual.toLocaleString('id-ID', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-      }));
-      $('#legendTotalPlan').text(totalPlan.toLocaleString('id-ID', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-      }));
-      $('#legendTotalActual').text(totalActual.toLocaleString('id-ID', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-      }));
-      $('#targetAchievement').text(efficiency.toFixed(1) + '%');
-      
-      // Format variance dengan warna
-      const varianceElement = $('#totalVariance');
-      varianceElement.text(variance.toFixed(1) + '%');
-      varianceElement.removeClass('positive negative');
-      if (variance > 0) {
-        varianceElement.addClass('positive');
-      } else if (variance < 0) {
-        varianceElement.addClass('negative');
-      }
-      
-      // Warna yang lebih jelas untuk chart
-      const planColor = '#1a365d'; // Dark blue
-      const actualColor = '#0bc5ea'; // Bright cyan
-      
-      // Config chart berdasarkan tipe
-      let seriesConfig;
-      if (chartType === 'bar') {
-        // Bar + Line Chart yang jelas
-        seriesConfig = [
-          {
-            name: 'Plan Order',
-            data: planOrder,
-            type: 'column',
-            color: planColor,
-            borderRadius: 6,
-            fill: {
-              type: 'gradient',
-              gradient: {
-                shade: 'light',
-                type: 'vertical',
-                shadeIntensity: 0.4,
-                gradientToColors: [planColor],
-                stops: [0, 100]
-              }
-            }
-          },
-          {
-            name: 'Actual Incoming',
-            data: actualIncoming,
-            type: 'line',
-            color: actualColor,
-            strokeWidth: 4,
-            fill: {
-              type: 'gradient',
-              gradient: {
-                shade: 'dark',
-                type: 'vertical',
-                shadeIntensity: 0.1,
-                gradientToColors: [actualColor],
-                stops: [0, 100]
-              }
-            },
-            markers: {
-              size: 6,
-              strokeWidth: 2,
-              strokeColors: '#ffffff',
-              colors: [actualColor]
-            }
-          }
-        ];
-      } else if (chartType === 'area') {
-        // Area Chart
-        seriesConfig = [
-          {
-            name: 'Plan Order',
-            data: planOrder,
-            type: 'area',
-            color: planColor,
-            fill: {
-              type: 'gradient',
-              gradient: {
-                shadeIntensity: 0.8,
-                opacityFrom: 0.7,
-                opacityTo: 0.1,
-                stops: [0, 100]
-              }
-            },
-            stroke: {
-              width: 3,
-              curve: 'smooth'
-            }
-          },
-          {
-            name: 'Actual Incoming',
-            data: actualIncoming,
-            type: 'area',
-            color: actualColor,
-            fill: {
-              type: 'gradient',
-              gradient: {
-                shadeIntensity: 0.8,
-                opacityFrom: 0.6,
-                opacityTo: 0.1,
-                stops: [0, 100]
-              }
-            },
-            stroke: {
-              width: 3,
-              curve: 'smooth',
-              dashArray: 0
-            }
-          }
-        ];
-      } else {
-        // Line Chart sederhana
-        seriesConfig = [
-          {
-            name: 'Plan Order',
-            data: planOrder,
-            type: 'line',
-            color: planColor,
-            strokeWidth: 4,
-            fill: {
-              type: 'solid',
-              opacity: 0.1
-            },
-            markers: {
-              size: 6,
-              strokeWidth: 2,
-              strokeColors: planColor,
-              colors: ['#ffffff']
-            }
-          },
-          {
-            name: 'Actual Incoming',
-            data: actualIncoming,
-            type: 'line',
-            color: actualColor,
-            strokeWidth: 4,
-            fill: {
-              type: 'solid',
-              opacity: 0.1
-            },
-            markers: {
-              size: 6,
-              strokeWidth: 2,
-              strokeColors: actualColor,
-              colors: ['#ffffff']
-            }
-          }
-        ];
-      }
-      
-      
-      trendChart = new ApexCharts(document.querySelector("#trendChart"), options);
-      trendChart.render();
-    },
-    error: function(xhr, status, error) {
-      console.error('Trend chart error:', error);
-      $('#trendChart').html(`
-        <div class="text-center py-5 text-danger">
-          <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
-          <p class="mt-3">Failed to load trend data</p>
-          <button class="btn btn-sm btn-primary mt-2" onclick="loadTrendChart()">
-            <i class="bi bi-arrow-clockwise me-1"></i> Try Again
-          </button>
-        </div>
-      `);
-      resetTrendStats();
     }
-  });
+    
+    const days = $('#trendRange').val();
+    
+    if (trendChart) {
+        trendChart.destroy();
+    }
+    
+    $.ajax({
+        url: 'api/get_performance_trend.php',
+        type: 'GET',
+        data: { days: days },
+        dataType: 'json',
+        timeout: 10000,
+        success: function(response) {
+            console.log("📊 Trend API Response:", response);
+            
+            if (!response || !response.success || !response.data || response.data.length === 0) {
+                console.error("❌ No valid data returned from API");
+                $('#trendChart').html(`
+                    <div class="text-center py-5">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                        <p class="mt-3">No trend data available</p>
+                        <p class="text-muted small">Try selecting a different time range</p>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadTrendChart()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                        </button>
+                    </div>
+                `);
+                return;
+            }
+            
+            const trendData = response.data;
+            console.log(`✅ Loaded ${trendData.length} data points`);
+            
+            const dates = trendData.map(r => r.date);
+            const planOrder = trendData.map(r => parseFloat(r.target_qty) || 0);
+            const actualIncoming = trendData.map(r => parseFloat(r.actual_qty) || 0);
+            
+            // Prepare chart options
+            const options = {
+                series: [
+                    {
+                        name: 'Plan Order',
+                        data: planOrder,
+                        type: 'column',
+                        color: '#1a365d'
+                    },
+                    {
+                        name: 'Actual Incoming',
+                        data: actualIncoming,
+                        type: 'line',
+                        color: '#0bc5ea'
+                    }
+                ],
+                chart: {
+                    height: 380,
+                    type: 'line',
+                    toolbar: {
+                        show: true,
+                        tools: {
+                            download: true,
+                            selection: false,
+                            zoom: true,
+                            zoomin: true,
+                            zoomout: true,
+                            pan: true,
+                            reset: true
+                        }
+                    },
+                    animations: {
+                        enabled: true,
+                        speed: 800
+                    }
+                },
+                stroke: {
+                    width: [0, 4],
+                    curve: 'smooth'
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 6,
+                        columnWidth: '60%'
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                markers: {
+                    size: 5
+                },
+                xaxis: {
+                    categories: dates,
+                    labels: {
+                        style: {
+                            colors: '#6b7280',
+                            fontSize: '12px'
+                        }
+                    }
+                },
+                yaxis: {
+                    title: {
+                        text: 'Quantity',
+                        style: {
+                            color: '#6b7280',
+                            fontSize: '12px'
+                        }
+                    },
+                    labels: {
+                        formatter: function(val) {
+                            return new Intl.NumberFormat('id-ID', {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
+                            }).format(val);
+                        },
+                        style: {
+                            colors: '#6b7280',
+                            fontSize: '11px'
+                        }
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    intersect: false,
+                    y: {
+                        formatter: function(val) {
+                            return new Intl.NumberFormat('id-ID', {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
+                            }).format(val) + ' pcs';
+                        }
+                    }
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 600
+                },
+                grid: {
+                    borderColor: '#e5e7eb',
+                    strokeDashArray: 4
+                }
+            };
+            
+            // Render chart langsung
+            trendChart = new ApexCharts(document.querySelector("#trendChart"), options);
+            trendChart.render();
+            
+            console.log("✅ Trend chart rendered successfully");
+            
+        },
+        error: function(xhr, status, error) {
+            console.error("❌ Trend chart AJAX error:", error);
+            
+            $('#trendChart').html(`
+                <div class="text-center py-5 text-danger">
+                    <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+                    <p class="mt-3">Failed to load trend data</p>
+                    <p class="text-muted small">Error: ${xhr.status} ${xhr.statusText}</p>
+                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadTrendChart()">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Retry
+                    </button>
+                </div>
+            `);
+        }
+    });
 }
 
-// Reset trend statistics
-function resetTrendStats() {
-  $('#avgPlanOrder').text('0');
-  $('#avgActualIncoming').text('0');
-  $('#legendTotalPlan').text('0');
-  $('#legendTotalActual').text('0');
-  $('#targetAchievement').text('0%');
-  $('#totalVariance').text('0%').removeClass('positive negative');
-}
-
-// Load shift comparison data - FIXED untuk sinkron dengan data
+// Load shift comparison data
 function loadShiftComparison() {
   // Jika section collapsed, jangan load chart
   if (isSectionCollapsed) return;
@@ -2117,18 +1832,10 @@ function loadShiftComparison() {
         total.delay_percentage = (total.delay_count / total.total_delivery * 100);
       }
       
-      // Calculate completion rates berdasarkan data yang sebenarnya
+      // Calculate completion rates
       ds.completion_rate = ds.total_order > 0 ? (ds.total_incoming / ds.total_order * 100) : 0;
       ns.completion_rate = ns.total_order > 0 ? (ns.total_incoming / ns.total_order * 100) : 0;
       total.completion_rate = total.total_order > 0 ? (total.total_incoming / total.total_order * 100) : 0;
-      
-      // Calculate efficiencies
-      ds.efficiency = ds.total_delivery > 0 ? 
-        ((ds.ok_count * 1 + ds.on_progress_count * 0.8 + ds.over_count * 0.6 + ds.delay_count * 0.3) / ds.total_delivery * 100) : 0;
-      ns.efficiency = ns.total_delivery > 0 ? 
-        ((ns.ok_count * 1 + ns.on_progress_count * 0.8 + ns.over_count * 0.6 + ns.delay_count * 0.3) / ns.total_delivery * 100) : 0;
-      total.efficiency = total.total_delivery > 0 ? 
-        ((total.ok_count * 1 + total.on_progress_count * 0.8 + total.over_count * 0.6 + total.delay_count * 0.3) / total.total_delivery * 100) : 0;
       
       currentShiftData.total = total;
       
@@ -2137,7 +1844,7 @@ function loadShiftComparison() {
       $('#currentMonth').text(monthYear);
       $('#shiftDateRange').text(response.date_range || '');
       
-      // Update overall status berdasarkan data yang sebenarnya
+      // Update overall status
       let overallStatus = 'NO DATA';
       let statusColor = '#718096';
       
@@ -2206,7 +1913,6 @@ function updateShiftDisplay(prefix, data) {
   
   // Update delivery info
   $(`#${prefix}DeliveryCount`).text(data.total_delivery || 0);
-  $(`#${prefix}Efficiency`).text(hasData ? data.efficiency.toFixed(1) + '%' : '0%');
 }
 
 // Create shift chart dengan 4 warna yang benar
@@ -2388,7 +2094,6 @@ function createErrorCharts() {
     $(`#${prefix}OkCount, #${prefix}OnCount, #${prefix}OverCount, #${prefix}DelayCount`).text('0');
     $(`#${prefix}OkPercent, #${prefix}OnPercent, #${prefix}OverPercent, #${prefix}DelayPercent`).text('0%');
     $(`#${prefix}DeliveryCount`).text('0');
-    $(`#${prefix}Efficiency`).text('0%');
   });
   
   // Create error charts
@@ -2440,7 +2145,7 @@ $(document).ready(function() {
   }
   
   // Event listeners
-  $('#trendRange, #chartType').on('change', function() {
+  $('#trendRange').on('change', function() {
     if (!isSectionCollapsed) {
       loadTrendChart();
     }

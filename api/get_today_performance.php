@@ -24,9 +24,15 @@ try {
     
     // Total Incoming for today
     $sqlIncoming = "
-    SELECT ISNULL(SUM(TRAN_QTY), 0) as total_incoming
-    FROM T_UPDATE_BO 
-    WHERE DATE = ?
+    SELECT ISNULL(SUM(last_qty), 0) as total_incoming
+    FROM (
+        SELECT 
+            ub.PART_NO,
+            MAX(ub.TRAN_QTY) as last_qty
+        FROM T_UPDATE_BO ub
+        WHERE ub.DATE = ?
+        GROUP BY ub.PART_NO
+    ) as supplier_data
     ";
     
     $stmtIncoming = sqlsrv_query($conn, $sqlIncoming, [$date]);

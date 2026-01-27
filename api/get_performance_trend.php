@@ -10,7 +10,6 @@ if (!$conn) {
 $days = isset($_GET['days']) ? (int)$_GET['days'] : 7;
 $data = [];
 
-// Get current date in Indonesia timezone
 date_default_timezone_set('Asia/Jakarta');
 $today = date('Ymd');
 
@@ -20,41 +19,40 @@ for ($i = $days; $i >= 0; $i--) {
     $displayDate = date('d M', strtotime($date));
     
     try {
-        // Total Order for the date (include both regular and add orders)
+        // Query T_ORDER
         $sqlOrder = "
         SELECT 
-            ISNULL(SUM(
-                CASE 
-                    WHEN CYCLE BETWEEN 1 AND 12 
-                    AND ETA IS NOT NULL 
-                    AND ETA != ''
-                    THEN ORD_QTY 
-                    ELSE 0 
-                END
-            ), 0) as total_order
+            ISNULL(SUM(ORD_QTY), 0) as total_order
         FROM T_ORDER 
         WHERE DELV_DATE = ?
+        AND ORD_QTY > 0
         ";
         $stmtOrder = sqlsrv_query($conn, $sqlOrder, [$date]);
         
         if ($stmtOrder === false) {
-            throw new Exception('Failed to query order data for date: ' . $date);
+            throw new Exception('Failed to query order data');
         }
         
         $rowOrder = sqlsrv_fetch_array($stmtOrder, SQLSRV_FETCH_ASSOC);
         $totalOrder = (int)($rowOrder['total_order'] ?? 0);
         sqlsrv_free_stmt($stmtOrder);
         
-        // Total Incoming for the date (all hours) - PAKAI MAX BUKAN SUM
+        // Query T_UPDATE_BO
         $sqlIncoming = "
-        SELECT ISNULL(MAX(TRAN_QTY), 0) as total_incoming 
-        FROM T_UPDATE_BO 
-        WHERE DATE = ?
+        SELECT ISNULL(SUM(last_qty), 0) as total_incoming
+        FROM (
+            SELECT 
+                ub.PART_NO,
+                MAX(ub.TRAN_QTY) as last_qty
+            FROM T_UPDATE_BO ub
+            WHERE ub.DATE = ?
+            GROUP BY ub.PART_NO
+        ) as supplier_data
         ";
         $stmtIncoming = sqlsrv_query($conn, $sqlIncoming, [$date]);
         
         if ($stmtIncoming === false) {
-            throw new Exception('Failed to query incoming data for date: ' . $date);
+            throw new Exception('Failed to query incoming data');
         }
         
         $rowIncoming = sqlsrv_fetch_array($stmtIncoming, SQLSRV_FETCH_ASSOC);
@@ -73,7 +71,6 @@ for ($i = $days; $i >= 0; $i--) {
         ];
         
     } catch (Exception $e) {
-        // If error, use zero values but still include the date
         $data[] = [
             'date' => $displayDate,
             'full_date' => $date,
@@ -81,9 +78,16 @@ for ($i = $days; $i >= 0; $i--) {
             'actual_qty' => 0,
             'completion_rate' => 0
         ];
-        error_log("Error processing date $date: " . $e->getMessage());
     }
 }
 
-echo json_encode($data);
+echo json_encode([
+    'success' => true,
+    'data' => $data,
+    'count' => count($data),
+    'query_info' => [
+        'days' => $days,
+        'today' => $today
+    ]
+]);
 ?>

@@ -1,4 +1,4 @@
-<!-- components/modals-information.php - VERSION ELEGAN LANDSCAPE -->
+<!-- components/modals-information.php - VERSION ELEGAN LANDSCAPE REVISED -->
 <!-- Modal Add Information -->
 <div class="modal fade modal-add-information" id="modal-add-information" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-landscape">
@@ -285,7 +285,7 @@
   </div>
 </div>
 
-<!-- Modal Update Information (To/Recipient) - VERSION LANDSCAPE ELEGAN -->
+<!-- Modal Update Information (To/Recipient) - VERSION REVISED TANPA BUTTON ON PROGRESS/CLOSED -->
 <div class="modal fade modal-update-information-to" id="modal-update-information-to" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-landscape">
     <div class="modal-content border-0 shadow-lg" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); color: #1e293b; min-height: 550px; max-height: 90vh;">
@@ -317,12 +317,64 @@
             <input type="hidden" name="txt-requestto-update" id="txt-requestto-update">
             <input type="hidden" name="txt-picto-update" id="txt-picto-update">
             <input type="hidden" name="txt-timeto-update" id="txt-timeto-update">
-            <input type="hidden" name="action_type" id="action-type" value="on_progress">
+            
+            <!-- Status Selection dengan Radio Button Sederhana -->
+            <div class="status-selection-section bg-white p-4 border-bottom">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                      <div class="d-flex align-items-center mb-3">
+                        <div class="form-check me-3">
+                          <input class="form-check-input status-radio" type="radio" name="status_action" 
+                                 id="statusOnProgress" value="on_progress" checked>
+                        </div>
+                        <div class="rounded-circle bg-warning p-2 d-flex align-items-center justify-content-center me-3" 
+                             style="width: 50px; height: 50px;">
+                          <i class="bi bi-clock-history text-white fs-4"></i>
+                        </div>
+                        <div>
+                          <h6 class="card-title mb-1 fw-bold text-dark">ON PROGRESS</h6>
+                          <small class="text-muted">Anda sedang menangani informasi ini</small>
+                        </div>
+                      </div>
+                      <p class="card-text small text-muted mb-0">
+                        <i class="bi bi-info-circle me-1"></i>Tambahkan catatan progress (opsional)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                      <div class="d-flex align-items-center mb-3">
+                        <div class="form-check me-3">
+                          <input class="form-check-input status-radio" type="radio" name="status_action" 
+                                 id="statusClosed" value="closed">
+                        </div>
+                        <div class="rounded-circle bg-success p-2 d-flex align-items-center justify-content-center me-3" 
+                             style="width: 50px; height: 50px;">
+                          <i class="bi bi-check-circle-fill text-white fs-4"></i>
+                        </div>
+                        <div>
+                          <h6 class="card-title mb-1 fw-bold text-dark">CLOSED</h6>
+                          <small class="text-muted">Selesaikan dan tutup informasi</small>
+                        </div>
+                      </div>
+                      <p class="card-text small text-danger mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i><strong>Catatan wajib diisi</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <!-- Three Column Layout for Landscape -->
             <div class="row g-0 h-100">
               <!-- Column 1: Original Information -->
-              <div class="col-lg-4 border-end" style="background: #ffffff; min-height: 500px;">
+              <div class="col-lg-4 border-end" style="background: #ffffff; min-height: 400px;">
                 <div class="p-4 h-100 d-flex flex-column">
                   <h6 class="mb-4 fw-semibold text-success border-bottom pb-3">
                     <i class="bi bi-info-circle-fill me-2"></i>Informasi Asli
@@ -408,7 +460,7 @@
               </div>
               
               <!-- Column 2: Content Details -->
-              <div class="col-lg-4 border-end" style="background: #fefefe; min-height: 500px;">
+              <div class="col-lg-4 border-end" style="background: #fefefe; min-height: 400px;">
                 <div class="p-4 h-100 d-flex flex-column">
                   <h6 class="mb-4 fw-semibold text-success border-bottom pb-3">
                     <i class="bi bi-chat-left-text-fill me-2"></i>Detail Konten
@@ -447,74 +499,36 @@
               </div>
               
               <!-- Column 3: Action & Remarks -->
-              <div class="col-lg-4" style="background: #ffffff; min-height: 500px;">
+              <div class="col-lg-4" style="background: #ffffff; min-height: 400px;">
                 <div class="p-4 h-100 d-flex flex-column">
                   <h6 class="mb-4 fw-semibold text-success border-bottom pb-3">
                     <i class="bi bi-send-check-fill me-2"></i>Tindakan & Respon
                   </h6>
                   
-                  <!-- Action Selection -->
+                  <!-- Time Input -->
                   <div class="mb-4">
-                    <div class="small mb-3 fw-medium text-muted">
-                      <i class="bi bi-lightning-charge-fill me-1"></i>Pilih Tindakan Anda
+                    <label for="reply-time-input" class="form-label fw-medium mb-2 text-dark">
+                      <i class="bi bi-clock-fill me-1 text-success"></i>Waktu Respon
+                    </label>
+                    <div class="input-group">
+                      <input type="text" class="form-control" 
+                             id="reply-time-input" 
+                             value="<?php echo date('H:i'); ?>"
+                             readonly>
+                      <span class="input-group-text bg-light">
+                        <i class="bi bi-check-circle text-success"></i>
+                      </span>
                     </div>
-                    
-                    <!-- On Progress Option -->
-                    <div class="card status-action-card border-warning mb-3 cursor-pointer" 
-                         data-action="on_progress" 
-                         onclick="notificationSystem.selectStatusAction('on_progress')">
-                      <div class="card-body p-3">
-                        <div class="d-flex align-items-center">
-                          <div class="action-icon me-3">
-                            <div class="rounded-circle bg-warning p-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                              <i class="bi bi-clock-history text-white fs-4"></i>
-                            </div>
-                          </div>
-                          <div class="flex-grow-1">
-                            <h6 class="card-title mb-1 fw-bold text-warning">Dalam Proses</h6>
-                            <p class="card-text small mb-2 text-muted" style="line-height: 1.4;">
-                              Anda sedang menangani informasi ini. Tambahkan catatan progress (opsional).
-                            </p>
-                          </div>
-                          <div class="form-check d-inline-block">
-                            <input class="form-check-input action-radio" type="radio" name="status_radio" 
-                                   id="statusOnProgress" value="on_progress" checked>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Closed Option -->
-                    <div class="card status-action-card border-success cursor-pointer" 
-                         data-action="closed" 
-                         onclick="notificationSystem.selectStatusAction('closed')">
-                      <div class="card-body p-3">
-                        <div class="d-flex align-items-center">
-                          <div class="action-icon me-3">
-                            <div class="rounded-circle bg-success p-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                              <i class="bi bi-check-circle-fill text-white fs-4"></i>
-                            </div>
-                          </div>
-                          <div class="flex-grow-1">
-                            <h6 class="card-title mb-1 fw-bold text-success">Selesai / Tutup</h6>
-                            <p class="card-text small mb-2 text-muted" style="line-height: 1.4;">
-                              Informasi sudah selesai ditangani. <strong class="text-danger">Catatan wajib diisi.</strong>
-                            </p>
-                          </div>
-                          <div class="form-check d-inline-block">
-                            <input class="form-check-input action-radio" type="radio" name="status_radio" 
-                                   id="statusClosed" value="closed">
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <small class="form-text text-muted">
+                      Waktu saat ini otomatis terisi
+                    </small>
                   </div>
                   
                   <!-- Remarks Section -->
-                  <div class="flex-grow-1 d-flex flex-column">
+                  <div class="flex-grow-1 d-flex flex-column mb-4">
                     <label for="txt-remark-update" class="form-label fw-semibold mb-2 d-flex align-items-center text-dark">
                       <i class="bi bi-chat-square-text-fill me-2 text-success"></i>Catatan / Tindakan Anda
-                      <span class="text-danger ms-1">*</span>
+                      <span id="remark-required" class="text-danger ms-1" style="display: none;">*</span>
                     </label>
                     
                     <textarea class="form-control flex-grow-1 shadow-none" 
@@ -522,38 +536,25 @@
                               rows="5" placeholder="Tulis catatan atau tindakan yang sudah dilakukan..."
                               style="border: 1px solid #d1d5db; border-left: 4px solid #10b981 !important; resize: none; font-size: 0.95rem; border-radius: 8px;"></textarea>
                     
-                    <div class="form-text mt-2 fw-medium text-muted">
+                    <div class="form-text mt-2 fw-medium text-muted" id="remark-info-text">
                       <i class="bi bi-info-circle me-1"></i>
-                      <span id="remark-info-text">
-                        Untuk "Dalam Proses": Catatan opsional. Untuk "Selesai": Wajib diisi.
-                      </span>
+                      Tambahkan catatan tentang progress atau update terbaru
                     </div>
+                  </div>
+                  
+                  <!-- Submit Button -->
+                  <div class="mt-auto pt-3 border-top">
+                    <button type="submit" class="btn btn-lg btn-success w-100 py-3 fw-bold"
+                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;"
+                            id="btn-submit-reply">
+                      <i class="bi bi-send-check-fill me-2"></i>
+                      <span id="submit-button-text">Kirim Respon</span>
+                    </button>
                     
-                    <!-- Action Buttons -->
-                    <div class="mt-4 pt-3 border-top">
-                      <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-lg btn-warning py-3 d-flex align-items-center justify-content-center fw-bold" 
-                                id="btn-on-progress-action"
-                                style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none;"
-                                onclick="notificationSystem.submitReply('on_progress')">
-                          <i class="bi bi-clock-history me-2 fs-5"></i>
-                          <span>Simpan sebagai Dalam Proses</span>
-                        </button>
-                        
-                        <button type="button" class="btn btn-lg btn-success py-3 d-flex align-items-center justify-content-center fw-bold" 
-                                id="btn-closed-action"
-                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; display: none;"
-                                onclick="notificationSystem.submitReply('closed')">
-                          <i class="bi bi-check-circle me-2 fs-5"></i>
-                          <span>Selesaikan & Tutup</span>
-                        </button>
-                      </div>
-                      
-                      <div class="mt-3 text-center">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
-                          <i class="bi bi-x-circle me-1"></i> Batalkan
-                        </button>
-                      </div>
+                    <div class="mt-3 text-center">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Batalkan
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -607,6 +608,12 @@
   overflow-y: auto;
 }
 
+/* Status Radio Button Styling */
+.status-radio:checked {
+  background-color: #10b981;
+  border-color: #10b981;
+}
+
 /* Scrollable Content */
 .scrollable-content::-webkit-scrollbar {
   width: 6px;
@@ -627,46 +634,28 @@
 }
 
 /* Card Styles */
-.status-action-card {
+.card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 10px !important;
   overflow: hidden;
-  border-left: 4px solid transparent !important;
+  border: 1px solid #e2e8f0;
 }
 
-.status-action-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
-}
-
-.status-action-card.selected {
-  border-left-color: currentColor !important;
-  background-color: rgba(13, 110, 253, 0.05) !important;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
-}
-
-.status-action-card.cursor-pointer {
-  cursor: pointer;
-}
-
-/* Action Icon Animation */
-.action-icon {
-  transition: transform 0.3s ease;
-}
-
-.status-action-card:hover .action-icon {
-  transform: scale(1.1);
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Form Controls */
-.form-control-lg {
-  padding: 0.875rem 1rem !important;
-  font-size: 0.95rem !important;
+.form-control {
+  padding: 0.70rem 1rem !important;
+  font-size: 0.80rem !important;
   border-radius: 8px !important;
+  border: 1px solid #d1d5db;
 }
 
 textarea.form-control {
-  min-height: 120px;
+  min-height: 100px;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
@@ -701,16 +690,6 @@ textarea.form-control {
     padding: 1.25rem !important;
   }
   
-  .status-action-card .d-flex {
-    flex-direction: column !important;
-    text-align: center;
-  }
-  
-  .action-icon {
-    margin-bottom: 1rem !important;
-    margin-right: 0 !important;
-  }
-  
   .btn-lg {
     padding: 0.75rem 1rem !important;
     font-size: 0.9rem !important;
@@ -737,16 +716,6 @@ textarea.form-control {
   .modal-title {
     font-size: 1.1rem !important;
   }
-}
-
-/* Animation for Status Change */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.status-action-card {
-  animation: fadeIn 0.3s ease-out;
 }
 
 /* Button Loading State */
@@ -777,15 +746,6 @@ textarea.form-control {
 /* Status Progress Bar */
 #status-progress-bar {
   transition: width 0.5s ease;
-}
-
-/* Time Ago Badge */
-.time-ago-badge {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  background: #e2e8f0;
-  color: #475569;
-  border-radius: 4px;
 }
 
 /* Custom Scrollbar for Modal Body */
@@ -845,72 +805,156 @@ textarea:focus {
 .custom-toast.error .toast-icon {
   color: #dc3545 !important;
 }
+
+.week-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.8em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Weekly reset notification */
+.weekly-reset-notification {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    color: white;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+/* Week info in modal */
+.week-info-panel {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border-left: 4px solid #28a745;
+}
+
+.week-info-panel .week-title {
+    font-weight: 600;
+    color: #28a745;
+    margin-bottom: 5px;
+}
+
+.week-info-panel .week-dates {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+/* Highlight untuk data minggu ini */
+.this-week-row {
+    background-color: rgba(40, 167, 69, 0.05) !important;
+    border-left: 3px solid #28a745 !important;
+}
+
+.previous-week-row {
+    background-color: rgba(108, 117, 125, 0.05) !important;
+    opacity: 0.7;
+}
+
+/* Notification dengan week info */
+.notification-week-tag {
+    font-size: 0.7em;
+    background: #e9ecef;
+    color: #495057;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 5px;
+}
+
+/* Responsive design untuk week info */
+@media (max-width: 768px) {
+    .week-badge {
+        font-size: 0.7em;
+        padding: 3px 8px;
+    }
+    
+    .week-info-panel {
+        padding: 10px;
+        font-size: 0.9em;
+    }
+}
 </style>
 
 <script>
-// Notification System Extension
-if (window.notificationSystem) {
-  // Extend notificationSystem with modal functionality
-  window.notificationSystem.selectStatusAction = function(action) {
-    // Update UI
-    $('.status-action-card').removeClass('selected');
-    $(`.status-action-card[data-action="${action}"]`).addClass('selected');
-    
-    // Update radio button
-    $(`input.action-radio[value="${action}"]`).prop('checked', true);
-    $('#action-type').val(action);
-    
-    // Update remark info text
-    if (action === 'closed') {
-      $('#remark-info-text').html(`
-        <strong class="text-danger">Wajib diisi!</strong> 
-        Harap berikan catatan detail sebelum menutup informasi ini.
-      `);
-      $('#txt-remark-update').attr('required', 'required').attr('placeholder', 'Contoh: Sudah ditindaklanjuti, masalah sudah selesai, hasilnya...');
-    } else {
-      $('#remark-info-text').html(`
-        Opsional: Tambahkan catatan tentang progress atau update terbaru.
-        Contoh: "Sedang dikonfirmasi ke supplier", "Menunggu respon dari bagian QC"
-      `);
-      $('#txt-remark-update').removeAttr('required').attr('placeholder', 'Tulis catatan atau tindakan yang sudah dilakukan...');
-    }
-    
-    // Update button visibility
-    if (action === 'on_progress') {
-      $('#btn-on-progress-action').show();
-      $('#btn-closed-action').hide();
-    } else {
-      $('#btn-on-progress-action').hide();
-      $('#btn-closed-action').show();
-    }
-  };
+$(document).ready(function() {
+  // Handle status radio change
+  $('.status-radio').on('change', function() {
+    const selectedStatus = $(this).val();
+    updateRemarkField(selectedStatus);
+  });
   
-  window.notificationSystem.submitReply = function(action) {
-    const form = $('#updateToInformationForm');
+  function updateRemarkField(status) {
+    const $remarkField = $('#txt-remark-update');
+    const $requiredStar = $('#remark-required');
+    const $infoText = $('#remark-info-text');
+    const $submitButton = $('#btn-submit-reply');
+    const $submitText = $('#submit-button-text');
+    
+    if (status === 'closed') {
+      // CLOSED - Remark wajib
+      $requiredStar.show();
+      $remarkField.attr('required', 'required');
+      $remarkField.attr('placeholder', 'Contoh: Sudah ditindaklanjuti, masalah sudah selesai, hasilnya...');
+      $infoText.html('<i class="bi bi-exclamation-triangle me-1 text-danger"></i><strong class="text-danger">Wajib diisi!</strong> Harap berikan catatan detail sebelum menutup informasi ini.');
+      $submitText.text('Tutup Informasi');
+      $submitButton.removeClass('btn-warning').addClass('btn-success');
+    } else {
+      // ON PROGRESS - Remark opsional
+      $requiredStar.hide();
+      $remarkField.removeAttr('required');
+      $remarkField.attr('placeholder', 'Tulis catatan atau tindakan yang sudah dilakukan...');
+      $infoText.html('<i class="bi bi-info-circle me-1"></i>Opsional: Tambahkan catatan tentang progress atau update terbaru. Contoh: "Sedang dikonfirmasi ke supplier", "Menunggu respon dari bagian QC"');
+      $submitText.text('Simpan sebagai On Progress');
+      $submitButton.removeClass('btn-success').addClass('btn-warning');
+    }
+  }
+  
+  // Handle form submission
+  $('#updateToInformationForm').on('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const selectedStatus = $('input[name="status_action"]:checked').val();
     const remark = $('#txt-remark-update').val().trim();
     
     // Validation
-    if (action === 'closed' && !remark) {
-      this.showToast('error', 'Catatan wajib diisi untuk menutup informasi');
+    if (selectedStatus === 'closed' && !remark) {
+      showToast('error', 'Catatan wajib diisi untuk menutup informasi');
       $('#txt-remark-update').focus();
-      return;
+      return false;
     }
     
-    // Set action type
-    $('#action-type').val(action);
+    // Show loading
+    const $submitBtn = $('#btn-submit-reply');
+    const originalText = $submitBtn.html();
+    $submitBtn.prop('disabled', true)
+              .addClass('btn-loading')
+              .html('<span class="spinner-border spinner-border-sm"></span> Processing...');
     
-    // Disable buttons
-    $('#btn-on-progress-action, #btn-closed-action').prop('disabled', true).addClass('btn-loading');
+    // Prepare form data
+    const formData = new FormData(this);
+    formData.append('action_type', selectedStatus);
     
-    // Submit form
+    // AJAX submit
     $.ajax({
       url: 'modules/data_information.php',
       type: 'POST',
-      data: form.serialize(),
+      data: formData,
+      processData: false,
+      contentType: false,
       dataType: 'json',
-      success: (response) => {
+      success: function(response) {
+        $submitBtn.prop('disabled', false)
+                  .removeClass('btn-loading')
+                  .html(originalText);
+        
         if (response.success) {
-          this.showToast('success', response.message);
+          showToast('success', response.message);
           
           // Close modal after 1.5 seconds
           setTimeout(() => {
@@ -922,40 +966,40 @@ if (window.notificationSystem) {
             if (typeof fetchDataInformation === 'function') {
               fetchDataInformation();
             }
-            // Trigger notification check
-            this.forceCheck();
           }, 2000);
           
         } else {
-          this.showToast('error', response.message);
-          $('#btn-on-progress-action, #btn-closed-action').prop('disabled', false).removeClass('btn-loading');
+          showToast('error', response.message);
         }
       },
-      error: (xhr, status, error) => {
-        this.showToast('error', 'Network error: ' + error);
-        $('#btn-on-progress-action, #btn-closed-action').prop('disabled', false).removeClass('btn-loading');
+      error: function(xhr, status, error) {
+        $submitBtn.prop('disabled', false)
+                  .removeClass('btn-loading')
+                  .html(originalText);
+        showToast('error', 'Network error: ' + error);
       }
     });
-  };
+    
+    return false;
+  });
   
-  window.notificationSystem.showToast = function(type, message) {
+  // Toast function
+  function showToast(type, message) {
     $('.custom-toast').remove();
     
-    const icon = type === 'success' ? 'bx-check-circle' : 'bx-error-circle';
+    const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
     const title = type === 'success' ? 'Success' : 'Error';
+    const color = type === 'success' ? '#10b981' : '#dc3545';
     
     const toast = $(`
-      <div class="custom-toast ${type}">
-        <div class="toast-icon">
-          <i class="bx ${icon}"></i>
+      <div class="custom-toast" style="border-left-color: ${color}">
+        <div class="toast-icon" style="color: ${color}">
+          <i class="bi ${icon}"></i>
         </div>
         <div class="toast-content">
           <div class="toast-title">${title}</div>
           <div class="toast-message">${message}</div>
         </div>
-        <button type="button" class="toast-close">
-          <i class="bx bx-x"></i>
-        </button>
       </div>
     `);
     
@@ -968,130 +1012,36 @@ if (window.notificationSystem) {
       toast.removeClass('show');
       setTimeout(() => toast.remove(), 300);
     }, 5000);
-    
-    // Close button
-    toast.find('.toast-close').on('click', function() {
-      toast.removeClass('show');
-      setTimeout(() => toast.remove(), 300);
-    });
-  };
+  }
   
-  // Load notification data when modal opens
-  $(document).on('show.bs.modal', '#modal-update-information-to', function(e) {
-    const button = $(e.relatedTarget);
-    const infoId = button.data('id');
+  // Initialize when modal shows
+  $('#modal-update-information-to').on('shown.bs.modal', function() {
+    // Default to ON PROGRESS
+    $('#statusOnProgress').prop('checked', true).trigger('change');
+    updateRemarkField('on_progress');
     
-    if (infoId) {
+    // Auto-set current time
+    const now = new Date();
+    const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                      now.getMinutes().toString().padStart(2, '0');
+    $('#reply-time-input').val(timeString);
+    $('#txt-timeto-update').val(timeString);
+  });
+  
+  // Reset when modal hides
+  $('#modal-update-information-to').on('hidden.bs.modal', function() {
+    $('.status-radio').prop('checked', false);
+    $('#statusOnProgress').prop('checked', true);
+    $('#txt-remark-update').val('');
+    $('#btn-submit-reply').prop('disabled', false).removeClass('btn-loading');
+  });
+  
+  // Load notification data when modal opens via button click
+  $(document).on('click', '.btn-reply-info', function() {
+    const infoId = $(this).data('id');
+    if (infoId && window.notificationSystem) {
       window.notificationSystem.loadNotificationData(infoId);
     }
   });
-  
-  // Initialize when modal shows
-  $(document).on('shown.bs.modal', '#modal-update-information-to', function() {
-    setTimeout(() => {
-      window.notificationSystem.selectStatusAction('on_progress');
-    }, 100);
-  });
-  
-  window.notificationSystem.loadNotificationData = function(infoId) {
-    $.ajax({
-      url: 'modules/data_information.php?type=get-single&id=' + infoId,
-      type: 'GET',
-      dataType: 'json',
-      success: (response) => {
-        if (response.success && response.data) {
-          const info = response.data;
-          
-          // Fill form fields
-          $('#txt-id-information2').val(info.ID_INFORMATION);
-          $('#txt-timefrom-to-update').val(info.TIME_FROM);
-          $('#txt-picfrom-to-update').val(info.PIC_FROM);
-          $('#txt-itemto-update').val(info.ITEM);
-          $('#txt-requestto-update').val(info.REQUEST);
-          $('#txt-picto-update').val(info.user_role === 'recipient' ? $('.nav-profile span').text() : '');
-          $('#txt-timeto-update').val(new Date().toTimeString().substring(0, 5));
-          
-          // Update display fields
-          $('#display-picfrom').text(info.PIC_FROM);
-          $('#display-timefrom').text(info.TIME_FROM);
-          $('#display-date').text(info.DATE);
-          $('#display-picto').text(info.PIC_TO || 'Multiple Recipients');
-          $('#display-item').text(info.ITEM);
-          $('#display-request').text(info.REQUEST);
-          
-          // Status display
-          const status = info.STATUS || 'Open';
-          $('#display-status-text').text(status);
-          
-          // Status badge
-          let badgeClass = 'bg-secondary';
-          if (status === 'Open') badgeClass = 'bg-danger';
-          else if (status === 'On Progress') badgeClass = 'bg-warning';
-          else if (status === 'Closed') badgeClass = 'bg-success';
-          
-          $('#display-status-badge').removeClass().addClass(`badge ${badgeClass}`).text(status);
-          
-          // Status icon
-          let statusIcon = 'bi-question-circle';
-          if (status === 'Open') statusIcon = 'bi-exclamation-circle';
-          else if (status === 'On Progress') statusIcon = 'bi-clock-history';
-          else if (status === 'Closed') statusIcon = 'bi-check-circle';
-          
-          $('#display-status-icon').html(`<i class="bi ${statusIcon} text-${status === 'Open' ? 'danger' : status === 'On Progress' ? 'warning' : 'success'}"></i>`);
-          
-          // Status progress bar
-          let progressWidth = 0;
-          if (status === 'Open') progressWidth = 30;
-          else if (status === 'On Progress') progressWidth = 60;
-          else if (status === 'Closed') progressWidth = 100;
-          
-          $('#status-progress-bar').css('width', progressWidth + '%');
-          
-          // Calculate days old
-          const createdDate = new Date(info.DATE);
-          const now = new Date();
-          const daysOld = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
-          const remainingDays = Math.max(0, 7 - daysOld);
-          
-          $('#days-old-badge').text(`${daysOld} hari lalu`);
-          
-          // Retention info
-          if (daysOld > 7) {
-            $('#retention-info').html(`
-              <span class="text-danger fw-bold">SUDAH KADALUARSA</span><br>
-              ${daysOld - 7} hari melebihi batas retention
-            `);
-          } else {
-            $('#retention-info').html(`
-              <span class="text-success fw-bold">MASIH AKTIF</span><br>
-              ${remainingDays} hari tersisa hingga ${new Date(createdDate.getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}
-            `);
-          }
-          
-          // Update time info
-          $('#current-time-display').text(new Date().toTimeString().substring(0, 5));
-          
-        } else {
-          this.showToast('error', 'Gagal memuat data informasi');
-        }
-      },
-      error: () => {
-        this.showToast('error', 'Gagal memuat data informasi');
-      }
-    });
-  };
-}
-
-// Clear selection button
-$(document).on('click', '#clear-selection', function(e) {
-  e.preventDefault();
-  $('.recipient-checkbox').prop('checked', false).trigger('change');
-  $(this).hide();
-});
-
-// Toggle clear button visibility
-$(document).on('change', '.recipient-checkbox', function() {
-  const hasSelection = $('.recipient-checkbox:checked').length > 0;
-  $('#clear-selection').toggle(hasSelection);
 });
 </script>

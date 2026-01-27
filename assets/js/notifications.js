@@ -1,4 +1,4 @@
-// assets/js/notifications.js - VERSION REAL-TIME & AUTO-SCROLL
+// assets/js/notifications.js - VERSION FINAL TANPA AUDIO
 class NotificationSystem {
     constructor() {
         this.pollingInterval = null;
@@ -38,7 +38,7 @@ class NotificationSystem {
             this.markAllAsRead();
         });
         
-        // ==================== REVISI: NOTIFICATION CLICK DENGAN AUTO-SCROLL ====================
+        // Notification click
         $(document).on('click', '.notification-item', (e) => {
             if (!$(e.target).closest('a').length && !$(e.target).hasClass('btn-close')) {
                 const notificationId = $(e.currentTarget).data('id');
@@ -80,14 +80,6 @@ class NotificationSystem {
         $(document).on('forceCheckNotifications', () => {
             console.log('🔔 Force check triggered');
             this.checkNewNotifications(true);
-        });
-        
-        // Event ketika informasi baru ditambahkan (real-time)
-        $(document).on('informationAdded', (e, data) => {
-            console.log('🔔 New information added event:', data);
-            setTimeout(() => {
-                this.checkNewNotifications(true);
-            }, 2000);
         });
     }
     
@@ -186,8 +178,8 @@ class NotificationSystem {
                     // Reset retry count on success
                     this.retryCount = 0;
                     
-                    // ==================== REVISI: REAL-TIME NOTIFICATION ====================
-                    // Jika ada notifikasi baru yang urgent, beri alert langsung
+                    // ==================== REVISI: REAL-TIME NOTIFICATION TANPA AUDIO ====================
+                    // Jika ada notifikasi baru yang urgent, beri visual alert saja
                     if (urgentCount > 0 && newCount > 0 && newCount > this.notificationCount) {
                         console.log(`🔔 [${checkId}] New urgent notification detected!`);
                         this.showUrgentNotification(urgentCount, newCount);
@@ -200,10 +192,9 @@ class NotificationSystem {
                         this.notificationCount = newCount;
                         this.updateBadge(newCount);
                         
-                        // Play sound and show indicator for new notifications
+                        // Show visual indicator untuk new notifications (TANPA AUDIO)
                         if (urgentCount > 0 && newCount > 0) {
                             console.log(`🔔 [${checkId}] Urgent notifications found: ${urgentCount}`);
-                            this.playNotificationSound();
                             this.showNewNotificationIndicator();
                         }
                         
@@ -258,18 +249,8 @@ class NotificationSystem {
         });
     }
     
-    // ==================== FUNGSI BARU: SHOW URGENT NOTIFICATION ====================
-    showUrgentNotification(urgentCount, totalCount) {
-        // Show toast notification
-        this.showToast('warning', 'Peringatan!', 
-            `Anda memiliki ${urgentCount} notifikasi penting dari ${totalCount} notifikasi baru`);
-        
-        // Show desktop notification if supported
-        this.showDesktopNotification(urgentCount);
-    }
-    
     showNewNotificationIndicator() {
-        console.log('🔔 Showing new notification indicator...');
+        console.log('🔔 Showing new notification indicator (visual only)...');
         
         // Add animation to bell icon
         const $bell = $('.notification-bell');
@@ -286,33 +267,51 @@ class NotificationSystem {
         }, 2000);
     }
     
-    showDesktopNotification(count) {
-        if (!("Notification" in window)) {
-            console.log("🔔 Desktop notifications not supported");
-            return;
-        }
+    showUrgentNotification(urgentCount, totalCount) {
+        // Visual indicator saja, tanpa audio
+        const $badge = $('#notificationBadge');
         
-        if (Notification.permission === "granted") {
-            const notification = new Notification("Notifikasi Baru - Progress BO", {
-                body: `Anda memiliki ${count} notifikasi baru`,
-                icon: "./assets/img/logo-denso.png",
-                tag: "progress-bo-notification"
-            });
-            
-            notification.onclick = function() {
-                window.focus();
-                this.close();
-            };
-            
-            setTimeout(notification.close.bind(notification), 5000);
-            
-        } else if (Notification.permission !== "denied") {
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    this.showDesktopNotification(count);
-                }
-            });
-        }
+        // Add urgent animation
+        $badge.addClass('animate__animated animate__pulse animate__infinite');
+        
+        // Change badge color to red
+        $badge.removeClass('bg-danger bg-warning bg-primary')
+               .addClass('bg-danger');
+        
+        // Update document title
+        document.title = `(${totalCount}) Progress BO Control - ${urgentCount} URGENT!`;
+        
+        // Show visual toast
+        this.showVisualToast(urgentCount, totalCount);
+    }
+    
+    showVisualToast(urgentCount, totalCount) {
+        // Remove existing toasts
+        $('.urgent-toast').remove();
+        
+        const toast = $(`
+            <div class="custom-toast urgent-toast" style="border-left-color: #dc3545">
+                <div class="toast-icon" style="color: #dc3545">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="toast-content">
+                    <div class="toast-title">Notifikasi Baru!</div>
+                    <div class="toast-message">
+                        ${urgentCount} notifikasi urgent, total ${totalCount} notifikasi baru
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        $('body').append(toast);
+        
+        setTimeout(() => toast.addClass('show'), 10);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            toast.removeClass('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
     }
     
     loadNotifications() {
@@ -466,212 +465,58 @@ class NotificationSystem {
                                 ${notification.status_text}
                             </span>
                         </div>
-                        <p class="notification-message mb-2" style="font-size: 0.85rem; line-height: 1.3; color: #475569;">
-                            ${displayMessage.substring(0, 80)}${displayMessage.length > 80 ? '...' : ''}
+                        <p class="notification-message mb-2" style="font-size: 0.85rem; color: #64748b;">
+                            ${displayMessage}
                         </p>
-                        <div class="notification-meta d-flex justify-content-between align-items-center">
-                            <span class="notification-time" style="font-size: 0.75rem; color: #6c757d;">
+                        <div class="notification-meta">
+                            <span class="notification-time">
                                 <i class="bi bi-clock me-1"></i>${timeAgo}
                             </span>
-                            <span class="notification-from fw-semibold" style="font-size: 0.75rem; color: #0066cc;">
+                            <span class="notification-from">
                                 <i class="bi bi-person me-1"></i>${notification.from_user}
                             </span>
                         </div>
                     </div>
-                    ${isUnread ? `
-                    <button type="button" class="btn-close btn-close-sm ms-2" aria-label="Tandai sudah dibaca" 
-                            style="font-size: 0.6rem; opacity: 0.5;" 
-                            onclick="event.stopPropagation(); window.notificationSystem.markAsRead('${notification.id}')">
-                    </button>
-                    ` : ''}
                 </div>
             </div>
         `;
     }
     
+    getTimeAgo(dateTimeString) {
+        if (!dateTimeString) return 'Baru saja';
+        
+        const now = new Date();
+        const past = new Date(dateTimeString);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffMins < 1) return 'Baru saja';
+        if (diffMins < 60) return `${diffMins} menit lalu`;
+        if (diffHours < 24) return `${diffHours} jam lalu`;
+        if (diffDays < 7) return `${diffDays} hari lalu`;
+        
+        return new Date(dateTimeString).toLocaleDateString('id-ID');
+    }
+    
     showEmptyState(message = 'Tidak ada notifikasi') {
         $('#notificationContainer').html(`
             <div class="empty-notifications text-center py-5">
-                <i class="bi bi-bell-slash fs-1" style="color: #6c757d;"></i>
-                <p class="mb-1 mt-3" style="color: #adb5bd;">${message}</p>
-                <small class="text-muted">Semuanya sudah up to date</small>
+                <i class="bi bi-bell-slash" style="font-size: 3rem; color: #94a3b8;"></i>
+                <p class="mt-3 mb-1" style="color: #64748b;">${message}</p>
+                <small style="color: #94a3b8;">Notifikasi baru akan muncul di sini</small>
             </div>
         `);
-    }
-    
-    markAsRead(notificationId) {
-        console.log('🔔 Marking as read:', notificationId);
-        
-        $.ajax({
-            url: 'api/mark_notification_read.php',
-            type: 'POST',
-            data: { notification_id: notificationId },
-            dataType: 'json',
-            success: (response) => {
-                if (response.success) {
-                    // Remove unread style and close button
-                    const $item = $(`.notification-item[data-id="${notificationId}"]`);
-                    $item.removeClass('unread').find('.btn-close').remove();
-                    
-                    // Update count
-                    if (this.notificationCount > 0) {
-                        this.notificationCount--;
-                        this.updateBadge(this.notificationCount);
-                    }
-                    
-                    // Reload if dropdown open
-                    if ($('#notificationDropdown').hasClass('show')) {
-                        setTimeout(() => this.loadNotifications(), 300);
-                    }
-                }
-            }
-        });
-    }
-    
-    markAllAsRead() {
-        const unreadItems = $('.notification-item.unread');
-        if (unreadItems.length === 0) {
-            this.showToast('info', 'Tidak ada notifikasi yang belum dibaca');
-            return;
-        }
-        
-        const unreadIds = [];
-        unreadItems.each(function() {
-            const id = $(this).data('id');
-            if (id) unreadIds.push(id);
-        });
-        
-        Swal.fire({
-            title: 'Tandai semua sudah dibaca?',
-            text: `Ini akan menandai ${unreadIds.length} notifikasi sebagai sudah dibaca`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#0066cc',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Ya, tandai semua',
-            cancelButtonText: 'Batal',
-            background: '#ffffff',
-            color: '#1e293b'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                let completed = 0;
-                unreadIds.forEach(id => {
-                    $.ajax({
-                        url: 'api/mark_notification_read.php',
-                        type: 'POST',
-                        data: { notification_id: id },
-                        success: () => {
-                            completed++;
-                            if (completed === unreadIds.length) {
-                                // Update UI
-                                $('.notification-item').removeClass('unread');
-                                $('.notification-item .btn-close').remove();
-                                this.notificationCount = 0;
-                                this.updateBadge(0);
-                                this.showToast('success', 'Semua notifikasi ditandai sudah dibaca');
-                            }
-                        }
-                    });
-                });
-            }
-        });
-    }
-    
-    // ==================== FUNGSI BARU: AUTO-SCROLL KE INFORMASI TERKAIT ====================
-    scrollToRelatedInformation(notificationId, notificationType) {
-        console.log('🔔 Scrolling to related information:', notificationId, notificationType);
-        
-        if (notificationType === 'delay') {
-            // Untuk delay notifications, scroll ke tabel progress
-            this.scrollToProgressTable();
-            return;
-        }
-        
-        // Untuk information notifications, cari di tabel informasi
-        if (typeof tableInformation !== 'undefined') {
-            // Cari row yang sesuai dengan notificationId
-            const data = tableInformation.rows().data();
-            let foundRow = null;
-            let rowIndex = -1;
-            
-            $.each(data, function(index, row) {
-                if (row.ID_INFORMATION == notificationId) {
-                    foundRow = row;
-                    rowIndex = index;
-                    return false;
-                }
-            });
-            
-            if (foundRow && rowIndex >= 0) {
-                // Close notification dropdown
-                $('#notificationDropdown').dropdown('hide');
-                
-                // Scroll ke tabel informasi section
-                $('html, body').animate({
-                    scrollTop: $('#table-information').offset().top - 100
-                }, 800);
-                
-                // Highlight row dan scroll ke row tersebut
-                setTimeout(() => {
-                    const table = $('#table-information').DataTable();
-                    const node = table.row(rowIndex).node();
-                    
-                    if (node) {
-                        // Add highlight class
-                        $(node).addClass('highlight-row');
-                        
-                        // Scroll table to row
-                        const tableContainer = $('#table-information_wrapper .dataTables_scrollBody');
-                        if (tableContainer.length > 0) {
-                            const rowTop = $(node).position().top;
-                            const containerHeight = tableContainer.height();
-                            tableContainer.animate({
-                                scrollTop: tableContainer.scrollTop() + rowTop - (containerHeight / 2)
-                            }, 1000);
-                        }
-                        
-                        // Remove highlight after 3 seconds
-                        setTimeout(() => {
-                            $(node).removeClass('highlight-row');
-                        }, 3000);
-                    }
-                }, 1000);
-            } else {
-                // Jika tidak ditemukan, refresh tabel informasi
-                if (typeof fetchDataInformation === 'function') {
-                    fetchDataInformation();
-                    this.showToast('info', 'Memuat ulang data informasi...');
-                }
-            }
-        }
-    }
-    
-    scrollToProgressTable() {
-        // Scroll ke tabel progress
-        $('html, body').animate({
-            scrollTop: $('#table-detail-progress').offset().top - 100
-        }, 800);
-        
-        this.showToast('info', 'Scroll ke tabel progress...');
     }
     
     updateBadge(count) {
         const $badge = $('#notificationBadge');
         const $infoBadge = $('#info-badge');
         
-        console.log('🔔 Updating badge to:', count);
-        
         if (count > 0) {
-            const displayCount = count > 99 ? '99+' : count;
-            $badge.text(displayCount).show().addClass('bg-danger');
-            $infoBadge.text(count > 9 ? '9+' : count).show().addClass('bg-danger');
-            
-            // Add animation for new notifications
-            if ($badge.text() !== count.toString()) {
-                $badge.addClass('animate__animated animate__bounceIn');
-                setTimeout(() => $badge.removeClass('animate__animated animate__bounceIn'), 1000);
-            }
-            
+            $badge.text(count).show().addClass('bg-danger');
+            $infoBadge.text(count).show().addClass('bg-danger');
         } else {
             $badge.hide();
             $infoBadge.hide();
@@ -686,45 +531,89 @@ class NotificationSystem {
         }
     }
     
-    playNotificationSound() {
-        try {
-            const audio = new Audio('assets/sound/notification.mp3');
-            audio.volume = 0.4;
-            audio.play().catch(e => console.log("🔔 Audio play failed:", e));
-        } catch (e) {
-            console.log("🔔 Audio not supported");
+    markAsRead(notificationId) {
+        if (!notificationId) return;
+        
+        $.ajax({
+            url: 'api/mark_notification_read.php',
+            type: 'POST',
+            data: { notification_id: notificationId },
+            dataType: 'json',
+            success: (response) => {
+                if (response.success) {
+                    // Remove unread class
+                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                    
+                    // Update badge count
+                    this.checkNewNotifications(true);
+                }
+            },
+            error: (xhr) => {
+                console.error('Error marking as read:', xhr.responseText);
+            }
+        });
+    }
+    
+    markAllAsRead() {
+        const $unreadItems = $('.notification-item.unread');
+        const notificationIds = [];
+        
+        $unreadItems.each(function() {
+            const id = $(this).data('id');
+            if (id) notificationIds.push(id);
+        });
+        
+        if (notificationIds.length === 0) return;
+        
+        // Mark each as read
+        notificationIds.forEach(id => {
+            this.markAsRead(id);
+        });
+        
+        // Show success message
+        this.showToast('success', `Marked ${notificationIds.length} notifications as read`);
+    }
+    
+    scrollToRelatedInformation(notificationId, notificationType) {
+        if (notificationType === 'information' || notificationType === 'delay') {
+            // Scroll to information table
+            if (typeof fetchDataInformation === 'function') {
+                fetchDataInformation();
+                
+                // Highlight row after data loads
+                setTimeout(() => {
+                    const $row = $(`#table-information tr[data-id="${notificationId}"]`);
+                    if ($row.length) {
+                        $row.addClass('highlight-row');
+                        $('html, body').animate({
+                            scrollTop: $row.offset().top - 100
+                        }, 1000);
+                        
+                        // Remove highlight after 3 seconds
+                        setTimeout(() => {
+                            $row.removeClass('highlight-row');
+                        }, 3000);
+                    }
+                }, 1000);
+            }
         }
     }
     
-    getTimeAgo(datetime) {
-        if (!datetime) return 'Baru saja';
+    showToast(type, message) {
+        $('.custom-toast').remove();
         
-        const now = new Date();
-        const past = new Date(datetime);
-        const diffMs = now - past;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMins / 60);
-        const diffDays = Math.floor(diffHours / 24);
+        const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill';
+        const title = type === 'success' ? 'Success' : 'Info';
+        const color = type === 'success' ? '#10b981' : '#3b82f6';
         
-        if (diffMins < 1) return 'Baru saja';
-        if (diffMins < 60) return `${diffMins}m lalu`;
-        if (diffHours < 24) return `${diffHours}j lalu`;
-        if (diffDays < 7) return `${diffDays}h lalu`;
-        return past.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
-    }
-    
-    showToast(type, title, message = '', duration = 3000) {
         const toast = $(`
-            <div class="custom-toast toast-${type}">
-                <div class="toast-icon">
-                    <i class="bi ${type === 'success' ? 'bi-check-circle' : 
-                                 type === 'error' ? 'bi-x-circle' : 
-                                 type === 'warning' ? 'bi-exclamation-triangle' : 
-                                 'bi-info-circle'}"></i>
+            <div class="custom-toast" style="border-left-color: ${color}">
+                <div class="toast-icon" style="color: ${color}">
+                    <i class="bi ${icon}"></i>
                 </div>
                 <div class="toast-content">
                     <div class="toast-title">${title}</div>
-                    ${message ? `<div class="toast-message">${message}</div>` : ''}
+                    <div class="toast-message">${message}</div>
                 </div>
             </div>
         `);
@@ -732,65 +621,34 @@ class NotificationSystem {
         $('body').append(toast);
         
         setTimeout(() => toast.addClass('show'), 10);
+        
+        // Auto remove after 3 seconds
         setTimeout(() => {
             toast.removeClass('show');
             setTimeout(() => toast.remove(), 300);
-        }, duration);
+        }, 3000);
     }
     
-    // Public method untuk manual trigger
+    // Public method untuk force check
     forceCheck() {
-        console.log('🔔 Manual force check triggered');
+        console.log('🔔 Force check called');
         this.checkNewNotifications(true);
-    }
-    
-    destroy() {
-        if (this.pollingInterval) clearInterval(this.pollingInterval);
-        if (this.deepCheckInterval) clearInterval(this.deepCheckInterval);
-        this.pollingActive = false;
-        console.log('🔔 NotificationSystem destroyed');
     }
 }
 
-// GLOBAL INITIALIZATION
+// Initialize on document ready
 $(document).ready(function() {
-    console.log('🔔 Document ready, initializing NotificationSystem...');
+    console.log('🔔 Initializing NotificationSystem...');
     
-    // Pastikan hanya satu instance
-    if (window.notificationSystem) {
-        console.log('🔔 Instance already exists, destroying old...');
-        window.notificationSystem.destroy();
+    if (!window.notificationSystem) {
+        window.notificationSystem = new NotificationSystem();
+        console.log('✅ NotificationSystem initialized');
     }
     
-    // Create new instance
-    window.notificationSystem = new NotificationSystem();
-    
-    // Expose forceCheck globally
-    window.forceCheckNotifications = function() {
+    // Expose forceCheck untuk global access
+    window.forceNotificationCheck = function() {
         if (window.notificationSystem) {
             window.notificationSystem.forceCheck();
         }
     };
-    
-    // Event untuk refresh dari system lain
-    $(document).on('refreshNotifications', function() {
-        console.log('🔔 Refresh event received');
-        if (window.notificationSystem) {
-            window.notificationSystem.forceCheck();
-        }
-    });
-    
-    // Auto-check ketika ada informasi baru dari information system
-    $(document).ajaxSuccess(function(event, xhr, settings) {
-        if (settings.url && settings.url.includes('data_information.php')) {
-            console.log('🔔 Information system update detected, refreshing notifications...');
-            setTimeout(() => {
-                if (window.notificationSystem) {
-                    window.notificationSystem.forceCheck();
-                }
-            }, 1500);
-        }
-    });
-    
-    console.log('🔔 NotificationSystem initialization complete');
 });

@@ -737,7 +737,7 @@ const allSupplierCodes = [
     "C87", "C92", "B78", "B56", "B04", "A09", "A96", "A80", "A42", "A25", "C30", "B82", "B86", "B01", "A20", "C40", "B79", "A12", "B91", "A27", "C60", "A02", "B87", "B05", "A31", "A21", "B54", "A47", "B38", "D07", "B25", "B95", "C09", "C42", "B59", "B08", "A54", "C39", "A44", "C36", "B62", "B88", "A19", "B89", "B67", "A14", "B61", "B96", "A90", "A95", "C38", "C97", "A03", "A39", "C41", "B70", "D11", "B77", "B12", "B90", "B93", "D05", "A15", "A57", "C17", "B48", "D14", "B23", "B13", "A48", "A93", "C79", "C29", "C68", "C24", "B37", "C57", "A84", "C55", "B55", "A63", "A89", "C84", "C81", "C64", "B69", "B45", "B98", "A08", "A52", "B14", "B24", "B63", "A22", "B65", "C46", "C04", "A04", "A72", "C25", "C73", "A53", "B94", "A07", "A85", "B32", "B53", "A59", "A73"
 ];
 
-// ================= GLOBAL VARIABLES =================
+// ================= GLOBAL VARIABLES UPDATED =================
 let dsActualMap = {};  
 let nsActualMap = {};  
 let tableDetailProgress;
@@ -750,6 +750,52 @@ let rangeDate1, rangeDate2;
 let ajaxDone = 0;
 let accumDataAll = [];
 let accumTableParams = {page: 1, pageSize: 10, search: '', sort: 'SUPPLIER_CODE', daysInMonth: 31, selectedTxt: '', year: '', month: ''};
+
+// VARIABEL FILTER GLOBAL
+let globalFilters = {
+    pic: [],
+    supplierCode: [],
+    status: []
+};
+
+// ================= UPDATE FILTER FUNCTIONS =================
+function updateGlobalFilters() {
+    // Ambil nilai dari filter
+    globalFilters.pic = $('#select-pic').val() || [];
+    globalFilters.supplierCode = $('#select-supplier-code').val() || [];
+    globalFilters.status = $('#select-status').val() || [];
+    
+    // Jika ada "select-all", konversi ke semua nilai
+    if (globalFilters.supplierCode.includes('select-all')) {
+        globalFilters.supplierCode = allSupplierCodes;
+    }
+    
+    console.log('🔄 Filter global diperbarui:', globalFilters);
+}
+
+function getFilteredSupplierCodes() {
+    // Jika ada PIC yang dipilih, ambil supplier code dari PIC tersebut
+    if (globalFilters.pic.length > 0 && !globalFilters.pic.includes('select-all')) {
+        let filteredCodes = [];
+        globalFilters.pic.forEach(pic => {
+            if (picSupplierMap[pic]) {
+                filteredCodes = filteredCodes.concat(picSupplierMap[pic]);
+            }
+        });
+        
+        // Jika ada supplier code spesifik yang dipilih, intersect
+        if (globalFilters.supplierCode.length > 0) {
+            filteredCodes = filteredCodes.filter(code => 
+                globalFilters.supplierCode.includes(code)
+            );
+        }
+        
+        return [...new Set(filteredCodes)];
+    }
+    
+    // Jika tidak ada PIC yang dipilih, pakai supplier code yang dipilih
+    return globalFilters.supplierCode;
+}
 
 // ================= VARIABEL BARU UNTUK MODAL D/S & N/S =================
 let dsCurrentPage = 1;
@@ -1312,10 +1358,16 @@ function loadTableDetailProgress() {
     let sendDate1 = date1 ? date1.replace(/-/g, '') : '';  
     let sendDate2 = date2 ? date2.replace(/-/g, '') : '';  
     
-    let supplierCodeArr = $('#select-supplier-code').val();
+    // PAKAI FILTER GLOBAL
+    let supplierCodeArr = getFilteredSupplierCodes();
     let supplierCode = supplierCodeArr ? supplierCodeArr.join(',') : '';  
     
-    console.log('Kirim date1:', sendDate1, 'date2:', sendDate2, 'supplier_code:', supplierCode);  
+    console.log('🔄 Loading progress dengan filter:', {
+        date1: sendDate1,
+        date2: sendDate2,
+        supplierCodes: supplierCodeArr,
+        status: globalFilters.status
+    });
     
     showTableSkeleton('#table-detail-progress tbody', 10);
     
@@ -1343,21 +1395,31 @@ function loadTableDetailProgress() {
             
             console.log("Data progress loaded:", data.length, "rows");
             
-            let displayData = data;
-            if (data.length > 500) {
-                console.warn("Data terlalu banyak (" + data.length + " rows), limiting to 500 rows");
-                displayData = data.slice(0, 500);
+            // Filter tambahan berdasarkan status di client side
+            let filteredData = data;
+            if (globalFilters.status.length > 0 && !globalFilters.status.includes('select-all')) {
+                filteredData = filteredData.filter(row => 
+                    globalFilters.status.includes(row.STATUS)
+                );
+                console.log("Setelah filter status:", filteredData.length, "rows");
+            }
+            
+            let displayData = filteredData;
+            if (filteredData.length > 500) {
+                console.warn("Data terlalu banyak (" + filteredData.length + " rows), limiting to 500 rows");
+                displayData = filteredData.slice(0, 500);
                 
                 if ($('#table-detail-progress_wrapper .alert-warning').length === 0) {
                     $('#table-detail-progress_wrapper').prepend(
                         '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
                         '<i class="bi bi-exclamation-triangle me-2"></i>' +
-                        'Data terlalu besar (' + data.length + ' rows). Menampilkan 500 rows pertama. Gunakan filter yang lebih spesifik.' +
+                        'Data terlalu besar (' + filteredData.length + ' rows). Menampilkan 500 rows pertama. Gunakan filter yang lebih spesifik.' +
                         '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
                         '</div>'
                     );
                 }
-            } else {
+            }
+            else {
                 $('#table-detail-progress_wrapper .alert-warning').remove();
             }
             
@@ -1512,6 +1574,20 @@ function loadDSData() {
     dsCurrentPage = 1;
     dsPageSize = parseInt($('#ds-page-size').val()) || 10;
     
+    // AMBIL FILTER SUPPLIER CODE
+    let filteredSupplierCodes = getFilteredSupplierCodes();
+    let supplierParam = '';
+    if (filteredSupplierCodes && filteredSupplierCodes.length > 0) {
+        supplierParam = filteredSupplierCodes.join(',');
+    }
+    
+    console.log("🔄 Loading DS Data dengan filter:", {
+        date1: sendDate1,
+        date2: sendDate2,
+        supplierCodes: filteredSupplierCodes,
+        supplierParam: supplierParam
+    });
+    
     showDSLoadingSkeleton();
     
     $.ajax({
@@ -1519,11 +1595,16 @@ function loadDSData() {
         type: 'GET',
         data: {
             date1: sendDate1,
-            date2: sendDate2
+            date2: sendDate2,
+            supplier_code: supplierParam // TAMBAH PARAMETER INI
         },
         dataType: 'json',
         success: function(response) {
-            console.log("Day Shift Data Response:", response);
+            console.log("Day Shift Data Response dengan filter:", {
+                supplierCodes: filteredSupplierCodes,
+                count: filteredSupplierCodes ? filteredSupplierCodes.length : 0,
+                responseData: response
+            });
             
             const data = Array.isArray(response)
                 ? response
@@ -1543,6 +1624,7 @@ function loadDSData() {
         }
     });
 }
+
 
 // ================= FUNGSI PROSES DS DATA - DIPERBAIKI =================
 function processDSData(rawData) {
@@ -1873,6 +1955,20 @@ function loadNSData() {
     nsCurrentPage = 1;
     nsPageSize = parseInt($('#ns-page-size').val()) || 10;
     
+    // AMBIL FILTER SUPPLIER CODE
+    let filteredSupplierCodes = getFilteredSupplierCodes();
+    let supplierParam = '';
+    if (filteredSupplierCodes && filteredSupplierCodes.length > 0) {
+        supplierParam = filteredSupplierCodes.join(',');
+    }
+    
+    console.log("🔄 Loading NS Data dengan filter:", {
+        date1: sendDate1,
+        date2: sendDate2,
+        supplierCodes: filteredSupplierCodes,
+        supplierParam: supplierParam
+    });
+    
     showNSLoadingSkeleton();
     
     $.ajax({
@@ -1880,11 +1976,16 @@ function loadNSData() {
         type: 'GET',
         data: {
             date1: sendDate1,
-            date2: sendDate2
+            date2: sendDate2,
+            supplier_code: supplierParam // TAMBAH PARAMETER INI
         },
         dataType: 'json',
         success: function(response) {
-            console.log("Night Shift Data Response:", response);
+            console.log("Night Shift Data Response dengan filter:", {
+                supplierCodes: filteredSupplierCodes,
+                count: filteredSupplierCodes ? filteredSupplierCodes.length : 0,
+                responseData: response
+            });
             
             const data = Array.isArray(response)
                 ? response
@@ -2224,6 +2325,32 @@ function showCycleModal() {
     loadCycleData();
 }
 
+function showDSModal() {
+    $("#modal-detail-ds").modal('show');
+    
+    // Tampilkan info filter
+    const filteredCount = getFilteredSupplierCodes().length;
+    const filterInfo = filteredCount > 0 ? 
+        ` (Filtered: ${filteredCount} suppliers)` : 
+        '';
+    
+    $("#txt-rangedate-day").html("(" + rangeDate1 + ") s/d (" + rangeDate2 + ")" + filterInfo);
+    loadDSData();
+}
+
+function showNSModal() {
+    $("#modal-detail-ns").modal('show');
+    
+    // Tampilkan info filter
+    const filteredCount = getFilteredSupplierCodes().length;
+    const filterInfo = filteredCount > 0 ? 
+        ` (Filtered: ${filteredCount} suppliers)` : 
+        '';
+    
+    $("#txt-rangedate-night").html("(" + rangeDate1 + ") s/d (" + rangeDate2 + ")" + filterInfo);
+    loadNSData();
+}
+
 function showAccumModal() {
     loadMonthOptions();
     const currentMonth = new Date().getFullYear() + '-' + pad(new Date().getMonth() + 1);
@@ -2232,21 +2359,15 @@ function showAccumModal() {
     var modal = new bootstrap.Modal(document.getElementById('modalByAccum'));
     modal.show();
     
+    // Tampilkan info filter
+    const filteredCount = getFilteredSupplierCodes().length;
+    const filterInfo = filteredCount > 0 ? 
+        ` - Filtered: ${filteredCount} suppliers` : 
+        '';
+    
     setTimeout(() => {
         loadAccumTable(currentMonth);
     }, 500);
-}
-
-function showDSModal() {
-    $("#modal-detail-ds").modal('show');
-    $("#txt-rangedate-day").html("(" + rangeDate1 + ") s/d (" + rangeDate2 + ")");
-    loadDSData();
-}
-
-function showNSModal() {
-    $("#modal-detail-ns").modal('show');
-    $("#txt-rangedate-night").html("(" + rangeDate1 + ") s/d (" + rangeDate2 + ")");
-    loadNSData();
 }
 
 // Tambahkan fungsi ini di app.js atau update yang existing
@@ -2448,17 +2569,31 @@ function loadMonthOptions(callback) {
 }
 
 function loadAccumTable(monthYear) {
-    console.log("🔍 loadAccumTable called with:", monthYear);
+    console.log("🔍 loadAccumTable called dengan filter supplier");
     
     if (!monthYear) {
         $('#accum-table-container').html('<div class="alert alert-warning">Pilih bulan terlebih dahulu</div>');
         return;
     }
     
+    // AMBIL FILTER SUPPLIER CODE
+    let filteredSupplierCodes = getFilteredSupplierCodes();
+    let supplierParam = '';
+    if (filteredSupplierCodes && filteredSupplierCodes.length > 0) {
+        supplierParam = filteredSupplierCodes.join(',');
+    }
+    
+    console.log("🔍 loadAccumTable called with:", monthYear);
+    
     let [year, month] = monthYear.split('-');
     if (!year || !month) return;
     
     console.log("📅 Processing:", year, month);
+    console.log("🎯 Supplier filter:", {
+        codes: filteredSupplierCodes,
+        param: supplierParam,
+        count: filteredSupplierCodes ? filteredSupplierCodes.length : 0
+    });
     
     year = String(year);
     month = pad(parseInt(month));
@@ -2473,7 +2608,10 @@ function loadAccumTable(monthYear) {
     $.ajax({
         url: 'modules/data_by_accum.php',
         method: 'GET',
-        data: { month: monthYear },
+        data: { 
+            month: monthYear,
+            supplier_code: supplierParam // TAMBAH INI
+        },
         dataType: 'json',
         success: function(response) {
             console.log("📦 Accum API Response:", response);
@@ -4285,198 +4423,197 @@ $(document).ready(function() {
         return show;
     });
     
-// CARI KODE INI (sekitar line 2050-2100) dan GANTI:
-
-tableInformation = $('#table-information').DataTable({
-    pageLength: 10,
-    autoWidth: true,
-    aaSorting: [[0, "asc"]],
-    bDestroy: true,
-    scrollX: true,
-    scrollCollapse: true,
-    paging: true,
-    searching: true,
-    language: {
-        processing: '<div class="spinner-border spinner-border-sm" role="status"></div> Loading...',
-        emptyTable: 'No information available',
-        zeroRecords: 'No matching records found',
-        search: 'Search:',
-        paginate: {
-            first: 'First',
-            last: 'Last',
-            next: 'Next',
-            previous: 'Previous'
-        }
-    },
-    columns: [
-        { 
-            title: "No", 
-            data: null, 
-            render: function(data, type, row, meta) {
-                return meta.row + 1;
+    // CARI KODE INI (sekitar line 2050-2100) dan GANTI:
+    tableInformation = $('#table-information').DataTable({
+        pageLength: 10,
+        autoWidth: true,
+        aaSorting: [[0, "asc"]],
+        bDestroy: true,
+        scrollX: true,
+        scrollCollapse: true,
+        paging: true,
+        searching: true,
+        language: {
+            processing: '<div class="spinner-border spinner-border-sm" role="status"></div> Loading...',
+            emptyTable: 'No information available',
+            zeroRecords: 'No matching records found',
+            search: 'Search:',
+            paginate: {
+                first: 'First',
+                last: 'Last',
+                next: 'Next',
+                previous: 'Previous'
+            }
+        },
+        columns: [
+            { 
+                title: "No", 
+                data: null, 
+                render: function(data, type, row, meta) {
+                    return meta.row + 1;
+                },
+                className: "text-center"
             },
-            className: "text-center"
-        },
-        { 
-            title: "Date", 
-            data: "DATE", 
-            render: formatDate,
-            className: "text-center"
-        },
-        { 
-            title: "Time", 
-            data: "TIME_FROM",
-            className: "text-center" 
-        },
-        { 
-            title: "PIC", 
-            data: "PIC_FROM",
-            className: "text-center"
-        },
-        { 
-            title: "Item", 
-            data: "ITEM", 
-            className: "text-center",
-            render: function(data) {
-                return '<div class="table-text-center">' + (data || '-') + '</div>';
-            }
-        },
-        { 
-            title: "Request", 
-            data: "REQUEST", 
-            className: "text-center",
-            render: function(data) {
-                return '<div class="table-text-center">' + (data || '-') + '</div>';
-            }
-        },
-        { 
-            title: "Action", 
-            data: null, 
-            orderable: false, 
-            searchable: false,
-            className: "text-center",
-            render: function(data, type, row) {
-                const role = row.user_role || '';
-                const status = row.STATUS || '';
-                
-                // Hanya sender yang bisa edit/delete
-                if (role === 'sender') {
-                    let buttons = '';
-                    // Edit hanya jika status Open
-                    if (status === 'Open') {
-                        buttons += `<button class="btn btn-sm btn-warning btn-edit-info me-1 btn-action-table" 
-                                    data-id="${row.ID_INFORMATION}" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                  </button>`;
-                    }
-                    // Delete button
-                    buttons += `<button class="btn btn-sm btn-danger btn-delete-info btn-action-table" 
-                                    data-id="${row.ID_INFORMATION}" title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                  </button>`;
-                    return buttons;
+            { 
+                title: "Date", 
+                data: "DATE", 
+                render: formatDate,
+                className: "text-center"
+            },
+            { 
+                title: "Time", 
+                data: "TIME_FROM",
+                className: "text-center" 
+            },
+            { 
+                title: "PIC", 
+                data: "PIC_FROM",
+                className: "text-center"
+            },
+            { 
+                title: "Item", 
+                data: "ITEM", 
+                className: "text-center",
+                render: function(data) {
+                    return '<div class="table-text-center">' + (data || '-') + '</div>';
                 }
-                return '-';
-            }
-        },
-        { 
-            title: "Time", 
-            data: "TIME_TO",
-            className: "text-center",
-            render: function(data) {
-                return data || '-';
-            }
-        },
-        { 
-            title: "PIC", 
-            data: "PIC_TO",
-            className: "text-center",
-            render: function(data) {
-                return data || '-';
-            }
-        },
-        { 
-            title: "Status", 
-            data: "STATUS", 
-            className: "text-center",
-            render: function(data) {
-                let badgeClass = 'bg-secondary';
-                let displayText = data || '-';
-                
-                if (data === 'Open') {
-                    badgeClass = 'bg-danger';
-                    displayText = 'OPEN';
-                } else if (data === 'On Progress') {
-                    badgeClass = 'bg-warning';
-                    displayText = 'ON PROGRESS';
-                } else if (data === 'Closed') {
-                    badgeClass = 'bg-success';
-                    displayText = 'CLOSED';
+            },
+            { 
+                title: "Request", 
+                data: "REQUEST", 
+                className: "text-center",
+                render: function(data) {
+                    return '<div class="table-text-center">' + (data || '-') + '</div>';
                 }
-                
-                return `<div class="status-container">
-                    <span class="badge ${badgeClass} w-100 py-2">${displayText}</span>
-                </div>`;
-            }
-        },
-        { 
-            title: "Remark", 
-            data: "REMARK", 
-            className: "text-center",
-            render: function(data) {
-                return '<div class="table-text-center">' + (data || '-') + '</div>';
-            }
-        },
-        { 
-            title: "Action", 
-            data: null, 
-            orderable: false, 
-            searchable: false,
-            className: "text-center",
-            render: function(data, type, row) {
-                const role = row.user_role || '';
-                const status = row.STATUS || '';
-                
-                // Hanya recipient yang bisa reply
-                if (role === 'recipient' && status !== 'Closed') {
-                    let buttonText = '';
-                    let buttonClass = '';
+            },
+            { 
+                title: "Action", 
+                data: null, 
+                orderable: false, 
+                searchable: false,
+                className: "text-center",
+                render: function(data, type, row) {
+                    const role = row.user_role || '';
+                    const status = row.STATUS || '';
                     
-                    if (status === 'Open') {
-                        buttonText = '<i class="bi bi-reply"></i> Reply';
-                        buttonClass = 'btn-success';
-                    } else if (status === 'On Progress') {
-                        buttonText = '<i class="bi bi-arrow-clockwise"></i> Update';
-                        buttonClass = 'btn-info';
+                    // Hanya sender yang bisa edit/delete
+                    if (role === 'sender') {
+                        let buttons = '';
+                        // Edit hanya jika status Open
+                        if (status === 'Open') {
+                            buttons += `<button class="btn btn-sm btn-warning btn-edit-info me-1 btn-action-table" 
+                                        data-id="${row.ID_INFORMATION}" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                      </button>`;
+                        }
+                        // Delete button
+                        buttons += `<button class="btn btn-sm btn-danger btn-delete-info btn-action-table" 
+                                        data-id="${row.ID_INFORMATION}" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                      </button>`;
+                        return buttons;
+                    }
+                    return '-';
+                }
+            },
+            { 
+                title: "Time", 
+                data: "TIME_TO",
+                className: "text-center",
+                render: function(data) {
+                    return data || '-';
+                }
+            },
+            { 
+                title: "PIC", 
+                data: "PIC_TO",
+                className: "text-center",
+                render: function(data) {
+                    return data || '-';
+                }
+            },
+            { 
+                title: "Status", 
+                data: "STATUS", 
+                className: "text-center",
+                render: function(data) {
+                    let badgeClass = 'bg-secondary';
+                    let displayText = data || '-';
+                    
+                    if (data === 'Open') {
+                        badgeClass = 'bg-danger';
+                        displayText = 'OPEN';
+                    } else if (data === 'On Progress') {
+                        badgeClass = 'bg-warning';
+                        displayText = 'ON PROGRESS';
+                    } else if (data === 'Closed') {
+                        badgeClass = 'bg-success';
+                        displayText = 'CLOSED';
                     }
                     
-                    return `<button class="btn btn-sm ${buttonClass} btn-reply-info" 
-                              data-id="${row.ID_INFORMATION}" title="Update Status">
-                              ${buttonText}
-                            </button>`;
+                    return `<div class="status-container">
+                        <span class="badge ${badgeClass} w-100 py-2">${displayText}</span>
+                    </div>`;
                 }
-                return '-';
+            },
+            { 
+                title: "Remark", 
+                data: "REMARK", 
+                className: "text-center",
+                render: function(data) {
+                    return '<div class="table-text-center">' + (data || '-') + '</div>';
+                }
+            },
+            { 
+                title: "Action", 
+                data: null, 
+                orderable: false, 
+                searchable: false,
+                className: "text-center",
+                render: function(data, type, row) {
+                    const role = row.user_role || '';
+                    const status = row.STATUS || '';
+                    
+                    // Hanya recipient yang bisa reply
+                    if (role === 'recipient' && status !== 'Closed') {
+                        let buttonText = '';
+                        let buttonClass = '';
+                        
+                        if (status === 'Open') {
+                            buttonText = '<i class="bi bi-reply"></i> Reply';
+                            buttonClass = 'btn-success';
+                        } else if (status === 'On Progress') {
+                            buttonText = '<i class="bi bi-arrow-clockwise"></i> Update';
+                            buttonClass = 'btn-info';
+                        }
+                        
+                        return `<button class="btn btn-sm ${buttonClass} btn-reply-info" 
+                                  data-id="${row.ID_INFORMATION}" title="Update Status">
+                                  ${buttonText}
+                                </button>`;
+                    }
+                    return '-';
+                }
             }
-        }
-    ],
-    drawCallback: function(settings) {
-        console.log('🔄 DataTable draw callback');
-        setTimeout(() => {
-            if (window.informationSystem && window.informationSystem.bindTableEvents) {
-                window.informationSystem.bindTableEvents();
-                console.log('✅ Table events re-bound');
-            }
-        }, 300);
-    },
-    initComplete: function() {
-        console.log('✅ Information DataTable initialized with proper columns');
-        if (window.informationSystem) {
+        ],
+        drawCallback: function(settings) {
+            console.log('🔄 DataTable draw callback');
             setTimeout(() => {
-                window.informationSystem.bindTableEvents();
-            }, 500);
+                if (window.informationSystem && window.informationSystem.bindTableEvents) {
+                    window.informationSystem.bindTableEvents();
+                    console.log('✅ Table events re-bound');
+                }
+            }, 300);
+        },
+        initComplete: function() {
+            console.log('✅ Information DataTable initialized with proper columns');
+            if (window.informationSystem) {
+                setTimeout(() => {
+                    window.informationSystem.bindTableEvents();
+                }, 500);
+            }
         }
-    }
-});
+    });
     
     tableByCycle = $('#table-by-cycle').DataTable({
         pageLength: 10,
@@ -4541,8 +4678,16 @@ tableInformation = $('#table-information').DataTable({
         handleDateChange();
     });
     
-    $('#select-supplier-code, #select-pic').on('change', function() {
+    // Update event handler untuk filter changes
+    $('#select-pic, #select-supplier-code, #select-status').on('change', function() {
+        // Update filter global
+        updateGlobalFilters();
+        
+        // Refresh progress table
         loadTableDetailProgress();
+        
+        // Refresh modal yang sedang terbuka
+        refreshOpenModals();
     });
     
     $('#btn-upload').on('click', function() {
@@ -4627,35 +4772,35 @@ tableInformation = $('#table-information').DataTable({
         $input.val(currentVal + addValue);
     });
     
-// Reset buttons
-$('#btn-reset-ds').on('click', function() {
-    if (confirm('Are you sure you want to reset ALL DS add orders to 0?\nThis action cannot be undone.')) {
-        // Prepare reset
+    // Reset buttons
+    $('#btn-reset-ds').on('click', function() {
+        if (confirm('Are you sure you want to reset ALL DS add orders to 0?\nThis action cannot be undone.')) {
+            // Prepare reset
+            dsSelectedHours = {};
+            $('#ds-action').val('reset');
+            $('#form-add-ds').submit();
+        }
+    });
+
+    $('#btn-reset-ns').on('click', function() {
+        if (confirm('Are you sure you want to reset ALL NS add orders to 0?\nThis action cannot be undone.')) {
+            // Prepare reset
+            nsSelectedHours = {};
+            $('#ns-action').val('reset');
+            $('#form-add-ns').submit();
+        }
+    });
+
+    // Modal close reset
+    $('#modal-add-ds').on('hidden.bs.modal', function() {
         dsSelectedHours = {};
-        $('#ds-action').val('reset');
-        $('#form-add-ds').submit();
-    }
-});
+        dsCurrentPage = 1;
+    });
 
-$('#btn-reset-ns').on('click', function() {
-    if (confirm('Are you sure you want to reset ALL NS add orders to 0?\nThis action cannot be undone.')) {
-        // Prepare reset
+    $('#modal-add-ns').on('hidden.bs.modal', function() {
         nsSelectedHours = {};
-        $('#ns-action').val('reset');
-        $('#form-add-ns').submit();
-    }
-});
-
-// Modal close reset
-$('#modal-add-ds').on('hidden.bs.modal', function() {
-    dsSelectedHours = {};
-    dsCurrentPage = 1;
-});
-
-$('#modal-add-ns').on('hidden.bs.modal', function() {
-    nsSelectedHours = {};
-    nsCurrentPage = 1;
-});
+        nsCurrentPage = 1;
+    });
     
     // ================= EVENT HANDLERS BARU UNTUK DS/NS =================
     
@@ -4703,11 +4848,6 @@ $('#modal-add-ns').on('hidden.bs.modal', function() {
         }
     });
     
-    // HAPUS export button untuk D/S
-    // $('#ds-export-btn').on('click', function() {
-    //     exportDSToExcel();
-    // });
-    
     // NS Event handlers
     let nsSearchTimeout;
     $('#ns-search-input').on('input', function() {
@@ -4749,11 +4889,6 @@ $('#modal-add-ns').on('hidden.bs.modal', function() {
             renderNSTable();
         }
     });
-    
-    // HAPUS export button untuk N/S
-    // $('#ns-export-btn').on('click', function() {
-    //     exportNSToExcel();
-    // });
     
     // Modal show event
     $('#modal-detail-ds').on('shown.bs.modal', function() {
@@ -5029,3 +5164,25 @@ $('#modal-add-ns').on('hidden.bs.modal', function() {
         }, 3000);
     });
 });
+
+// Fungsi untuk refresh modal yang sedang terbuka
+function refreshOpenModals() {
+    // Jika modal D/S terbuka, refresh data
+    if ($('#modal-detail-ds').is(':visible')) {
+        console.log('🔄 Refreshing D/S modal dengan filter baru');
+        loadDSData();
+    }
+    
+    // Jika modal N/S terbuka, refresh data
+    if ($('#modal-detail-ns').is(':visible')) {
+        console.log('🔄 Refreshing N/S modal dengan filter baru');
+        loadNSData();
+    }
+    
+    // Jika modal Accum terbuka, refresh data
+    if ($('#modalByAccum').is(':visible')) {
+        const currentMonth = $('#select-month').val();
+        console.log('🔄 Refreshing Accum modal dengan filter baru');
+        loadAccumTable(currentMonth);
+    }
+}
