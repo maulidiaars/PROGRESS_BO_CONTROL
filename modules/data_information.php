@@ -1,5 +1,5 @@
 <?php
-// modules/data_information.php - VERSION FINAL DENGAN SISTEM MINGGUAN
+// modules/data_information.php - VERSION LENGKAP SATU FILE DENGAN HIGHLIGHT SUPPORT
 session_start();
 ob_clean();
 header('Content-Type: application/json; charset=utf-8');
@@ -7,7 +7,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/week_logic.php'; // Tambah ini
+require_once __DIR__ . '/../config/week_logic.php';
 
 if (!$conn) {
     echo json_encode(["success" => false, "message" => "Database belum terkoneksi"]);
@@ -24,13 +24,12 @@ try {
     // ========================= INPUT DATA INFORMATION (SINGLE ROW) =========================
     if ($type === "input") {
         
-        // REVISI: Gunakan tanggal hari ini (bukan kemarin)
         $DATE      = date('Ymd'); // Selalu gunakan tanggal hari ini
         $TIME_FROM = $_POST["txt-time1"] ?? date('H:i');
         $PIC_FROM  = $currentUser;
         $ITEM      = trim($_POST["txt-item"] ?? '');
         $REQUEST   = trim($_POST["txt-request"] ?? '');
-        $recipients = $_POST["recipients"] ?? ''; // Format: JSON string array
+        $recipients = $_POST["recipients"] ?? '';
         
         // Validasi
         if (empty($ITEM) || empty($REQUEST)) {
@@ -102,12 +101,12 @@ try {
         sort($recipientArray);
         $PIC_TO_COMBINED = implode(', ', $recipientArray);
         
-        // ==================== REVISI: CEK DUPLIKASI HANYA UNTUK MINGGU INI ====================
+        // ==================== CEK DUPLIKASI HANYA UNTUK MINGGU INI ====================
         $weekInfo = getCurrentWeekInfo();
         $weekStart = $weekInfo['start_date'];
         
         $checkSql = "SELECT COUNT(*) as count FROM T_INFORMATION 
-                     WHERE DATE >= ?  -- Hanya cek mulai Senin minggu ini
+                     WHERE DATE >= ?
                      AND PIC_FROM = ? 
                      AND ITEM = ? 
                      AND PIC_TO = ?";
@@ -166,13 +165,8 @@ try {
             $response["id"] = $new_id;
             $response["recipient_count"] = count($recipientArray);
             $response["recipients"] = $recipientArray;
-            $response["date_used"] = date('Y-m-d'); // Tanggal yang digunakan
+            $response["date_used"] = date('Y-m-d');
             $response["week_info"] = $weekInfo;
-            $response["retention_info"] = [
-                "week_start" => $weekInfo['start_formatted'],
-                "week_end" => $weekInfo['end_formatted'],
-                "visible_until" => $weekInfo['end_formatted'] // Sampai Minggu ini
-            ];
             
         } else {
             $errors = sqlsrv_errors();
@@ -211,19 +205,19 @@ try {
         
         $checkSql = "SELECT PIC_FROM, STATUS, DATE FROM T_INFORMATION 
                      WHERE ID_INFORMATION = ? 
-                     AND DATE >= ?"; // Hanya bisa edit yang masih dalam minggu ini
+                     AND DATE >= ?";
         
         $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $weekStart]);
         
         if (!$checkStmt) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
@@ -264,14 +258,14 @@ try {
         exit;
     }
     
-    // ========================= UPDATE TO (PENERIMA) - DENGAN STATUS ON_PROGRESS/CLOSED =========================
+    // ========================= UPDATE TO (PENERIMA) =========================
     else if ($type === "update-to") {
         
         $ID_INFORMATION = (int)($_POST["txt-id-information2"] ?? 0);
         $TIME_TO = $_POST["txt-timeto-update"] ?? date('H:i');
         $PIC_TO = $_POST["txt-picto-update"] ?? $currentUser;
         $REMARK = trim($_POST["txt-remark-update"] ?? '');
-        $ACTION_TYPE = $_POST["action_type"] ?? 'on_progress'; // 'on_progress' atau 'closed'
+        $ACTION_TYPE = $_POST["action_type"] ?? 'on_progress';
         
         // Validasi
         if ($ID_INFORMATION <= 0) {
@@ -280,26 +274,26 @@ try {
             exit;
         }
         
-        // REVISI: Cek data informasi (HANYA MINGGU INI)
+        // Cek data informasi (HANYA MINGGU INI)
         $weekInfo = getCurrentWeekInfo();
         $weekStart = $weekInfo['start_date'];
         
         $checkSql = "SELECT PIC_TO, STATUS, ITEM, REQUEST, PIC_FROM, DATE 
                      FROM T_INFORMATION 
                      WHERE ID_INFORMATION = ? 
-                     AND DATE >= ?"; // Hanya untuk minggu ini
+                     AND DATE >= ?";
         
         $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $weekStart]);
         
         if (!$checkStmt) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
@@ -381,25 +375,25 @@ try {
             exit;
         }
         
-        // REVISI: Cek apakah informasi masih dalam minggu ini
+        // Cek apakah informasi masih dalam minggu ini
         $weekInfo = getCurrentWeekInfo();
         $weekStart = $weekInfo['start_date'];
         
         $checkSql = "SELECT PIC_FROM, DATE FROM T_INFORMATION 
                      WHERE ID_INFORMATION = ? 
-                     AND DATE >= ?"; // Hanya bisa hapus yang masih dalam minggu ini
+                     AND DATE >= ?";
         
         $checkStmt = sqlsrv_query($conn, $checkSql, [$ID_INFORMATION, $weekStart]);
         
         if (!$checkStmt) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
         
         $info = sqlsrv_fetch_array($checkStmt, SQLSRV_FETCH_ASSOC);
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
@@ -411,7 +405,7 @@ try {
             exit;
         }
         
-        // Delete dari user_notification_read dulu (foreign key constraint)
+        // Delete dari user_notification_read dulu
         $deleteNotifSql = "DELETE FROM user_notification_read WHERE notification_id = ?";
         sqlsrv_query($conn, $deleteNotifSql, [$ID_INFORMATION]);
         
@@ -431,16 +425,16 @@ try {
         exit;
     }
     
-    // ========================= FETCH DATA - HANYA MINGGU INI =========================
+    // ========================= FETCH DATA - DENGAN DATA ATTRIBUTES UNTUK HIGHLIGHT =========================
     else if ($type === "fetch") {
         
         $DATE1 = $_GET["date1"] ?? date('Y-m-d');
         $DATE2 = $_GET["date2"] ?? date('Y-m-d');
         
-        // REVISI: Override dengan range minggu ini
+        // Override dengan range minggu ini
         $weekInfo = getCurrentWeekInfo();
-        $date1_sql = $weekInfo['start_date']; // Senin
-        $date2_sql = $weekInfo['end_date'];   // Minggu
+        $date1_sql = $weekInfo['start_date'];
+        $date2_sql = $weekInfo['end_date'];
         
         $sql = "SELECT
                     ID_INFORMATION, 
@@ -463,7 +457,7 @@ try {
                     (SELECT TOP 1 read_at FROM user_notification_read 
                      WHERE user_id = ? AND notification_id = ID_INFORMATION) as read_at
                 FROM T_INFORMATION
-                WHERE DATE BETWEEN ? AND ?  -- HANYA MINGGU INI
+                WHERE DATE BETWEEN ? AND ?
                 ORDER BY DATE DESC, TIME_FROM DESC";
         
         $params = [$currentUser, $currentUser, $currentUser, $date1_sql, $date2_sql];
@@ -491,6 +485,15 @@ try {
                 // Tidak ada notifikasi untuk informasi dari user sendiri
                 $row['IS_UNREAD'] = ($row['read_at'] === null && $isRecipient && !$isFromSelf && $row['STATUS'] !== 'Closed') ? 1 : 0;
                 
+                // Tambah data untuk highlight (PENTING UNTUK NOTIFICATION SCROLLING)
+                $row['HIGHLIGHT_DATA'] = [
+                    'id' => $row['ID_INFORMATION'],
+                    'pic_from' => $row['PIC_FROM'],
+                    'item' => $row['ITEM'],
+                    'date' => $row['DATE'],
+                    'time_from' => $row['TIME_FROM']
+                ];
+                
                 // Tambah info minggu
                 $row['WEEK_INFO'] = $weekInfo;
                 $rowDate = isset($row['DATE']) ? str_replace('-', '', $row['DATE']) : '';
@@ -511,8 +514,7 @@ try {
             "original_request" => [
                 "date1" => $DATE1,
                 "date2" => $DATE2
-            ],
-            "filter_applied" => 'weekly_filter'
+            ]
         ];
         
         echo json_encode($response, JSON_UNESCAPED_UNICODE);
@@ -573,7 +575,7 @@ try {
         
         $sql = "SELECT * FROM T_INFORMATION 
                 WHERE ID_INFORMATION = ? 
-                AND DATE >= ?"; // Hanya dari minggu ini
+                AND DATE >= ?";
         
         $stmt = sqlsrv_query($conn, $sql, [$id, $weekStart]);
         
@@ -584,7 +586,7 @@ try {
         }
         
         if (!$info) {
-            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif (dari minggu sebelumnya)';
+            $response["message"] = 'Data tidak ditemukan atau sudah tidak aktif';
             echo json_encode($response);
             exit;
         }
@@ -605,17 +607,9 @@ try {
         // Tambah info minggu
         $info['WEEK_INFO'] = $weekInfo;
         $info['IS_CURRENT_WEEK'] = true;
-        $info['ACTIVE_UNTIL'] = $weekInfo['end_formatted'];
-        $info['DAYS_REMAINING'] = floor((strtotime($weekInfo['end_formatted']) - time()) / (60 * 60 * 24));
         
         $response["success"] = true;
         $response["data"] = $info;
-        $response["retention_info"] = [
-            "active_weeks" => 1,
-            "week_number" => $weekInfo['week_number'],
-            "remaining_days" => max(0, $info['DAYS_REMAINING']),
-            "status" => $info['DAYS_REMAINING'] > 0 ? "active" : "expired"
-        ];
         
         echo json_encode($response);
         exit;

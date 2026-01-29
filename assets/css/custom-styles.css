@@ -2491,3 +2491,124 @@ tbody, td, tfoot, th, thead, tr {
         font-size: 0.9em;
     }
 }
+
+
+/* assets/css/custom-styles.css - Tambahkan */
+.assigned-item {
+    background: linear-gradient(90deg, rgba(255, 193, 7, 0.05), transparent) !important;
+    border-left: 3px solid #ffc107 !important;
+}
+
+.assigned-item:hover {
+    background: linear-gradient(90deg, rgba(255, 193, 7, 0.1), transparent) !important;
+}
+
+.notification-item.viewer-item {
+    border-left: 3px solid #0d6efd !important;
+}
+
+.notification-item.viewer-item:hover {
+    background: rgba(13, 110, 253, 0.05) !important;
+}
+
+/* HIGHLIGHT ROW SIMPLE */
+.highlighted-blue {
+    background-color: rgba(173, 216, 230, 0.3) !important; /* Light blue */
+    border-left: 4px solid #0066cc !important;
+    transition: background-color 0.3s ease;
+}
+
+.highlighted-blue td {
+    font-weight: 500;
+}
+
+
+/* ================= SUPER FORCE HIGHLIGHT STYLES ================= */
+/* Ini PASTI kerja karena pake !important dan specificity tinggi */
+
+#table-information tbody tr.highlighted-row {
+    background: linear-gradient(90deg, 
+        rgba(255, 0, 0, 0.1) 0%,
+        rgba(255, 255, 0, 0.2) 50%,
+        rgba(255, 0, 0, 0.1) 100%) !important;
+    border-left: 5px solid #FF0000 !important;
+    border-right: 5px solid #FF0000 !important;
+    animation: superBlink 1s ease-in-out 3 !important;
+    position: relative !important;
+}
+
+/* Tambah glow effect yang keliatan banget */
+#table-information tbody tr.highlighted-row::before {
+    content: '' !important;
+    position: absolute !important;
+    top: -2px !important;
+    left: -5px !important;
+    right: -5px !important;
+    bottom: -2px !important;
+    border: 2px solid rgba(255, 0, 0, 0.5) !important;
+    border-radius: 4px !important;
+    animation: glowPulse 1.5s infinite !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+}
+
+/* Tambah marker merah di kiri */
+#table-information tbody tr.highlighted-row td:first-child::before {
+    content: '👉' !important;
+    position: absolute !important;
+    left: -30px !important;
+    color: #FF0000 !important;
+    font-size: 18px !important;
+    animation: pointBounce 1s infinite !important;
+}
+
+/* Warna cell khusus */
+#table-information tbody tr.highlighted-row td {
+    background-color: rgba(255, 243, 205, 0.3) !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+}
+
+/* Status badge lebih terang */
+#table-information tbody tr.highlighted-row .badge {
+    animation: badgeBlink 0.8s infinite !important;
+    transform: scale(1.1) !important;
+}
+
+/* ANIMASI BLINK MERAH */
+@keyframes superBlink {
+    0%, 100% { 
+        background-color: rgba(255, 243, 205, 0.3) !important;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.2) !important;
+    }
+    50% { 
+        background-color: rgba(255, 228, 230, 0.8) !important;
+        box-shadow: 0 0 25px rgba(255, 0, 0, 0.8) !important;
+    }
+}
+
+@keyframes glowPulse {
+    0%, 100% { 
+        border-color: rgba(255, 0, 0, 0.3) !important;
+        box-shadow: 0 0 5px rgba(255, 0, 0, 0.3) !important;
+    }
+    50% { 
+        border-color: rgba(255, 0, 0, 0.8) !important;
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.8) !important;
+    }
+}
+
+@keyframes pointBounce {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-5px); }
+}
+
+@keyframes badgeBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; transform: scale(1.15); }
+}
+
+/* Pastiin row bisa position relative */
+#table-information tbody tr {
+    position: relative !important;
+}

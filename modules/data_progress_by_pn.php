@@ -37,58 +37,46 @@ try {
     $date1 = ($date1 !== '' && is_numeric($date1)) ? intval($date1) : '';
     $date2 = ($date2 !== '' && is_numeric($date2)) ? intval($date2) : '';
 
-    // QUERY YANG DIPERBAIKI
     $sql = "SELECT
         CONVERT(varchar, o.DELV_DATE) AS DATE,  
         ISNULL(o.SUPPLIER_CODE, '') AS SUPPLIER_CODE,  
         ISNULL(o.PART_NO, '') AS PART_NO,  
         ISNULL(o.PART_NAME, '') AS PART_NAME,  
         
-        -- Total semua order (reguler) tanpa memperhatikan ETA
         SUM(ISNULL(o.ORD_QTY, 0)) AS TOTAL_REGULAR_ORDER,
         
-        -- REGULER DS: total order dengan ETA di DAY SHIFT (07:00 - 20:00)
         SUM(CASE 
             WHEN o.ETA IS NOT NULL 
             AND o.ETA != ''
             AND (
-                -- Format jam normal: 07:00 - 20:00
-                (TRY_CAST(o.ETA AS TIME) >= '07:00:00' AND TRY_CAST(o.ETA AS TIME) <= '20:00:00') OR
-                -- Handle format string 24 jam
-                (TRY_CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20)
+                (TRY_CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 7 AND 20) OR
+                (TRY_CAST(o.ETA AS TIME) >= '07:00:00' AND TRY_CAST(o.ETA AS TIME) <= '20:59:59')
             )
             THEN ISNULL(o.ORD_QTY, 0) 
             ELSE 0 
         END) AS REGULER_DS,  
 
-        -- REGULER NS: total order dengan ETA di NIGHT SHIFT (21:00 - 06:00)
         SUM(CASE 
             WHEN o.ETA IS NOT NULL 
             AND o.ETA != ''
             AND (
-                -- Jam 21:00 - 23:59
-                (TRY_CAST(o.ETA AS TIME) >= '21:00:00' AND TRY_CAST(o.ETA AS TIME) <= '23:59:59') OR
-                -- Jam 00:00 - 06:59
-                (TRY_CAST(o.ETA AS TIME) >= '00:00:00' AND TRY_CAST(o.ETA AS TIME) <= '06:59:59') OR
-                -- Handle format string
-                (TRY_CAST(LEFT(o.ETA, 2) AS INT) >= 21 OR TRY_CAST(LEFT(o.ETA, 2) AS INT) <= 6)
+                (TRY_CAST(LEFT(o.ETA, 2) AS INT) >= 21 OR 
+                 TRY_CAST(LEFT(o.ETA, 2) AS INT) BETWEEN 0 AND 6) OR
+                (TRY_CAST(o.ETA AS TIME) >= '21:00:00' OR 
+                 TRY_CAST(o.ETA AS TIME) <= '06:59:59')
             )
             THEN ISNULL(o.ORD_QTY, 0) 
             ELSE 0 
         END) AS REGULER_NS,
         
-        -- ADD orders: ambil MAX karena hanya 1 nilai per part per tanggal
         ISNULL(MAX(o.ADD_DS), 0) AS ADD_DS,
         ISNULL(MAX(o.ADD_NS), 0) AS ADD_NS,
         
-        -- Remarks: ambil MAX/pertama
         MAX(ISNULL(o.REMARK_DS, '')) AS REMARK_DS,
         MAX(ISNULL(o.REMARK_NS, '')) AS REMARK_NS,
         
-        -- ETA: untuk perhitungan status, ambil ETA pertama
         MAX(o.ETA) AS ETA,
         
-        -- Actual incoming (REAL-TIME QUERY) - PAKAI MAX BUKAN SUM!
         ISNULL((
             SELECT MAX(ub.TRAN_QTY)
             FROM T_UPDATE_BO ub 
@@ -108,7 +96,7 @@ try {
                 OR REPLACE(ub.PART_NO, ' ', '') = REPLACE(o.PART_NO, ' ', '')
             )
             AND ub.DATE = o.DELV_DATE
-            AND (ub.HOUR BETWEEN 21 AND 23 OR ub.HOUR BETWEEN 0 AND 6)
+            AND (ub.HOUR BETWEEN 21 AND 23 OR ub.HOUR BETWEEN 0 AND 7)
         ), 0) AS NS_ACTUAL
         
     FROM T_ORDER o  
@@ -155,7 +143,6 @@ try {
     $currentHour = intval(date('H'));
     
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        // Format data dasar
         $row['DATE'] = isset($row['DATE']) ? strval($row['DATE']) : '';
         $row['TOTAL_REGULAR_ORDER'] = intval($row['TOTAL_REGULAR_ORDER'] ?? 0);
         $row['REGULER_DS'] = intval($row['REGULER_DS'] ?? 0);
@@ -165,12 +152,9 @@ try {
         $row['DS_ACTUAL'] = intval($row['DS_ACTUAL'] ?? 0);
         $row['NS_ACTUAL'] = intval($row['NS_ACTUAL'] ?? 0);
         
-        // Hitung total order (reguler + add)
         $row['ORD_QTY_TOTAL'] = $row['TOTAL_REGULAR_ORDER'] + $row['ADD_DS'] + $row['ADD_NS'];
         $row['TOTAL_INCOMING'] = $row['DS_ACTUAL'] + $row['NS_ACTUAL'];
         
-        // ========== PAKE FUNGSI STATUS BARU DENGAN CURRENT HOUR ==========
-        // Hitung status D/S terpisah
         $row['DS_STATUS'] = calculateDSStatus(
             $row['DATE'],
             $row['ETA'],
@@ -180,7 +164,6 @@ try {
             $currentHour
         );
         
-        // Hitung status N/S terpisah
         $row['NS_STATUS'] = calculateNSStatus(
             $row['DATE'],
             $row['ETA'],
@@ -190,7 +173,6 @@ try {
             $currentHour
         );
         
-        // Status total (overall) dengan current hour
         $row['STATUS'] = calculateOrderStatus(
             $row['DATE'],
             $row['ETA'],
@@ -203,7 +185,6 @@ try {
             $currentHour
         );
         
-        // Tambahkan debug info
         $row['IS_TODAY'] = isToday($row['DATE']) ? 'YES' : 'NO';
         $row['CURRENT_HOUR'] = $currentHour;
         $row['AFTER_16'] = ($currentHour >= 16) ? 'YES' : 'NO';
@@ -217,11 +198,11 @@ try {
 
     sqlsrv_free_stmt($stmt);
 
-    error_log("Data returned: " . $rowCount . " rows (WITH NEW TAMENG LOGIC - Only today)");
+    error_log("Data returned: " . $rowCount . " rows (ALL ETA ACCEPTED)");
     
     $response["success"] = true;
     $response["data"] = $data;
-    $response["message"] = "Data loaded successfully";
+    $response["message"] = "Data loaded successfully (accepts all ETA formats)";
     $response["count"] = $rowCount;
     $response["current_hour"] = $currentHour;
     $response["after_16"] = ($currentHour >= 16);

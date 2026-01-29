@@ -10,6 +10,8 @@ $response = [
     'current_qty' => 0,
     'remark' => '',
     'hours_data' => [],
+    'last_by' => '',
+    'last_updated' => '',
     'message' => 'Data not found'
 ];
 
@@ -47,47 +49,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['date'], $_GET['supplier
             $response['current_qty'] = intval($row['current_qty'] ?? 0);
             $response['remark'] = $row['remark'] ?? '';
             $response['last_by'] = $row['last_by'] ?? '';
-            $response['last_updated'] = $row['last_updated'] ? 
-                (is_string($row['last_updated']) ? $row['last_updated'] : $row['last_updated']->format('Y-m-d H:i:s')) : '';
             
-            // Ambil data per jam dari T_UPDATE_BO
-            $hour_condition = ($type === 'ds') ? 
-                "HOUR BETWEEN 7 AND 20" : 
-                "(HOUR BETWEEN 21 AND 23 OR HOUR BETWEEN 0 AND 6)";
-            
-            $hours_sql = "SELECT HOUR, SUM(TRAN_QTY) as qty
-                         FROM T_UPDATE_BO 
-                         WHERE DATE = ? 
-                         AND PART_NO = ? 
-                         AND $hour_condition
-                         GROUP BY HOUR
-                         ORDER BY HOUR";
-            
-            $hours_params = [$date, $part_no];
-            $hours_stmt = sqlsrv_query($conn, $hours_sql, $hours_params);
-            
-            $hours_data = [];
-            if ($hours_stmt !== false) {
-                while ($hour_row = sqlsrv_fetch_array($hours_stmt, SQLSRV_FETCH_ASSOC)) {
-                    $hour = intval($hour_row['HOUR']);
-                    $qty = intval($hour_row['qty']);
-                    if ($qty > 0) {
-                        $hours_data[$hour] = $qty;
-                    }
+            // Format datetime
+            if ($row['last_updated']) {
+                if (is_string($row['last_updated'])) {
+                    $response['last_updated'] = $row['last_updated'];
+                } else if ($row['last_updated'] instanceof DateTime) {
+                    $response['last_updated'] = $row['last_updated']->format('Y-m-d H:i:s');
                 }
             }
             
-            $response['hours_data'] = $hours_data;
-            $response['message'] = 'Data ditemukan';
+            // Untuk add order, kita tidak menyimpan per jam di T_UPDATE_BO
+            // Jadi hours_data dikosongkan atau bisa diisi dengan default
+            $response['hours_data'] = [];
+            $response['message'] = 'Data add order ditemukan';
             
         } else {
+            // Tidak ada data add order (bukan error)
+            $response['success'] = true;
+            $response['current_qty'] = 0;
+            $response['remark'] = '';
             $response['message'] = 'Tidak ada data add order';
-            $response['success'] = true; // tetap success karena memang belum ada data
         }
         
     } catch (Exception $e) {
         $response['message'] = 'Error: ' . $e->getMessage();
     }
+} else {
+    $response['message'] = 'Parameter tidak lengkap';
 }
 
 echo json_encode($response);

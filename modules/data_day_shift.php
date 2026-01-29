@@ -22,7 +22,8 @@ WITH TRAN_DATA AS (
         DATE,
         PART_NO,
         PART_DESC,
-        ISNULL([8], 0) AS [TRAN_08],
+        -- JAM 8 = JAM 7 + JAM 8 (karena jam 7:30 masuk ke Day Shift)
+        ISNULL([8], 0) + ISNULL([7], 0) AS [TRAN_08],
         ISNULL([9], 0) AS [TRAN_09],
         ISNULL([10], 0) AS [TRAN_10],
         ISNULL([11], 0) AS [TRAN_11],
@@ -43,8 +44,8 @@ WITH TRAN_DATA AS (
             ub.HOUR,
             SUM(ub.TRAN_QTY) AS TRAN_QTY
         FROM T_UPDATE_BO ub
-        -- PERBAIKAN: HANYA MATCH PART_NO DAN DATE, TANPA SUPPLIER CODE!
-        WHERE ub.HOUR BETWEEN 8 AND 20
+        -- PERUBAHAN: AMBIL JAM 7 JUGA (07:00-07:59)
+        WHERE ub.HOUR BETWEEN 7 AND 20  -- LINE INI DIUBAH!
         AND EXISTS (
             SELECT 1 FROM T_ORDER o 
             WHERE o.DELV_DATE = ub.DATE 
@@ -59,7 +60,7 @@ WITH TRAN_DATA AS (
     ) AS SourceTable
     PIVOT (
         SUM(TRAN_QTY)
-        FOR HOUR IN ([8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [18], [19], [20])
+        FOR HOUR IN ([7], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [18], [19], [20])
     ) AS PivotTable
 ),
 ORD_DATA AS (
@@ -68,7 +69,8 @@ ORD_DATA AS (
         PART_NO,
         PART_NAME,
         SUPPLIER_CODE,
-        ISNULL([8], 0) AS [ORD_08],
+        -- JAM 8 = JAM 7 + JAM 8 (order jam 7:30 masuk ke Day Shift)
+        ISNULL([8], 0) + ISNULL([7], 0) AS [ORD_08],
         ISNULL([9], 0) AS [ORD_09],
         ISNULL([10], 0) AS [ORD_10],
         ISNULL([11], 0) AS [ORD_11],
@@ -87,6 +89,10 @@ ORD_DATA AS (
             PART_NO,
             PART_NAME,
             SUPPLIER_CODE,
+            SUM(CASE 
+                WHEN TRY_CAST(ETA AS TIME) BETWEEN '07:00:00' AND '07:59:59' THEN ORD_QTY 
+                ELSE 0 
+            END) AS [7],
             SUM(CASE 
                 WHEN TRY_CAST(ETA AS TIME) BETWEEN '08:00:00' AND '08:59:59' THEN ORD_QTY 
                 ELSE 0 
@@ -143,7 +149,8 @@ ORD_DATA AS (
         WHERE ETA IS NOT NULL 
         AND ETA != ''
         AND TRY_CAST(ETA AS TIME) IS NOT NULL
-        AND TRY_CAST(ETA AS TIME) BETWEEN '08:00:00' AND '20:00:00'
+        -- PERUBAHAN: MULAI DARI JAM 7
+        AND TRY_CAST(ETA AS TIME) BETWEEN '07:00:00' AND '20:00:00'
         AND DELV_DATE BETWEEN '$DATE1' AND '$DATE2'
         GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE
     ) AS SourceTable

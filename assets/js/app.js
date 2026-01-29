@@ -119,7 +119,14 @@ function showAddDSModal() {
 
     const today = new Date();
     const todayFormatted = today.toISOString().split('T')[0];
+    
+    // PERBAIKAN: Format date dengan benar
     const rowDateFormatted = formatDate(data.DATE);
+    console.log('📅 Show DS Modal - Date:', {
+        rawDate: data.DATE,
+        formatted: rowDateFormatted,
+        today: todayFormatted
+    });
 
     if (rowDateFormatted.replace(/-/g, '') !== todayFormatted.replace(/-/g, '')) {
         showDateBlockedModal({
@@ -168,7 +175,14 @@ function showAddNSModal() {
 
     const today = new Date();
     const todayFormatted = today.toISOString().split('T')[0];
+    
+    // PERBAIKAN: Format date dengan benar
     const rowDateFormatted = formatDate(data.DATE);
+    console.log('📅 Show NS Modal - Date:', {
+        rawDate: data.DATE,
+        formatted: rowDateFormatted,
+        today: todayFormatted
+    });
 
     if (rowDateFormatted.replace(/-/g, '') !== todayFormatted.replace(/-/g, '')) {
         showDateBlockedModal({
@@ -210,8 +224,8 @@ function showAddNSModal() {
 }
 
 
+// ================= FUNGSI GENERATE HOUR SELECTION =================
 
-// Update fungsi generateDSHourSelection:
 function generateDSHourSelection() {
     const $container = $('#ds-hour-selection');
     $container.empty();
@@ -222,37 +236,44 @@ function generateDSHourSelection() {
     // PERBAIKAN: Handle orderDateStr dengan lebih aman
     let orderDate = new Date(); // default ke hari ini
     let orderDateRaw = currentDSData?.DATE;
-    let orderDateStr = '';
-
-    if (orderDateRaw !== null && orderDateRaw !== undefined) {
-        orderDateStr = String(orderDateRaw); // 🔥 PENTING
-    }
-
     
-    // Convert orderDateStr ke Date object dengan aman
-    if (orderDateStr) {
+    console.log('🔍 Debug generateDSHourSelection:', {
+        orderDateRaw: orderDateRaw,
+        typeOfOrderDateRaw: typeof orderDateRaw
+    });
+    
+    // Convert orderDateRaw ke Date object dengan aman
+    if (orderDateRaw !== null && orderDateRaw !== undefined) {
+        const orderDateStr = String(orderDateRaw); // 🔥 PASTIKAN STRING
+        
         // Cek format: jika string 8 digit (YYYYMMDD)
         if (/^\d{8}$/.test(orderDateStr)) {
             const year = orderDateStr.slice(0, 4);
             const month = orderDateStr.slice(4, 6);
             const day = orderDateStr.slice(6, 8);
             orderDate = new Date(`${year}-${month}-${day}`);
-        } else if (orderDateStr instanceof Date) {
+            console.log('✅ Parsed date from 8-digit string:', orderDate);
+        } else if (orderDateRaw instanceof Date) {
             // Jika sudah Date object
-            orderDate = orderDateStr;
+            orderDate = orderDateRaw;
+            console.log('✅ Already a Date object');
         } else if (typeof orderDateStr === 'string' && orderDateStr.includes('-')) {
             // Format YYYY-MM-DD
             orderDate = new Date(orderDateStr);
+            console.log('✅ Parsed date from YYYY-MM-DD:', orderDate);
+        } else {
+            console.warn('⚠️ Unknown date format:', orderDateStr);
         }
+    } else {
+        console.warn('⚠️ orderDateRaw is null/undefined, using current date');
     }
     
     // Cek apakah order date sama dengan hari ini
     const isToday = orderDate.toDateString() === currentDate.toDateString();
     
-    console.log('🔍 Debug generateDSHourSelection:', {
-        orderDateStr: orderDateStr,
-        orderDate: orderDate,
-        currentDate: currentDate,
+    console.log('📅 Date comparison:', {
+        orderDate: orderDate.toDateString(),
+        currentDate: currentDate.toDateString(),
         isToday: isToday,
         currentHour: currentHour
     });
@@ -283,7 +304,6 @@ function generateDSHourSelection() {
     }
 }
 
-// Update fungsi generateNSHourSelection:
 function generateNSHourSelection() {
     const $container = $('#ns-hour-selection');
     $container.empty();
@@ -294,37 +314,44 @@ function generateNSHourSelection() {
     // PERBAIKAN: Handle orderDateStr dengan lebih aman
     let orderDate = new Date(); // default ke hari ini
     let orderDateRaw = currentNSData?.DATE;
-    let orderDateStr = '';
-
-    if (orderDateRaw !== null && orderDateRaw !== undefined) {
-        orderDateStr = String(orderDateRaw); // 🔥 PENTING
-    }
-
     
-    // Convert orderDateStr ke Date object dengan aman
-    if (orderDateStr) {
+    console.log('🔍 Debug generateNSHourSelection:', {
+        orderDateRaw: orderDateRaw,
+        typeOfOrderDateRaw: typeof orderDateRaw
+    });
+    
+    // Convert orderDateRaw ke Date object dengan aman
+    if (orderDateRaw !== null && orderDateRaw !== undefined) {
+        const orderDateStr = String(orderDateRaw); // 🔥 PASTIKAN STRING
+        
         // Cek format: jika string 8 digit (YYYYMMDD)
         if (/^\d{8}$/.test(orderDateStr)) {
             const year = orderDateStr.slice(0, 4);
             const month = orderDateStr.slice(4, 6);
             const day = orderDateStr.slice(6, 8);
             orderDate = new Date(`${year}-${month}-${day}`);
-        } else if (orderDateStr instanceof Date) {
+            console.log('✅ Parsed date from 8-digit string:', orderDate);
+        } else if (orderDateRaw instanceof Date) {
             // Jika sudah Date object
-            orderDate = orderDateStr;
+            orderDate = orderDateRaw;
+            console.log('✅ Already a Date object');
         } else if (typeof orderDateStr === 'string' && orderDateStr.includes('-')) {
             // Format YYYY-MM-DD
             orderDate = new Date(orderDateStr);
+            console.log('✅ Parsed date from YYYY-MM-DD:', orderDate);
+        } else {
+            console.warn('⚠️ Unknown date format:', orderDateStr);
         }
+    } else {
+        console.warn('⚠️ orderDateRaw is null/undefined, using current date');
     }
     
     // Cek apakah order date sama dengan hari ini
     const isToday = orderDate.toDateString() === currentDate.toDateString();
     
-    console.log('🔍 Debug generateNSHourSelection:', {
-        orderDateStr: orderDateStr,
-        orderDate: orderDate,
-        currentDate: currentDate,
+    console.log('📅 Date comparison:', {
+        orderDate: orderDate.toDateString(),
+        currentDate: currentDate.toDateString(),
         isToday: isToday,
         currentHour: currentHour
     });
@@ -384,7 +411,8 @@ function generateNSHourSelection() {
     });
 }
 
-// Toggle selection untuk D/S
+// ================= FUNGSI TOGGLE SELECTION =================
+
 function toggleDSHourSelection($btn) {
     const hour = $btn.data('hour');
     
@@ -405,7 +433,6 @@ function toggleDSHourSelection($btn) {
     updateDSQuantityInputs();
 }
 
-// Toggle selection untuk N/S
 function toggleNSHourSelection($btn) {
     const hour = $btn.data('hour');
     
@@ -426,7 +453,8 @@ function toggleNSHourSelection($btn) {
     updateNSQuantityInputs();
 }
 
-// Update quantity inputs untuk D/S
+// ================= FUNGSI UPDATE QUANTITY INPUTS =================
+
 function updateDSQuantityInputs() {
     const $container = $('#ds-quantity-container');
     
@@ -518,7 +546,6 @@ function updateDSQuantityInputs() {
     });
 }
 
-// Update quantity inputs untuk N/S
 function updateNSQuantityInputs() {
     const $container = $('#ns-quantity-container');
     
@@ -634,7 +661,6 @@ function loadCurrentDSStatus(date, supplier, partNo) {
                 const currentQty = response.current_qty || 0;
                 const lastUpdated = response.last_updated || '';
                 const lastBy = response.last_by || '';
-                const hoursData = response.hours_data || {};
                 
                 if (currentQty > 0) {
                     $('#ds-status-text').html(`
@@ -645,7 +671,8 @@ function loadCurrentDSStatus(date, supplier, partNo) {
                     $('#txt-ds-remark').val(response.remark || '');
                     $('#ds-action').val('update');
                     
-                    // Load hours data
+                    // Load hours data dari response
+                    const hoursData = response.hours_data || {};
                     dsSelectedHours = hoursData;
                     
                     // Select the hours in UI
@@ -687,7 +714,6 @@ function loadCurrentNSStatus(date, supplier, partNo) {
                 const currentQty = response.current_qty || 0;
                 const lastUpdated = response.last_updated || '';
                 const lastBy = response.last_by || '';
-                const hoursData = response.hours_data || {};
                 
                 if (currentQty > 0) {
                     $('#ns-status-text').html(`
@@ -698,7 +724,8 @@ function loadCurrentNSStatus(date, supplier, partNo) {
                     $('#txt-ns-remark').val(response.remark || '');
                     $('#ns-action').val('update');
                     
-                    // Load hours data
+                    // Load hours data dari response
+                    const hoursData = response.hours_data || {};
                     nsSelectedHours = hoursData;
                     
                     // Select the hours in UI
@@ -998,6 +1025,60 @@ function pad(n) {
     return n < 10 ? '0' + n : n;
 }
 
+// ================= FUNGSI BARU UNTUK PARSE ETA =================
+function parseETAHour(eta) {
+    if (!eta) return null;
+    
+    try {
+        const timeStr = String(eta).trim();
+        
+        // Format "13:30", "07:45", dll
+        if (timeStr.includes(':')) {
+            const parts = timeStr.split(':');
+            if (parts.length >= 1) {
+                const hour = parseInt(parts[0]);
+                if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+                    return hour;
+                }
+            }
+        }
+        
+        // Format "0730", "1330" (4 digit)
+        if (/^\d{4}$/.test(timeStr)) {
+            const hour = parseInt(timeStr.substring(0, 2));
+            if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+                return hour;
+            }
+        }
+        
+        // Format "730", "1330" (3-4 digit tanpa leading zero)
+        if (/^\d{3,4}$/.test(timeStr)) {
+            if (timeStr.length === 3) {
+                const hour = parseInt(timeStr.substring(0, 1));
+                if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+                    return hour;
+                }
+            } else if (timeStr.length === 4) {
+                const hour = parseInt(timeStr.substring(0, 2));
+                if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+                    return hour;
+                }
+            }
+        }
+        
+        // Coba parse sebagai number langsung
+        const hourNum = parseInt(timeStr);
+        if (!isNaN(hourNum) && hourNum >= 0 && hourNum <= 23) {
+            return hourNum;
+        }
+        
+    } catch (e) {
+        console.warn('Error parsing ETA:', eta, e);
+    }
+    
+    return null;
+}
+
 function getCurrentDateTime() {
     const now = new Date();
     const hours = pad(now.getHours());
@@ -1151,14 +1232,12 @@ function refreshActualMaps() {
         return;
     }
     
-    // Konversi format tanggal untuk API
     let sendDate1 = date1.replace(/-/g, '');
     let sendDate2 = date2.replace(/-/g, '');
     
-    console.log('🔄 Refreshing actual maps for date range:', date1, 'to', date2);
-    console.log('📤 Sending to API:', sendDate1, 'to', sendDate2);
+    console.log('🔄 Refreshing actual maps dengan LOGIC BARU (SELISIH PER JAM)');
     
-    // DAY SHIFT - PERBAIKAN: MENGGUNAKAN QUERY BARU
+    // DAY SHIFT - PAKAI QUERY BARU YANG SUDAH PERHITUNGAN INCOMING PER JAM
     $.ajax({  
         url: 'modules/data_day_shift1.php',  
         type: 'GET',
@@ -1168,7 +1247,11 @@ function refreshActualMaps() {
         },
         dataType: 'json',  
         success: function(response) {
-            console.log('✅ DS Actual Data Response:', response);
+            console.log('✅ DS Actual Response (LOGIC BARU - SELISIH):', {
+                count: response.count,
+                total_incoming: response.total_incoming,
+                logic: response.logic || 'NEW: incoming_per_hour = current - previous'
+            });
             
             if (!response.success) {
                 console.error('❌ DS API Error:', response.message);
@@ -1179,53 +1262,39 @@ function refreshActualMaps() {
             const totalIncoming = response.total_incoming || 0;
             
             console.log('📊 DS Data loaded:', data.length, 'records');
-            console.log('💰 Total incoming DS:', totalIncoming);
             
             // Reset map
             dsActualMap = {};
             
-            // AKUMULASI DATA KE MAP
             $.each(data, function(index, item) {  
                 var key = safeTrim(item.DATE) + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
                 
-                // Gunakan TOTAL_INCOMING dari query (sudah terakumulasi)
+                // 🔥 SEKARANG TOTAL_INCOMING SUDAH BENAR (SUM INCOMING PER JAM, BUKAN NILAI AKUMULATIF)
                 var total_incoming = parseInt(item.TOTAL_INCOMING) || 0;
                 
-                // Jika TOTAL_INCOMING 0, hitung manual dari per jam
-                if (total_incoming === 0) {
-                    total_incoming = 0;
-                    for(var jam=8; jam<=20; jam++) {  
-                        var jamStr = jam < 10 ? '0' + jam : '' + jam;  
-                        total_incoming += (parseInt(item['TRAN_' + jamStr]) || 0);  
-                    }
+                // Debug: cek apakah ini SUM incoming per jam
+                let sumFromHourly = 0;
+                for(let hour = 8; hour <= 20; hour++) {
+                    let hourKey = hour < 10 ? 'TRAN_0' + hour : 'TRAN_' + hour;
+                    sumFromHourly += parseInt(item[hourKey] || 0);
                 }
                 
-                // Simpan ke map
+                console.log(`🔍 DS Item ${index+1}:`, {
+                    key: key,
+                    total_incoming_api: total_incoming,
+                    sum_from_hourly: sumFromHourly,
+                    incoming_08: item.TRAN_08,
+                    incoming_09: item.TRAN_09,
+                    incoming_10: item.TRAN_10
+                });
+                
                 dsActualMap[key] = total_incoming;  
-                
-                // Debug log untuk beberapa item pertama
-                if (index < 5) {
-                    console.log('🔍 DS Item', index + 1, ':', {
-                        key: key,
-                        date: item.DATE,
-                        supplier: item.SUPPLIER_CODE,
-                        part_no: item.PART_NO,
-                        total_incoming: total_incoming,
-                        per_jam: {
-                            '08': item.TRAN_08,
-                            '09': item.TRAN_09,
-                            '10': item.TRAN_10,
-                            '11': item.TRAN_11,
-                            '12': item.TRAN_12
-                        }
-                    });
-                }
             });  
             
             console.log('📊 DS Actual Map updated:', Object.keys(dsActualMap).length, 'keys');
             
             // Sample beberapa key untuk debugging
-            const sampleKeys = Object.keys(dsActualMap).slice(0, 3);
+            const sampleKeys = Object.keys(dsActualMap).slice(0, 2);
             sampleKeys.forEach(key => {
                 console.log('🔑 Sample DS Key:', key, '=', dsActualMap[key]);
             });
@@ -1234,12 +1303,6 @@ function refreshActualMaps() {
             if (typeof tableDetailProgress !== 'undefined' && tableDetailProgress) {
                 console.log('🔄 Refreshing progress table...');
                 tableDetailProgress.draw();
-            }
-            
-            // Update tampilan jika ada modal DS terbuka
-            if ($('#modal-detail-ds').is(':visible')) {
-                console.log('🔄 Refreshing DS modal data...');
-                loadDSData();
             }
         },  
         error: function(xhr, status, error) {  
@@ -1252,7 +1315,7 @@ function refreshActualMaps() {
         }  
     });  
     
-    // NIGHT SHIFT - PERBAIKAN: MENGGUNAKAN QUERY BARU
+    // NIGHT SHIFT - PAKAI QUERY BARU
     $.ajax({  
         url: 'modules/data_night_shift1.php',  
         type: 'GET',
@@ -1262,7 +1325,11 @@ function refreshActualMaps() {
         },
         dataType: 'json',  
         success: function(response) {
-            console.log('✅ NS Actual Data Response:', response);
+            console.log('✅ NS Actual Response (LOGIC BARU - SELISIH):', {
+                count: response.count,
+                total_incoming: response.total_incoming,
+                logic: response.logic || 'NEW: incoming_per_hour = current - previous'
+            });
             
             if (!response.success) {
                 console.error('❌ NS API Error:', response.message);
@@ -1273,7 +1340,6 @@ function refreshActualMaps() {
             const totalIncoming = response.total_incoming || 0;
             
             console.log('📊 NS Data loaded:', data.length, 'records');
-            console.log('💰 Total incoming NS:', totalIncoming);
             
             // Reset map
             nsActualMap = {};
@@ -1281,44 +1347,16 @@ function refreshActualMaps() {
             $.each(data, function(index, item) {  
                 var key = safeTrim(item.DATE) + '|' + safeTrim(item.SUPPLIER_CODE) + '|' + safeTrim(item.PART_NO);  
                 
-                // Gunakan TOTAL_INCOMING dari query (sudah terakumulasi)
+                // 🔥 TOTAL_INCOMING SUDAH BENAR
                 var total_incoming = parseInt(item.TOTAL_INCOMING) || 0;
                 
-                // Jika TOTAL_INCOMING 0, hitung manual dari per jam
-                if (total_incoming === 0) {
-                    total_incoming = 0;
-                    var jamArr = [21,22,23,0,1,2,3,4,5,6,7];  
-                    jamArr.forEach(function(jam){  
-                        var jamStr = jam < 10 ? '0' + jam : '' + jam;  
-                        total_incoming += (parseInt(item['TRAN_' + jamStr]) || 0);  
-                    });  
-                }
-                
-                // Simpan ke map
                 nsActualMap[key] = total_incoming;  
-                
-                // Debug log untuk beberapa item pertama
-                if (index < 5) {
-                    console.log('🔍 NS Item', index + 1, ':', {
-                        key: key,
-                        date: item.DATE,
-                        supplier: item.SUPPLIER_CODE,
-                        part_no: item.PART_NO,
-                        total_incoming: total_incoming,
-                        per_jam: {
-                            '21': item.TRAN_21,
-                            '22': item.TRAN_22,
-                            '23': item.TRAN_23,
-                            '00': item.TRAN_00
-                        }
-                    });
-                }
             });  
             
             console.log('📊 NS Actual Map updated:', Object.keys(nsActualMap).length, 'keys');
             
             // Sample beberapa key untuk debugging
-            const sampleKeys = Object.keys(nsActualMap).slice(0, 3);
+            const sampleKeys = Object.keys(nsActualMap).slice(0, 2);
             sampleKeys.forEach(key => {
                 console.log('🔑 Sample NS Key:', key, '=', nsActualMap[key]);
             });
@@ -1327,18 +1365,6 @@ function refreshActualMaps() {
             if (typeof tableDetailProgress !== 'undefined' && tableDetailProgress) {
                 console.log('🔄 Refreshing progress table...');
                 tableDetailProgress.draw();
-            }
-            
-            // Update tampilan jika ada modal NS terbuka
-            if ($('#modal-detail-ns').is(':visible')) {
-                console.log('🔄 Refreshing NS modal data...');
-                loadNSData();
-            }
-            
-            // Update accum table jika terbuka
-            if ($('#modalByAccum').is(':visible')) {
-                console.log('🔄 Refreshing accum table...');
-                renderAccumTable();
             }
         },  
         error: function(xhr, status, error) {  
@@ -1591,7 +1617,7 @@ function loadDSData() {
     showDSLoadingSkeleton();
     
     $.ajax({
-        url: 'modules/data_day_shift.php',
+        url: 'modules/data_day_shift1.php',
         type: 'GET',
         data: {
             date1: sendDate1,
@@ -1626,11 +1652,12 @@ function loadDSData() {
 }
 
 
-// ================= FUNGSI PROSES DS DATA - DIPERBAIKI =================
+// ========== FUNGSI PROSES DS DATA - TAMPIL SEMUA ORDER ==========
 function processDSData(rawData) {
+    console.log("🔍 Processing DS Data - TAMPIL SEMUA ORDER (meski incoming 0)");
+    
     let groupedData = {};
     
-    // Group data by unique combination
     rawData.forEach(function(item, index) {
         let dateFormat = String(item.DATE || '');
         if (/^\d{8}$/.test(dateFormat)) {
@@ -1649,38 +1676,38 @@ function processDSData(rawData) {
                 partName: item.PART_DESC || item.PART_NAME,
                 orderData: {},
                 incomingData: {},
-                // VARIABLE BARU UNTUK SIMPAN NILAI MAX PER JAM
-                maxIncomingPerHour: {}
+                totalOrder: parseInt(item.TOTAL_ORDER || 0),
+                totalIncoming: parseInt(item.TOTAL_INCOMING || 0),
+                addDS: parseInt(item.ADD_DS || 0)
             };
             
-            // Initialize order data
+            // Initialize order data per jam (8-20)
             for(let hour = 8; hour <= 20; hour++) {
-                groupedData[key].orderData[hour] = 0;
+                let hourKey = hour < 10 ? '0' + hour : hour.toString();
+                groupedData[key].orderData[hour] = parseInt(item['ORD_' + hourKey] || 0);
+                groupedData[key].incomingData[hour] = parseInt(item['TRAN_' + hourKey] || 0);
             }
             
-            // Initialize incoming data
-            for(let hour = 8; hour <= 20; hour++) {
-                groupedData[key].incomingData[hour] = 0;
-                groupedData[key].maxIncomingPerHour[hour] = 0;
-            }
+            // Juga untuk jam 7
+            groupedData[key].orderData[7] = parseInt(item['ORD_07'] || 0);
+            groupedData[key].incomingData[7] = parseInt(item['TRAN_07'] || 0);
         }
         
-        // Collect order data (SUM seperti biasa)
-        for(let hour = 8; hour <= 20; hour++) {
-            let hourKey = hour < 10 ? 'ORD_0' + hour : 'ORD_' + hour;
-            groupedData[key].orderData[hour] += parseInt(item[hourKey] || 0);
-        }
-        
-        // PERBAIKAN: Untuk incoming, AMBIL NILAI MAX, BUKAN SUM!
-        for(let hour = 8; hour <= 20; hour++) {
-            let hourKey = hour < 10 ? 'TRAN_0' + hour : 'TRAN_' + hour;
-            let incomingValue = parseInt(item[hourKey] || 0);
-            
-            // JIKA NILAI INI LEBIH BESAR DARI SEBELUMNYA, UPDATE
-            if (incomingValue > groupedData[key].maxIncomingPerHour[hour]) {
-                groupedData[key].maxIncomingPerHour[hour] = incomingValue;
-                groupedData[key].incomingData[hour] = incomingValue;
-            }
+        // Debug
+        if (index < 2) {
+            console.log(`📊 DS Item ${index+1}:`, {
+                key: key,
+                date: dateFormat,
+                supplier: item.SUPPLIER_CODE,
+                partNo: item.PART_NO,
+                order_08: item.ORD_08 || 0,
+                order_09: item.ORD_09 || 0,
+                incoming_08: item.TRAN_08 || 0,
+                incoming_09: item.TRAN_09 || 0,
+                total_order: item.TOTAL_ORDER || 0,
+                total_incoming: item.TOTAL_INCOMING || 0,
+                add_ds: item.ADD_DS || 0
+            });
         }
     });
     
@@ -1690,24 +1717,8 @@ function processDSData(rawData) {
     Object.keys(groupedData).forEach(key => {
         const item = groupedData[key];
         
-        // Calculate total order (SUM semua jam)
-        let totalOrder = 0;
-        for(let hour = 8; hour <= 20; hour++) {
-            totalOrder += item.orderData[hour];
-        }
-        
-        // PERBAIKAN: Total incoming = NILAI MAKSIMAL DARI SEMUA JAM
-        // (bukan SUM semua jam, karena data sudah akumulasi)
-        let totalIncoming = 0;
-        for(let hour = 8; hour <= 20; hour++) {
-            // Cari nilai maksimum dari semua jam
-            if (item.incomingData[hour] > totalIncoming) {
-                totalIncoming = item.incomingData[hour];
-            }
-        }
-        
-        // Atau pakai cara ini: ambil nilai jam terakhir (20:00)
-        // let totalIncoming = item.incomingData[20] || 0;
+        // HITUNG TOTAL ORDER TERMASUK ADD_DS
+        const totalOrderWithAdd = item.totalOrder + item.addDS;
         
         const searchText = [
             item.date,
@@ -1722,26 +1733,39 @@ function processDSData(rawData) {
             type: 'order',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrder,
-            totalIncoming: totalIncoming
+            totalOrder: totalOrderWithAdd,  // TOTAL ORDER + ADD_DS
+            totalIncoming: item.totalIncoming,
+            addDS: item.addDS
         });
         
-        // Add incoming row
+        // Add incoming row (TAMPIL MESKI 0!)
         rows.push({
             id: dataIndex * 2 + 1,
             type: 'incoming',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrder,
-            totalIncoming: totalIncoming
+            totalOrder: totalOrderWithAdd,
+            totalIncoming: item.totalIncoming,
+            addDS: item.addDS
         });
         
         dataIndex++;
+        
+        console.log(`✅ ${item.date} - ${item.supplier} - ${item.partNo}:`, {
+            order: totalOrderWithAdd,
+            incoming: item.totalIncoming,
+            add_ds: item.addDS,
+            status: item.totalIncoming >= totalOrderWithAdd ? '✅ COMPLETE' : '⏳ ON PROGRESS'
+        });
     });
     
     dsFilteredData = rows;
+    console.log(`📊 DS Data: ${Object.keys(groupedData).length} items (TAMPIL SEMUA ORDER)`);
+    
     renderDSTable();
 }
+
+
 
 // ================= FUNGSI RENDER DS TABLE DENGAN PAGINATION - PERBAIKAN =================
 function renderDSTable() {
@@ -1972,7 +1996,7 @@ function loadNSData() {
     showNSLoadingSkeleton();
     
     $.ajax({
-        url: 'modules/data_night_shift.php',
+        url: 'modules/data_night_shift1.php',
         type: 'GET',
         data: {
             date1: sendDate1,
@@ -2006,11 +2030,13 @@ function loadNSData() {
     });
 }
 
+// ========== FUNGSI PROSES NS DATA - TAMPIL SEMUA ORDER ==========
 function processNSData(rawData) {
+    console.log("🔍 Processing NS Data - TAMPIL SEMUA ORDER (meski incoming 0)");
+    
     let groupedData = {};
     const nsHours = [21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7];
     
-    // Group data by unique combination
     rawData.forEach(function(item, index) {
         let dateFormat = String(item.DATE || '');
         if (/^\d{8}$/.test(dateFormat)) {
@@ -2029,39 +2055,34 @@ function processNSData(rawData) {
                 partName: item.PART_DESC || item.PART_NAME,
                 orderData: {},
                 incomingData: {},
-                // VARIABLE BARU
-                maxIncomingPerHour: {}
+                totalOrder: parseInt(item.TOTAL_ORDER || 0),
+                totalIncoming: parseInt(item.TOTAL_INCOMING || 0),
+                addNS: parseInt(item.ADD_NS || 0)
             };
             
-            // Initialize order data
+            // Initialize NS data per jam
             nsHours.forEach(hour => {
-                groupedData[key].orderData[hour] = 0;
-            });
-            
-            // Initialize incoming data
-            nsHours.forEach(hour => {
-                groupedData[key].incomingData[hour] = 0;
-                groupedData[key].maxIncomingPerHour[hour] = 0;
+                let hourKey = hour < 10 ? '0' + hour : hour.toString();
+                groupedData[key].orderData[hour] = parseInt(item['ORD_' + hourKey] || 0);
+                groupedData[key].incomingData[hour] = parseInt(item['TRAN_' + hourKey] || 0);
             });
         }
         
-        // Collect order data (SUM)
-        nsHours.forEach(hour => {
-            let hourKey = hour < 10 ? 'ORD_0' + hour : 'ORD_' + hour;
-            groupedData[key].orderData[hour] += parseInt(item[hourKey] || 0);
-        });
-        
-        // PERBAIKAN: Untuk incoming, AMBIL NILAI MAX, BUKAN SUM!
-        nsHours.forEach(hour => {
-            let hourKey = hour < 10 ? 'TRAN_0' + hour : 'TRAN_' + hour;
-            let incomingValue = parseInt(item[hourKey] || 0);
-            
-            // JIKA NILAI INI LEBIH BESAR DARI SEBELUMNYA, UPDATE
-            if (incomingValue > groupedData[key].maxIncomingPerHour[hour]) {
-                groupedData[key].maxIncomingPerHour[hour] = incomingValue;
-                groupedData[key].incomingData[hour] = incomingValue;
-            }
-        });
+        if (index < 2) {
+            console.log(`📊 NS Item ${index+1}:`, {
+                key: key,
+                date: dateFormat,
+                supplier: item.SUPPLIER_CODE,
+                partNo: item.PART_NO,
+                order_21: item.ORD_21 || 0,
+                order_22: item.ORD_22 || 0,
+                incoming_21: item.TRAN_21 || 0,
+                incoming_22: item.TRAN_22 || 0,
+                total_order: item.TOTAL_ORDER || 0,
+                total_incoming: item.TOTAL_INCOMING || 0,
+                add_ns: item.ADD_NS || 0
+            });
+        }
     });
     
     let rows = [];
@@ -2070,23 +2091,8 @@ function processNSData(rawData) {
     Object.keys(groupedData).forEach(key => {
         const item = groupedData[key];
         
-        // Calculate total order (SUM)
-        let totalOrder = 0;
-        nsHours.forEach(hour => {
-            totalOrder += item.orderData[hour];
-        });
-        
-        // PERBAIKAN: Total incoming = NILAI MAKSIMAL DARI SEMUA JAM
-        let totalIncoming = 0;
-        nsHours.forEach(hour => {
-            // Cari nilai maksimum dari semua jam
-            if (item.incomingData[hour] > totalIncoming) {
-                totalIncoming = item.incomingData[hour];
-            }
-        });
-        
-        // Atau pakai nilai jam terakhir (07:00)
-        // let totalIncoming = item.incomingData[7] || 0;
+        // HITUNG TOTAL ORDER TERMASUK ADD_NS
+        const totalOrderWithAdd = item.totalOrder + item.addNS;
         
         const searchText = [
             item.date,
@@ -2101,24 +2107,35 @@ function processNSData(rawData) {
             type: 'order',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrder,
-            totalIncoming: totalIncoming
+            totalOrder: totalOrderWithAdd,  // TOTAL ORDER + ADD_NS
+            totalIncoming: item.totalIncoming,
+            addNS: item.addNS
         });
         
-        // Add incoming row
+        // Add incoming row (TAMPIL MESKI 0!)
         rows.push({
             id: dataIndex * 2 + 1,
             type: 'incoming',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrder,
-            totalIncoming: totalIncoming
+            totalOrder: totalOrderWithAdd,
+            totalIncoming: item.totalIncoming,
+            addNS: item.addNS
         });
         
         dataIndex++;
+        
+        console.log(`🌙 ${item.date} - ${item.supplier} - ${item.partNo}:`, {
+            order: totalOrderWithAdd,
+            incoming: item.totalIncoming,
+            add_ns: item.addNS,
+            status: item.totalIncoming >= totalOrderWithAdd ? '✅ COMPLETE' : '⏳ ON PROGRESS'
+        });
     });
     
     nsFilteredData = rows;
+    console.log(`📊 NS Data: ${Object.keys(groupedData).length} items (TAMPIL SEMUA ORDER)`);
+    
     renderNSTable();
 }
 
@@ -2801,62 +2818,53 @@ function renderAccumTable() {
             });
         }
         
-// ========== FIX: INI PERBAIKAN UTAMA ==========
-// Reset incoming setiap hari ke 0 dulu
-for(let i=0; i<daysInMonth; i++) {  
-    totalIncomingPerDay[i] = 0;  
-}
-
-// Ambil incoming dari table DETAIL PROGRESS (yang sudah benar)
-if (tableDetailProgress) {
-    const progressData = tableDetailProgress.rows().data().toArray();
-    
-    progressData.forEach(function(row) {
-        const rowDate = String(row.DATE || '');
-        if (rowDate.length === 8) {
-            const rowYear = rowDate.substr(0,4);
-            const rowMonth = rowDate.substr(4,2);
-            const rowDay = parseInt(rowDate.substr(6,2));
-            
-            // Cocokkan dengan item yang sedang diproses
-            if (rowYear === year && 
-                rowMonth === month && 
-                rowDay >= 1 && rowDay <= daysInMonth &&
-                row.SUPPLIER_CODE === item.SUPPLIER_CODE &&
-                row.PART_NO === item.PART_NO) {
-                
-                const dayIndex = rowDay - 1;
-                const dsActual = parseInt(row.DS_ACTUAL) || 0;
-                const nsActual = parseInt(row.NS_ACTUAL) || 0;
-                
-                // INI YANG BENAR: Total incoming = DS + NS untuk hari itu
-                totalIncomingPerDay[dayIndex] = dsActual + nsActual;
-            }
+        for(let i=0; i<daysInMonth; i++) {  
+            totalIncomingPerDay[i] = 0;  
         }
-    });
-}
-// ========== AKHIR PERBAIKAN ==========
         
-        // ========== FIX: PERHITUNGAN YANG BENAR SESUAI DATA ==========
-        // Result = Incoming - Order (TETAP SEPERTI LAMA)
+        if (tableDetailProgress) {
+            const progressData = tableDetailProgress.rows().data().toArray();
+            
+            progressData.forEach(function(row) {
+                const rowDate = String(row.DATE || '');
+                if (rowDate.length === 8) {
+                    const rowYear = rowDate.substr(0,4);
+                    const rowMonth = rowDate.substr(4,2);
+                    const rowDay = parseInt(rowDate.substr(6,2));
+                    
+                    if (rowYear === year && 
+                        rowMonth === month && 
+                        rowDay >= 1 && rowDay <= daysInMonth &&
+                        row.SUPPLIER_CODE === item.SUPPLIER_CODE &&
+                        row.PART_NO === item.PART_NO) {
+                        
+                        const dayIndex = rowDay - 1;
+                        const dsActual = parseInt(row.DS_ACTUAL) || 0;
+                        const nsActual = parseInt(row.NS_ACTUAL) || 0;
+                        
+                        totalIncomingPerDay[dayIndex] = dsActual + nsActual;
+                    }
+                }
+            });
+        }
+        
         let resultPerDay = totalIncomingPerDay.map((incoming, idx) => 
             incoming - totalOrderPerDay[idx]
         );
         
-        // Total Akumulasi (TETAP SEPERTI LAMA)
         let balancePerDay = [];  
         for(let i=0; i<daysInMonth; i++) {  
             if(i==0) balancePerDay[i] = resultPerDay[0];  
             else balancePerDay[i] = balancePerDay[i-1] + resultPerDay[i];  
         }  
         
-        // Regular Order
+        // Regular Order - PERUBAHAN DI SINI!
         html += '<tr class="data-group-start">';  
         html += `<td rowspan="7" style="vertical-align: middle;">${item.SUPPLIER_CODE||''}</td>`;  
         html += `<td rowspan="7" style="vertical-align: middle;">${item.SUPPLIER_NAME||''}</td>`;  
         html += `<td rowspan="7" style="vertical-align: middle;">${item.PART_NO||''}</td>`;  
         html += `<td rowspan="7" style="vertical-align: middle;">${item.PART_NAME||''}</td>`;  
-        html += '<td><strong>Data ' + itemNumber + '</strong></td>';  
+        html += '<td><strong>Order</strong></td>';  // <== GANTI JADI ORDER!
         
         for(let i=0;i<daysInMonth;i++) {
             html += `<td class="text-center">${ordQtyPerDay[i] > 0 ? ordQtyPerDay[i] : 0}</td>`;
@@ -2887,7 +2895,7 @@ if (tableDetailProgress) {
         }  
         html += '</tr>';
         
-        // Total Incoming (SEKARANG SUDAH BENAR SETELAH FILTER)
+        // Total Incoming
         html += '<tr>';  
         html += '<td>Total Incoming</td>';  
         for(let i=0;i<daysInMonth;i++) {
@@ -2900,7 +2908,6 @@ if (tableDetailProgress) {
         html += '<td>Result</td>';  
         for(let i=0;i<daysInMonth;i++) {
             let result = resultPerDay[i];
-            // Warna: Hijau jika positif (Over), Merah jika negatif (Kurang)
             if (result > 0) {
                 html += `<td class="text-center text-success fw-bold">${result}</td>`;
             } else if (result < 0) {
@@ -2934,7 +2941,6 @@ if (tableDetailProgress) {
     
     $('#accum-table-container').html(html);  
     
-    // Initialize drag scroll for accum table
     initAccumDragScroll();
     
     let pagHTML = '';  
@@ -3030,7 +3036,7 @@ function handleAddDS(e) {
     $spinner.removeClass('d-none');
     $submitBtn.find('span:not(.spinner-border)').text('Saving...');
     
-    // Buat FormData secara manual
+    // Buat FormData
     const formData = new FormData();
     formData.append('date', $('#add-ds-date').val());
     formData.append('supplier_code', $('#add-ds-supplier').val());
@@ -3045,7 +3051,8 @@ function handleAddDS(e) {
         supplier: $('#add-ds-supplier').val(),
         part_no: $('#add-ds-partno').val(),
         hours_data: JSON.stringify(validHours),
-        total_qty: totalQty
+        total_qty: totalQty,
+        remark: $('#txt-ds-remark').val().trim()
     });
     
     $.ajax({
@@ -3055,10 +3062,7 @@ function handleAddDS(e) {
         processData: false,
         contentType: false,
         dataType: 'json',
-        timeout: 10000, // 10 detik timeout
-        beforeSend: function() {
-            console.log('Sending DS add order request...');
-        },
+        timeout: 10000,
         success: function(response) {
             console.log('DS Add Response:', response);
             
@@ -3075,7 +3079,7 @@ function handleAddDS(e) {
                     
                     // Refresh data setelah modal tutup
                     setTimeout(() => {
-                        refreshActualMaps();
+                        // Refresh progress table
                         loadTableDetailProgress();
                         
                         // Show success toast
@@ -3175,7 +3179,7 @@ function handleAddNS(e) {
     $spinner.removeClass('d-none');
     $submitBtn.find('span:not(.spinner-border)').text('Saving...');
     
-    // Buat FormData secara manual
+    // Buat FormData
     const formData = new FormData();
     formData.append('date', $('#add-ns-date').val());
     formData.append('supplier_code', $('#add-ns-supplier').val());
@@ -3190,7 +3194,8 @@ function handleAddNS(e) {
         supplier: $('#add-ns-supplier').val(),
         part_no: $('#add-ns-partno').val(),
         hours_data: JSON.stringify(validHours),
-        total_qty: totalQty
+        total_qty: totalQty,
+        remark: $('#txt-ns-remark').val().trim()
     });
     
     $.ajax({
@@ -3201,9 +3206,6 @@ function handleAddNS(e) {
         contentType: false,
         dataType: 'json',
         timeout: 10000,
-        beforeSend: function() {
-            console.log('Sending NS add order request...');
-        },
         success: function(response) {
             console.log('NS Add Response:', response);
             
@@ -3220,7 +3222,7 @@ function handleAddNS(e) {
                     
                     // Refresh data setelah modal tutup
                     setTimeout(() => {
-                        refreshActualMaps();
+                        // Refresh progress table
                         loadTableDetailProgress();
                         
                         // Show success toast
@@ -4732,6 +4734,16 @@ $(document).ready(function() {
     $('#form-add-ds').on('submit', handleAddDS);
     $('#form-add-ns').on('submit', handleAddNS);
     
+
+        // Reset buttons
+    $('#btn-reset-ds').on('click', function() {
+        // Function sudah didefinisikan di atas
+    });
+    
+    $('#btn-reset-ns').on('click', function() {
+        // Function sudah didefinisikan di atas
+    });
+
     // DS Quantity controls
     $('#ds-increase').on('click', function() {
         const $input = $('#txt-ds-addqty');
@@ -4772,35 +4784,181 @@ $(document).ready(function() {
         $input.val(currentVal + addValue);
     });
     
-    // Reset buttons
-    $('#btn-reset-ds').on('click', function() {
-        if (confirm('Are you sure you want to reset ALL DS add orders to 0?\nThis action cannot be undone.')) {
-            // Prepare reset
-            dsSelectedHours = {};
-            $('#ds-action').val('reset');
-            $('#form-add-ds').submit();
-        }
-    });
+// ================= FUNGSI RESET UNTUK D/S & N/S =================
 
-    $('#btn-reset-ns').on('click', function() {
-        if (confirm('Are you sure you want to reset ALL NS add orders to 0?\nThis action cannot be undone.')) {
-            // Prepare reset
-            nsSelectedHours = {};
-            $('#ns-action').val('reset');
-            $('#form-add-ns').submit();
+$('#btn-reset-ds').on('click', function() {
+    const remark = $('#txt-ds-remark').val().trim();
+    
+    Swal.fire({
+        title: 'Reset Add Order D/S?',
+        html: `
+            <div class="text-start">
+                <p>Anda yakin ingin reset add order D/S ke 0?</p>
+                <p><strong>Remark akan tetap tersimpan:</strong><br>${remark || '(kosong)'}</p>
+                <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> Total order akan berkurang!</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, reset ke 0!',
+        cancelButtonText: 'Batal',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('date', $('#add-ds-date').val());
+                formData.append('supplier_code', $('#add-ds-supplier').val());
+                formData.append('part_no', $('#add-ds-partno').val());
+                formData.append('type', 'ds');
+                formData.append('action', 'reset');
+                formData.append('remark', remark);
+                
+                $.ajax({
+                    url: 'api/update_add_order.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('Reset DS Response:', response);
+                        resolve(response);
+                    },
+                    error: function(xhr) {
+                        console.error('Reset error:', xhr.responseText);
+                        reject('Network error');
+                    }
+                });
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const response = result.value;
+            
+            if (response && response.success) {
+                showDSAlert('success', response.message || 'Add order berhasil direset!');
+                
+                // Reset UI
+                dsSelectedHours = {};
+                $('#ds-action').val('add');
+                $('#ds-status-text').text('No add order yet');
+                $('#btn-reset-ds').hide();
+                updateDSQuantityInputs();
+                
+                // Refresh setelah 2 detik
+                setTimeout(() => {
+                    $('#modal-add-ds').modal('hide');
+                    setTimeout(() => {
+                        loadTableDetailProgress();
+                    }, 500);
+                }, 2000);
+                
+            } else {
+                showDSAlert('error', response?.message || 'Gagal reset add order');
+            }
         }
     });
+});
+
+$('#btn-reset-ns').on('click', function() {
+    const remark = $('#txt-ns-remark').val().trim();
+    
+    Swal.fire({
+        title: 'Reset Add Order N/S?',
+        html: `
+            <div class="text-start">
+                <p>Anda yakin ingin reset add order N/S ke 0?</p>
+                <p><strong>Remark akan tetap tersimpan:</strong><br>${remark || '(kosong)'}</p>
+                <p class="text-warning"><i class="bi bi-exclamation-triangle"></i> Total order akan berkurang!</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, reset ke 0!',
+        cancelButtonText: 'Batal',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('date', $('#add-ns-date').val());
+                formData.append('supplier_code', $('#add-ns-supplier').val());
+                formData.append('part_no', $('#add-ns-partno').val());
+                formData.append('type', 'ns');
+                formData.append('action', 'reset');
+                formData.append('remark', remark);
+                
+                $.ajax({
+                    url: 'api/update_add_order.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('Reset NS Response:', response);
+                        resolve(response);
+                    },
+                    error: function(xhr) {
+                        console.error('Reset error:', xhr.responseText);
+                        reject('Network error');
+                    }
+                });
+            });
+        },
+        allowOutsideClick: () => !Swal.isLoading()
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const response = result.value;
+            
+            if (response && response.success) {
+                showNSAlert('success', response.message || 'Add order berhasil direset!');
+                
+                // Reset UI
+                nsSelectedHours = {};
+                $('#ns-action').val('add');
+                $('#ns-status-text').text('No add order yet');
+                $('#btn-reset-ns').hide();
+                updateNSQuantityInputs();
+                
+                // Refresh setelah 2 detik
+                setTimeout(() => {
+                    $('#modal-add-ns').modal('hide');
+                    setTimeout(() => {
+                        loadTableDetailProgress();
+                    }, 500);
+                }, 2000);
+                
+            } else {
+                showNSAlert('error', response?.message || 'Gagal reset add order');
+            }
+        }
+    });
+});
 
     // Modal close reset
     $('#modal-add-ds').on('hidden.bs.modal', function() {
         dsSelectedHours = {};
-        dsCurrentPage = 1;
+        currentDSData = null;
+        $('#ds-action').val('add');
+        $('#txt-ds-remark').val('');
+        $('#ds-status-text').text('No add order yet');
+        $('#btn-reset-ds').hide();
     });
 
     $('#modal-add-ns').on('hidden.bs.modal', function() {
         nsSelectedHours = {};
-        nsCurrentPage = 1;
+        currentNSData = null;
+        $('#ns-action').val('add');
+        $('#txt-ns-remark').val('');
+        $('#ns-status-text').text('No add order yet');
+        $('#btn-reset-ns').hide();
     });
+    
     
     // ================= EVENT HANDLERS BARU UNTUK DS/NS =================
     

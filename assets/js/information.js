@@ -1,4 +1,4 @@
-// assets/js/information.js - VERSION FINAL TANPA AUDIO & DENGAN 7 HARI RETENTION
+// assets/js/information.js - VERSION LENGKAP SATU FILE
 (function() {
     'use strict';
     
@@ -18,6 +18,7 @@
             this.setupEventListeners();
             this.bindTableEvents();
             this.initRealTimeNotifications();
+            this.initDataTable();
         }
         
         initRealTimeNotifications() {
@@ -117,17 +118,6 @@
                 return false;
             });
             
-            // Button actions di modal reply
-            $(document).on('click', '#btn-on-progress-action', (e) => {
-                e.preventDefault();
-                this.submitReply('on_progress');
-            });
-            
-            $(document).on('click', '#btn-closed-action', (e) => {
-                e.preventDefault();
-                this.submitReply('closed');
-            });
-            
             // Modal hide events
             $('#modal-add-information').on('hidden.bs.modal', () => {
                 this.selectedRecipients = [];
@@ -175,6 +165,220 @@
             });
             
             console.log('✅ Table events bound successfully');
+        }
+        
+        initDataTable() {
+            // Inisialisasi DataTable dengan konfigurasi lengkap
+            if ($.fn.DataTable.isDataTable('#table-information')) {
+                window.tableInformation = $('#table-information').DataTable();
+            } else {
+                window.tableInformation = $('#table-information').DataTable({
+                    pageLength: 10,
+                    autoWidth: true,
+                    aaSorting: [[0, "asc"]],
+                    bDestroy: true,
+                    scrollX: true,
+                    scrollCollapse: true,
+                    paging: true,
+                    searching: true,
+                    language: {
+                        processing: '<div class="spinner-border spinner-border-sm" role="status"></div> Loading...',
+                        emptyTable: 'No information available',
+                        zeroRecords: 'No matching records found',
+                        search: 'Search:',
+                        paginate: {
+                            first: 'First',
+                            last: 'Last',
+                            next: 'Next',
+                            previous: 'Previous'
+                        }
+                    },
+                    columns: [
+                        { 
+                            title: "No", 
+                            data: null, 
+                            render: function(data, type, row, meta) {
+                                return meta.row + 1;
+                            },
+                            className: "text-center"
+                        },
+                        { 
+                            title: "Date", 
+                            data: "DATE", 
+                            className: "text-center"
+                        },
+                        { 
+                            title: "Time", 
+                            data: "TIME_FROM",
+                            className: "text-center" 
+                        },
+                        { 
+                            title: "PIC", 
+                            data: "PIC_FROM",
+                            className: "text-center"
+                        },
+                        { 
+                            title: "Item", 
+                            data: "ITEM", 
+                            className: "text-center",
+                            render: function(data) {
+                                return '<div class="table-text-center text-truncate" style="max-width: 200px;">' + (data || '-') + '</div>';
+                            }
+                        },
+                        { 
+                            title: "Request", 
+                            data: "REQUEST", 
+                            className: "text-center",
+                            render: function(data) {
+                                return '<div class="table-text-center text-truncate" style="max-width: 200px;">' + (data || '-') + '</div>';
+                            }
+                        },
+                        { 
+                            title: "Action", 
+                            data: null, 
+                            orderable: false, 
+                            searchable: false,
+                            className: "text-center",
+                            render: function(data, type, row) {
+                                const role = row.user_role || '';
+                                const status = row.STATUS || '';
+                                
+                                // Hanya sender yang bisa edit/delete
+                                if (role === 'sender') {
+                                    let buttons = '';
+                                    // Edit hanya jika status Open
+                                    if (status === 'Open') {
+                                        buttons += `<button class="btn btn-sm btn-warning btn-edit-info me-1 btn-action-table" 
+                                                    data-id="${row.ID_INFORMATION}" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                  </button>`;
+                                    }
+                                    // Delete button
+                                    buttons += `<button class="btn btn-sm btn-danger btn-delete-info btn-action-table" 
+                                                    data-id="${row.ID_INFORMATION}" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                  </button>`;
+                                    return buttons;
+                                }
+                                return '-';
+                            }
+                        },
+                        { 
+                            title: "Time", 
+                            data: "TIME_TO",
+                            className: "text-center",
+                            render: function(data) {
+                                return data || '-';
+                            }
+                        },
+                        { 
+                            title: "PIC", 
+                            data: "PIC_TO",
+                            className: "text-center",
+                            render: function(data) {
+                                return data || '-';
+                            }
+                        },
+                        { 
+                            title: "Status", 
+                            data: "STATUS", 
+                            className: "text-center",
+                            render: function(data) {
+                                let badgeClass = 'bg-secondary';
+                                let displayText = data || '-';
+                                
+                                if (data === 'Open') {
+                                    badgeClass = 'bg-danger';
+                                    displayText = 'OPEN';
+                                } else if (data === 'On Progress') {
+                                    badgeClass = 'bg-warning';
+                                    displayText = 'ON PROGRESS';
+                                } else if (data === 'Closed') {
+                                    badgeClass = 'bg-success';
+                                    displayText = 'CLOSED';
+                                }
+                                
+                                return `<div class="status-container">
+                                    <span class="badge ${badgeClass} w-100 py-2">${displayText}</span>
+                                </div>`;
+                            }
+                        },
+                        { 
+                            title: "Remark", 
+                            data: "REMARK", 
+                            className: "text-center",
+                            render: function(data) {
+                                return '<div class="table-text-center">' + (data || '-') + '</div>';
+                            }
+                        },
+                        { 
+                            title: "Action", 
+                            data: null, 
+                            orderable: false, 
+                            searchable: false,
+                            className: "text-center",
+                            render: function(data, type, row) {
+                                const role = row.user_role || '';
+                                const status = row.STATUS || '';
+                                
+                                // Hanya recipient yang bisa reply
+                                if (role === 'recipient' && status !== 'Closed') {
+                                    let buttonText = '';
+                                    let buttonClass = '';
+                                    
+                                    if (status === 'Open') {
+                                        buttonText = '<i class="bi bi-reply"></i> Reply';
+                                        buttonClass = 'btn-success';
+                                    } else if (status === 'On Progress') {
+                                        buttonText = '<i class="bi bi-arrow-clockwise"></i> Update';
+                                        buttonClass = 'btn-info';
+                                    }
+                                    
+                                    return `<button class="btn btn-sm ${buttonClass} btn-reply-info" 
+                                              data-id="${row.ID_INFORMATION}" title="Update Status">
+                                              ${buttonText}
+                                            </button>`;
+                                }
+                                return '-';
+                            }
+                        }
+                    ],
+                    createdRow: function(row, data, dataIndex) {
+                        // Tambah data attributes untuk highlight
+                        $(row).attr({
+                            'data-id': data.ID_INFORMATION,
+                            'data-pic-from': data.PIC_FROM,
+                            'data-item': data.ITEM,
+                            'data-date': data.DATE
+                        });
+                        
+                        // Tambah class untuk unread
+                        if (data.IS_UNREAD == 1) {
+                            $(row).addClass('unread-row');
+                        }
+                    },
+                    drawCallback: function(settings) {
+                        console.log('🔄 DataTable draw callback');
+                        setTimeout(() => {
+                            if (window.informationSystem && window.informationSystem.bindTableEvents) {
+                                window.informationSystem.bindTableEvents();
+                                console.log('✅ Table events re-bound');
+                            }
+                            
+                            // Trigger event bahwa tabel sudah di-load
+                            $(document).trigger('informationTableLoaded', [settings.aoData]);
+                        }, 300);
+                    },
+                    initComplete: function() {
+                        console.log('✅ Information DataTable initialized with proper columns');
+                        if (window.informationSystem) {
+                            setTimeout(() => {
+                                window.informationSystem.bindTableEvents();
+                            }, 500);
+                        }
+                    }
+                });
+            }
         }
         
         loadRecipients() {
@@ -556,7 +760,7 @@
                             return;
                         }
                         
-                        // Fill modal data dengan desain baru
+                        // Fill modal data
                         $('#txt-id-information2').val(info.ID_INFORMATION);
                         $('#txt-timefrom-to-update').val(info.TIME_FROM || '');
                         $('#txt-picfrom-to-update').val(info.PIC_FROM || '');
@@ -565,7 +769,7 @@
                         $('#txt-picto-update').val(this.currentUser);
                         $('#txt-timeto-update').val(new Date().toTimeString().substring(0, 5));
                         
-                        // Update tampilan dengan informasi lengkap
+                        // Update tampilan
                         this.updateReplyModalDisplay(info);
                         
                         // Show modal
@@ -604,25 +808,11 @@
                 <i class="bi bi-calendar me-1"></i>${info.DATE || '-'}
             `);
             
-            // Display item dengan format yang lebih baik
-            $('#display-item').html(`
-                <div class="alert alert-info border-0 mb-0" style="background: rgba(13, 110, 253, 0.1);">
-                    <div class="fw-medium mb-1 text-primary">
-                        <i class="bi bi-tag me-1"></i>Item:
-                    </div>
-                    <div class="fs-6">${info.ITEM || '-'}</div>
-                </div>
-            `);
+            // Display item
+            $('#display-item').html(info.ITEM || '-');
             
-            // Display request dengan format yang lebih baik
-            $('#display-request').html(`
-                <div class="alert alert-light border mb-0">
-                    <div class="fw-medium mb-1">
-                        <i class="bi bi-chat-text me-1"></i>Request:
-                    </div>
-                    <div class="text-break">${info.REQUEST || '-'}</div>
-                </div>
-            `);
+            // Display request
+            $('#display-request').html(info.REQUEST || '-');
             
             // Update status display
             let statusBadge = '';
@@ -651,129 +841,13 @@
             $('#display-status-text').text(statusText);
             $('#reply-time-display').text(new Date().toTimeString().substring(0, 5));
             
-            // Calculate days old
-            const createdDate = new Date(info.DATE);
-            const now = new Date();
-            const daysOld = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
-            const remainingDays = Math.max(0, 7 - daysOld);
-            
-            // Update retention info
-            if (daysOld > 7) {
-                $('#retention-info').html(`
-                    <span class="text-danger fw-bold">SUDAH KADALUARSA</span><br>
-                    ${daysOld - 7} hari melebihi batas retention
-                `);
-            } else {
-                $('#retention-info').html(`
-                    <span class="text-success fw-bold">MASIH AKTIF</span><br>
-                    ${remainingDays} hari tersisa
-                `);
-            }
-            
             // Reset remark field
             $('#txt-remark-update').val('');
             
-            // Auto-select appropriate action
-            if (info.STATUS === 'Open') {
-                this.selectStatusAction('on_progress');
-            } else if (info.STATUS === 'On Progress') {
-                this.selectStatusAction('closed');
-            }
-        }
-        
-        selectStatusAction(action) {
-            console.log('🎯 Selecting status action:', action);
-            
-            // Update UI
-            $('.status-action-card').removeClass('selected');
-            $(`.status-action-card[data-action="${action}"]`).addClass('selected');
-            
-            // Update radio button
-            $(`input.action-radio[value="${action}"]`).prop('checked', true);
-            $('#action-type').val(action);
-            
-            // Update remark info text
-            if (action === 'closed') {
-                $('#remark-info-text').html(`
-                    <strong class="text-danger">Wajib diisi!</strong> 
-                    Harap berikan catatan detail sebelum menutup informasi ini.
-                `);
-                $('#txt-remark-update').attr('required', 'required').attr('placeholder', 'Contoh: Sudah ditindaklanjuti, masalah sudah selesai, hasilnya...');
-            } else {
-                $('#remark-info-text').html(`
-                    Opsional: Tambahkan catatan tentang progress atau update terbaru.
-                    Contoh: "Sedang dikonfirmasi ke supplier", "Menunggu respon dari bagian QC"
-                `);
-                $('#txt-remark-update').removeAttr('required').attr('placeholder', 'Tulis catatan atau tindakan yang sudah dilakukan...');
-            }
-            
-            // Update button visibility
-            if (action === 'on_progress') {
-                $('#btn-on-progress-action').show();
-                $('#btn-closed-action').hide();
-            } else {
-                $('#btn-on-progress-action').hide();
-                $('#btn-closed-action').show();
-            }
-        }
-        
-        submitReply(action) {
-            console.log('📤 Submitting reply with action:', action);
-            
-            const form = $('#updateToInformationForm');
-            const remark = $('#txt-remark-update').val().trim();
-            
-            // Validation
-            if (action === 'closed' && !remark) {
-                this.showToast('error', 'Catatan wajib diisi untuk menutup informasi');
-                $('#txt-remark-update').focus();
-                return;
-            }
-            
-            // Set action type
-            $('#action-type').val(action);
-            
-            // Disable buttons
-            $('#btn-on-progress-action, #btn-closed-action').prop('disabled', true).addClass('btn-loading');
-            
-            // Submit form via AJAX
-            const formData = new FormData(form[0]);
-            formData.append('action_type', action);
-            
-            $.ajax({
-                url: 'modules/data_information.php',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                dataType: 'json',
-                success: (response) => {
-                    if (response.success) {
-                        this.showToast('success', response.message);
-                        
-                        // Close modal after 1.5 seconds
-                        setTimeout(() => {
-                            $('#modal-update-information-to').modal('hide');
-                        }, 1500);
-                        
-                        // Refresh data after 2 seconds
-                        setTimeout(() => {
-                            this.refreshInformationTable();
-                            this.checkNewNotifications();
-                        }, 2000);
-                        
-                    } else {
-                        this.showToast('error', response.message);
-                        $('#btn-on-progress-action, #btn-closed-action').prop('disabled', false).removeClass('btn-loading');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    this.showToast('error', 'Network error: ' + error);
-                    $('#btn-on-progress-action, #btn-closed-action').prop('disabled', false).removeClass('btn-loading');
-                }
-            });
-            
-            return false;
+            // Default select ON PROGRESS
+            setTimeout(() => {
+                $('.action-card[data-action="on_progress"]').click();
+            }, 100);
         }
         
         deleteInformation(id) {

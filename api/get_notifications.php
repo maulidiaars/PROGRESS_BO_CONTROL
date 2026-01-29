@@ -6,7 +6,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/week_logic.php'; // Tambah ini
+require_once __DIR__ . '/../config/week_logic.php';
 
 $response = [
     'success' => true,
@@ -40,29 +40,23 @@ if (!$conn) {
 }
 
 try {
-    // ==================== REVISI UTAMA: HANYA NOTIFIKASI DARI USER LAIN, HANYA MINGGU INI ====================
+    // ==================== REVISI SIMPLE: SEMUA USER BISA LIHAT ====================
     $sql = "
         SELECT 
             ti.ID_INFORMATION as id,
             'information' as type,
+            -- TITLE BERBEDA BERDASARKAN USER
             CASE 
-                WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 'PENTING: Ditugaskan ke Anda'
-                WHEN ti.PIC_FROM = ? THEN 'Informasi Anda' -- INI AKAN DI-FILTER KELUAR
-                ELSE 'Informasi Baru'
+                WHEN ti.PIC_TO LIKE '%' + ? + '%' THEN 'DITUGASKAN UNTUK ANDA'
+                ELSE 'INFORMASI BARU'
             END as title,
+            -- MESSAGE BERBEDA BERDASARKAN USER
             CASE 
-                WHEN ti.PIC_TO IS NOT NULL AND ti.PIC_TO != '' THEN 
-                    CONCAT(
-                        ti.ITEM,
-                        CASE WHEN LEN(ti.REQUEST) > 0 THEN ': ' + LEFT(ti.REQUEST, 100) ELSE '' END,
-                        ' → ',
-                        ti.PIC_TO
-                    )
+                WHEN ti.PIC_TO LIKE '%' + ? + '%' THEN 
+                    CONCAT('Anda ditugaskan: ', ti.ITEM, 
+                           CASE WHEN LEN(ti.REQUEST) > 0 THEN ' - ' + LEFT(ti.REQUEST, 100) ELSE '' END)
                 ELSE 
-                    CONCAT(
-                        ti.ITEM,
-                        CASE WHEN LEN(ti.REQUEST) > 0 THEN ': ' + LEFT(ti.REQUEST, 100) ELSE '' END
-                    )
+                    CONCAT(ti.PIC_FROM, ' → ', ti.PIC_TO, ': ', ti.ITEM)
             END as message,
             ti.DATE,
             ti.TIME_FROM as time,
@@ -71,60 +65,51 @@ try {
             ti.STATUS,
             CASE 
                 WHEN ti.STATUS = 'Open' THEN 'BUKA'
+                WHEN ti.STATUS = 'On Progress' THEN 'SEDANG DIPROSES'
                 WHEN ti.STATUS = 'Closed' THEN 'SELESAI'
                 ELSE UPPER(ti.STATUS)
             END as status_text,
             CASE 
-                WHEN ti.STATUS = 'Open' THEN 'danger'
+                WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 'danger'
+                WHEN ti.STATUS = 'Open' THEN 'warning'
+                WHEN ti.STATUS = 'On Progress' THEN 'primary'
                 WHEN ti.STATUS = 'Closed' THEN 'success'
                 ELSE 'info'
             END as badge_color,
             CONVERT(varchar(19), CAST(ti.DATE + ' ' + ti.TIME_FROM as datetime), 120) as datetime_full,
-            -- Tambahan untuk logic display
+            -- FLAG: apakah user ini penerima?
             CASE 
-                WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 'assigned_to_you'
-                WHEN ti.PIC_FROM = ? THEN 'your_information'
-                ELSE 'other_information'
-            END as notification_type,
-            -- Tambahan: cek apakah dari minggu ini
+                WHEN ti.PIC_TO LIKE '%' + ? + '%' THEN 'recipient'
+                ELSE 'viewer'
+            END as user_role,
+            -- FLAG: apakah bisa reply? (hanya penerima dan status Open)
             CASE 
-                WHEN ti.DATE >= ? AND ti.DATE <= ? THEN 'current_week'
-                ELSE 'previous_week'
-            END as week_category
+                WHEN ti.PIC_TO LIKE '%' + ? + '%' AND ti.STATUS = 'Open' THEN 1
+                ELSE 0
+            END as can_reply
             
         FROM T_INFORMATION ti
         WHERE ti.DATE >= ?  -- FILTER: MULAI SENIN MINGGU INI
         AND ti.DATE <= ?    -- FILTER: SAMPAI MINGGU MINGGU INI
-        AND ti.PIC_FROM != ?  -- FILTER PENTING: BUKAN DARI USER SENDIRI
+        AND ti.PIC_FROM != ?  -- FILTER: BUKAN DARI USER SENDIRI
         AND NOT EXISTS (
             SELECT 1 FROM user_notification_read unr 
             WHERE unr.notification_id = ti.ID_INFORMATION 
             AND unr.user_id = ? 
             AND unr.read_at IS NOT NULL
         )
-        AND (
-            ti.PIC_TO LIKE '%' + ? + '%'  -- User adalah penerima
-            OR ti.PIC_FROM = ?  -- User adalah pengirim (TAPI AKAN DI-FILTER KELUAR)
-        )
         ORDER BY CAST(ti.DATE as int) DESC, ti.TIME_FROM DESC
     ";
 
     $params = [
-        $currentUser, $currentUser,  // title
-        $currentUser, $currentUser,  // notification_type
-        $weekStart, $weekEnd,        // week_category
-        $weekStart, $weekEnd,        // WHERE DATE >= AND DATE <=
+        $currentUser,  // title (cek penerima)
+        $currentUser,  // message (cek penerima)  
+        $currentUser,  // badge_color
+        $currentUser,  // user_role
+        $currentUser,  // can_reply
+        $weekStart, $weekEnd,        // WHERE DATE
         $currentUser,                // AND PIC_FROM != currentUser
-        $currentUser,                // NOT EXISTS user_notification_read
-        $currentUser,                // PIC_TO LIKE currentUser
-        $currentUser                 // PIC_FROM = currentUser (akan difilter)
-    ];
-    
-    $response['debug']['sql_params'] = $params;
-    $response['debug']['week_range'] = [
-        'start' => $weekStart,
-        'end' => $weekEnd,
-        'current_date' => date('Ymd')
+        $currentUser                 // NOT EXISTS user_notification_read
     ];
     
     $stmt = sqlsrv_query($conn, $sql, $params);
@@ -146,36 +131,20 @@ try {
                 }
             }
             
-            // Filter: HAPUS NOTIFIKASI "Informasi Anda" (dari user sendiri)
-            if ($row['notification_type'] === 'your_information') {
-                continue; // SKIP notifikasi dari user sendiri
-            }
-            
             // Filter: Hanya notifikasi dari minggu ini
-            if ($row['week_category'] !== 'current_week') {
+            if ($row['DATE'] < $weekStart || $row['DATE'] > $weekEnd) {
                 continue; // SKIP notifikasi dari minggu sebelumnya
             }
             
-            // Format message berdasarkan tipe notifikasi
-            if ($row['notification_type'] === 'assigned_to_you') {
-                $row['display_message'] = 'Ditugaskan kepada Anda: ' . $row['ITEM'];
-            } else {
-                $row['display_message'] = $row['message'];
-            }
+            // Set display message
+            $row['display_message'] = $row['message'];
             
-            // Tambah info minggu
-            $row['week_info'] = [
-                'category' => $row['week_category'],
-                'week_number' => $weekInfo['week_number'],
-                'display_text' => $weekInfo['display_text']
-            ];
-            
+            // Set unread status
             $row['is_unread'] = 1;
+            
             $unread_count++;
             $weekly_total++;
             $notifications[] = $row;
-            
-            $response['debug']['found_ids'][] = $row['id'];
         }
         sqlsrv_free_stmt($stmt);
     } else {
@@ -191,10 +160,9 @@ try {
             SELECT DISTINCT TOP 3
                 CONCAT('DELAY_', o.PART_NO, '_', o.SUPPLIER_CODE) as id,
                 'delay' as type,
-                'Keterlambatan Pengiriman' as title,
+                '⏰ KETERLAMBATAN PENGIRIMAN' as title,
                 CONCAT(
-                    'Part ', o.PART_NO, ' (', mp.PART_DESC, ') dari ',
-                    o.SUPPLIER_CODE, ' - Pengiriman hari ini!'
+                    'Part ', o.PART_NO, ' dari ', o.SUPPLIER_CODE
                 ) as message,
                 o.DELV_DATE as DATE,
                 CONVERT(varchar(5), GETDATE(), 108) as time,
@@ -204,11 +172,8 @@ try {
                 'TERLAMBAT' as status_text,
                 'danger' as badge_color,
                 CONVERT(varchar(19), GETDATE(), 120) as datetime_full,
-                'delay_notification' as notification_type,
-                CONCAT(
-                    'Part ', o.PART_NO, ' (', mp.PART_DESC, ') dari ',
-                    o.SUPPLIER_CODE
-                ) as display_message
+                'viewer' as user_role,
+                0 as can_reply
             FROM T_ORDER o
             INNER JOIN M_PART_NO mp ON o.PART_NO = mp.PART_NO
             WHERE mp.PIC_ORDER = ?
@@ -238,16 +203,10 @@ try {
             while ($row = sqlsrv_fetch_array($stmt_delay, SQLSRV_FETCH_ASSOC)) {
                 $row['date_formatted'] = date('Y-m-d');
                 $row['is_unread'] = 1;
-                $row['week_info'] = [
-                    'category' => 'current_week',
-                    'week_number' => $weekInfo['week_number'],
-                    'display_text' => 'Hari Ini'
-                ];
+                $row['display_message'] = $row['message'];
                 
                 $unread_count++;
                 $notifications[] = $row;
-                
-                $response['debug']['delay_ids'][] = $row['id'];
             }
             sqlsrv_free_stmt($stmt_delay);
         }
@@ -257,14 +216,6 @@ try {
     $response['unread_count'] = $unread_count;
     $response['weekly_info_count'] = $weekly_total;
     $response['debug']['total_notifications'] = count($notifications);
-    $response['debug']['filtered_out'] = 'Removed notifications from self and previous weeks';
-    
-    // ==================== CEK RESET MINGGUAN ====================
-    if (isMonday() && !($_SESSION['weekly_reset_done'] ?? false)) {
-        $resetInfo = resetWeeklyView();
-        $response['weekly_reset'] = $resetInfo;
-        $response['debug']['weekly_reset_triggered'] = true;
-    }
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     

@@ -60,7 +60,7 @@
               <select id="select-status" class="form-control">
                 <option value=""></option>
                 <option value="select-all">Select All</option>
-                <option value="OK">✅ OK</option>
+                <option value="OK">✅ COMPLETED</option>
                 <option value="ON_PROGRESS">🔄 ON PROGRESS</option>
                 <option value="DELAY">⚠️ DELAY</option>
                 <option value="OVER">📈 OVER</option>

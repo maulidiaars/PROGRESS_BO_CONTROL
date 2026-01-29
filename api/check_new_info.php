@@ -1,5 +1,5 @@
 <?php
-// api/check_new_info.php - REVISI UNTUK SISTEM MINGGUAN
+// api/check_new_info.php - REVISI UNTUK SISTEM MINGGUAN DAN SEMUA USER BISA LIHAT
 session_start();
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate');
@@ -7,7 +7,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/week_logic.php'; // Tambah ini
+require_once __DIR__ . '/../config/week_logic.php';
 
 $response = [
     'success' => true,
@@ -22,7 +22,6 @@ $response = [
 
 $currentUser = $_SESSION['name'] ?? '';
 
-// Debug info
 $response['debug']['session_user'] = $currentUser;
 $response['debug']['server_time'] = date('Y-m-d H:i:s');
 $response['debug']['week_info'] = getCurrentWeekInfo();
@@ -37,8 +36,8 @@ if (!$conn || !$currentUser) {
 try {
     // ==================== REVISI UTAMA: FILTER PER MINGGU ====================
     $weekInfo = getCurrentWeekInfo();
-    $weekStart = $weekInfo['start_date'];  // Senin
-    $weekEnd = $weekInfo['end_date'];      // Minggu
+    $weekStart = $weekInfo['start_date'];
+    $weekEnd = $weekInfo['end_date'];
     
     $response['debug']['week_range'] = [
         'start' => $weekStart,
@@ -47,16 +46,15 @@ try {
     ];
     
     // ==================== HITUNG INFORMASI MINGGU INI ====================
-    // QUERY: Hitung informasi dari minggu ini saja (Senin-Minggu)
+    // QUERY: Hitung informasi dari minggu ini untuk SEMUA USER (kecuali dari user sendiri)
     $sql = "
         SELECT 
-            -- Count unread information for current user (HANYA DARI USER LAIN, HANYA MINGGU INI)
-            SUM(CASE WHEN ti.PIC_TO LIKE '%' + ? + '%' 
-                      AND ti.PIC_FROM != ?  -- FILTER: BUKAN DARI USER SENDIRI
+            -- Count unread information untuk SEMUA USER (kecuali dari user sendiri)
+            SUM(CASE WHEN ti.PIC_FROM != ?  -- FILTER: BUKAN DARI USER SENDIRI
                       AND (unr.read_at IS NULL OR unr.id IS NULL) 
                       AND ti.STATUS = 'Open'
-                      AND ti.DATE >= ?  -- FILTER: MULAI SENIN
-                      AND ti.DATE <= ?  -- FILTER: SAMPAI MINGGU
+                      AND ti.DATE >= ?
+                      AND ti.DATE <= ?
                 THEN 1 ELSE 0 END) as unread_count,
             
             -- Count assigned to me (HANYA DARI USER LAIN, HANYA MINGGU INI)
@@ -84,15 +82,17 @@ try {
         WHERE ti.DATE >= ?  -- FILTER MULAI SENIN
         AND ti.DATE <= ?    -- FILTER SAMPAI MINGGU
         AND ti.STATUS = 'Open'
+        AND ti.PIC_FROM != ?  -- Jangan hitung informasi dari diri sendiri
     ";
     
     $params = [
-        $currentUser, $currentUser, $weekStart, $weekEnd,  // unread_count
+        $currentUser, $weekStart, $weekEnd,  // unread_count
         $currentUser, $currentUser, $weekStart, $weekEnd,  // assigned_count
         $currentUser, $currentUser, $weekStart, $weekEnd,  // urgent_count
         $weekStart, $weekEnd,  // weekly_total
         $currentUser,  // user_id untuk LEFT JOIN
-        $weekStart, $weekEnd  // WHERE DATE >= AND DATE <=
+        $weekStart, $weekEnd,  // WHERE DATE >= AND DATE <=
+        $currentUser   // AND PIC_FROM != currentUser
     ];
     
     $response['debug']['sql_params'] = $params;
@@ -119,7 +119,6 @@ try {
     }
     
     // ==================== CEK APAKAH PERLU RESET MINGGUAN ====================
-    // Reset jika hari Senin dan belum direset
     if (isMonday() && !($_SESSION['weekly_reset_done'] ?? false)) {
         $resetInfo = resetWeeklyView();
         $response['weekly_reset'] = $resetInfo;
@@ -127,7 +126,6 @@ try {
     }
     
     // ==================== DELAY NOTIFICATIONS ====================
-    // Hanya untuk supervisor
     $supervisors = ['ALBERTO', 'EKO', 'EKA', 'MURSID', 'SATRIO'];
     
     if (in_array($currentUser, $supervisors)) {

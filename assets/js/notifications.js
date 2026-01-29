@@ -1,4 +1,4 @@
-// assets/js/notifications.js - VERSION FINAL TANPA AUDIO
+// assets/js/notifications.js - VERSION LENGKAP SATU FILE
 class NotificationSystem {
     constructor() {
         this.pollingInterval = null;
@@ -10,6 +10,9 @@ class NotificationSystem {
         this.retryCount = 0;
         this.maxRetries = 5;
         this.lastNotificationId = null;
+        this.highlightActive = false;
+        this.currentHighlightId = null;
+        this.pendingHighlightData = null;
         this.init();
     }
     
@@ -25,6 +28,9 @@ class NotificationSystem {
         // Initial load
         this.loadInitialData();
         
+        // Check URL parameter for notification highlight
+        this.checkUrlForHighlight();
+        
         this.isInitialized = true;
     }
     
@@ -38,21 +44,35 @@ class NotificationSystem {
             this.markAllAsRead();
         });
         
-        // Notification click
+        // Notification click - REVISED FOR HIGHLIGHT
         $(document).on('click', '.notification-item', (e) => {
-            if (!$(e.target).closest('a').length && !$(e.target).hasClass('btn-close')) {
-                const notificationId = $(e.currentTarget).data('id');
-                const notificationType = $(e.currentTarget).data('type');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Skip jika klik di close button atau link
+            if ($(e.target).closest('.btn-close').length || $(e.target).closest('a').length) {
+                return;
+            }
+            
+            const notificationId = $(e.currentTarget).data('id');
+            const notificationType = $(e.currentTarget).data('type');
+            
+            if (notificationId) {
+                console.log(`🔔 Notification clicked: ${notificationId}, type: ${notificationType}`);
                 
-                if (notificationId) {
-                    // Mark as read first
-                    this.markAsRead(notificationId);
-                    
-                    // Then scroll to related information in table
-                    setTimeout(() => {
-                        this.scrollToRelatedInformation(notificationId, notificationType);
-                    }, 300);
-                }
+                // Mark as read first
+                this.markAsRead(notificationId);
+                
+                // Remove unread styling
+                $(e.currentTarget).removeClass('unread');
+                
+                // FORCE close dropdown sebelum scroll
+                $('#notificationDropdown').dropdown('hide');
+                
+                // Delay dikit biar dropdown tertutup dulu
+                setTimeout(() => {
+                    this.scrollToRelatedInformation(notificationId, notificationType);
+                }, 300);
             }
         });
         
@@ -74,6 +94,7 @@ class NotificationSystem {
         window.addEventListener('focus', () => {
             console.log('🔔 Window focused, checking notifications...');
             this.checkNewNotifications(true);
+            this.removeAllHighlights();
         });
         
         // Custom event untuk trigger manual
@@ -81,6 +102,44 @@ class NotificationSystem {
             console.log('🔔 Force check triggered');
             this.checkNewNotifications(true);
         });
+        
+        // Custom event ketika data tabel selesai di-load
+        $(document).on('informationTableLoaded', (event, data) => {
+            console.log('📋 Information table loaded, checking for pending highlights...');
+            if (this.currentHighlightId) {
+                setTimeout(() => {
+                    this.highlightInformationRow(this.currentHighlightId);
+                }, 500);
+            }
+        });
+        
+        // Close highlight ketika klik di luar
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('.highlighted-row').length && !$(e.target).closest('.notification-item').length) {
+                this.removeAllHighlights();
+            }
+        });
+    }
+    
+    checkUrlForHighlight() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const highlightId = urlParams.get('highlight');
+        const notificationId = urlParams.get('notification_id');
+        
+        if (highlightId || notificationId) {
+            const idToHighlight = highlightId || notificationId;
+            console.log(`🔗 URL contains highlight parameter: ${idToHighlight}`);
+            
+            // Set timeout untuk menunggu halaman selesai load
+            setTimeout(() => {
+                this.highlightInformationRow(idToHighlight);
+                this.markAsRead(idToHighlight);
+                
+                // Clean URL tanpa refresh
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }, 1500);
+        }
     }
     
     startPollingImmediately() {
@@ -298,6 +357,7 @@ class NotificationSystem {
                     <div class="toast-title">Notifikasi Baru!</div>
                     <div class="toast-message">
                         ${urgentCount} notifikasi urgent, total ${totalCount} notifikasi baru
+                        <br><small class="text-muted">Klik notifikasi untuk melihat detail</small>
                     </div>
                 </div>
             </div>
@@ -368,36 +428,27 @@ class NotificationSystem {
         
         let html = '';
         
-        // Group by type
-        const groups = {
-            urgent: notifications.filter(n => n.badge_color === 'danger'),
-            assigned: notifications.filter(n => n.notification_type === 'assigned_to_you'),
-            delay: notifications.filter(n => n.type === 'delay'),
-            other: notifications.filter(n => 
-                !groups.urgent?.includes(n) && 
-                !groups.assigned?.includes(n) && 
-                !groups.delay?.includes(n)
-            )
-        };
+        // Group notifications by type untuk visual yang lebih baik
+        const informationNotifs = notifications.filter(n => n.type === 'information');
+        const delayNotifs = notifications.filter(n => n.type === 'delay');
         
-        // Urgent first
-        if (groups.urgent && groups.urgent.length > 0) {
-            html += this.createNotificationGroup('PENTING', groups.urgent, 'danger');
+        // Group information notifications by user role
+        const assignedNotifs = informationNotifs.filter(n => n.user_role === 'recipient');
+        const viewerNotifs = informationNotifs.filter(n => n.user_role === 'viewer');
+        
+        // Render assigned notifications first (most important)
+        if (assignedNotifs.length > 0) {
+            html += this.createNotificationGroup('DITUGASKAN UNTUK ANDA', assignedNotifs, 'warning');
         }
         
-        // Assigned to you
-        if (groups.assigned && groups.assigned.length > 0) {
-            html += this.createNotificationGroup('DITUGASKAN KE ANDA', groups.assigned, 'warning');
+        // Render other information notifications
+        if (viewerNotifs.length > 0) {
+            html += this.createNotificationGroup('INFORMASI UMUM', viewerNotifs, 'info');
         }
         
-        // Delay notifications
-        if (groups.delay && groups.delay.length > 0) {
-            html += this.createNotificationGroup('KETERLAMBATAN PENGIRIMAN', groups.delay, 'danger');
-        }
-        
-        // Other notifications
-        if (groups.other && groups.other.length > 0) {
-            html += this.createNotificationGroup('LAINNYA', groups.other, 'secondary');
+        // Render delay notifications
+        if (delayNotifs.length > 0) {
+            html += this.createNotificationGroup('KETERLAMBATAN PENGIRIMAN', delayNotifs, 'danger');
         }
         
         container.html(html);
@@ -443,37 +494,70 @@ class NotificationSystem {
         const isUnread = notification.is_unread || false;
         const timeAgo = this.getTimeAgo(notification.datetime_full);
         const displayMessage = notification.display_message || notification.message || '';
+        const canReply = notification.can_reply || false;
+        const userRole = notification.user_role || 'viewer';
+        
+        // Icon warna berdasarkan role
+        let iconColor = 'primary';
+        let iconType = 'bi-info-circle';
+        
+        if (userRole === 'recipient') {
+            iconColor = notification.badge_color === 'danger' ? 'danger' : 'warning';
+            iconType = 'bi-person-check';
+        } else if (notification.type === 'delay') {
+            iconColor = 'danger';
+            iconType = 'bi-clock';
+        }
+        
+        // Badge untuk role
+        let roleBadge = '';
+        if (userRole === 'recipient') {
+            roleBadge = `<span class="badge bg-warning ms-2" style="font-size: 0.6rem;">UNTUK ANDA</span>`;
+        } else if (notification.type === 'delay') {
+            roleBadge = `<span class="badge bg-danger ms-2" style="font-size: 0.6rem;">TERLAMBAT</span>`;
+        } else {
+            roleBadge = `<span class="badge bg-secondary ms-2" style="font-size: 0.6rem;">INFO</span>`;
+        }
+        
+        // Badge untuk status reply
+        let replyBadge = '';
+        if (canReply) {
+            replyBadge = `<span class="badge bg-success ms-1" style="font-size: 0.5rem;">BISA REPLY</span>`;
+        }
         
         return `
             <div class="notification-item ${isUnread ? 'unread' : ''} ${isUrgent ? 'urgent-blink' : ''}" 
-                 data-id="${notification.id}" 
-                 data-type="${notification.type}"
-                 style="cursor: pointer;"
-                 title="Klik untuk melihat di tabel informasi">
-                <div class="d-flex gap-3 align-items-start">
-                    <div class="notification-icon bg-${notification.badge_color} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
-                         style="width: 40px; height: 40px;">
-                        <i class="bi ${iconMap[notification.type] || 'bi-info-circle'} text-white"></i>
+                data-id="${notification.id}" 
+                data-type="${notification.type}"
+                data-can-reply="${canReply}"
+                data-user-role="${userRole}"
+                style="cursor: pointer; border-left: 3px solid ${userRole === 'recipient' ? '#ffc107' : '#0d6efd'};"
+                title="Klik untuk melihat detail di tabel informasi">
+                <div class="d-flex gap-3 align-items-start py-2">
+                    <div class="notification-icon bg-${iconColor} rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+                        style="width: 40px; height: 40px;">
+                        <i class="bi ${iconType} text-white"></i>
                     </div>
                     <div class="flex-grow-1" style="min-width: 0;">
                         <div class="d-flex justify-content-between align-items-start mb-1">
                             <h6 class="notification-title mb-0 text-truncate" style="font-size: 0.9rem; color: ${isUrgent ? '#dc3545' : '#1e293b'}">
-                                ${notification.title}
+                                ${notification.title} ${roleBadge} ${replyBadge}
                             </h6>
                             <span class="badge bg-${notification.badge_color} status-badge" 
-                                  style="font-size: 0.65rem; padding: 2px 6px;">
+                                style="font-size: 0.65rem; padding: 2px 6px;">
                                 ${notification.status_text}
                             </span>
                         </div>
                         <p class="notification-message mb-2" style="font-size: 0.85rem; color: #64748b;">
                             ${displayMessage}
                         </p>
-                        <div class="notification-meta">
-                            <span class="notification-time">
+                        <div class="notification-meta d-flex justify-content-between align-items-center">
+                            <span class="notification-time" style="font-size: 0.75rem; color: #94a3b8;">
                                 <i class="bi bi-clock me-1"></i>${timeAgo}
                             </span>
-                            <span class="notification-from">
+                            <span class="notification-from" style="font-size: 0.75rem; color: #64748b;">
                                 <i class="bi bi-person me-1"></i>${notification.from_user}
+                                ${userRole === 'recipient' ? ' → <i class="bi bi-arrow-right me-1"></i>ANDA' : ''}
                             </span>
                         </div>
                     </div>
@@ -541,6 +625,7 @@ class NotificationSystem {
             dataType: 'json',
             success: (response) => {
                 if (response.success) {
+                    console.log(`✅ Marked notification ${notificationId} as read`);
                     // Remove unread class
                     $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
                     
@@ -570,41 +655,412 @@ class NotificationSystem {
             this.markAsRead(id);
         });
         
+        // Clear all unread styling
+        $unreadItems.removeClass('unread');
+        
         // Show success message
         this.showToast('success', `Marked ${notificationIds.length} notifications as read`);
     }
     
-    scrollToRelatedInformation(notificationId, notificationType) {
-        if (notificationType === 'information' || notificationType === 'delay') {
-            // Scroll to information table
+scrollToRelatedInformation(notificationId, notificationType) {
+    console.log(`🎯 INSTANT Scroll to information: ${notificationId}, type: ${notificationType}`);
+    
+    if (notificationType === 'information') {
+        // 1. TUTUP DROPDOWN SEKARANG JUGA (tanpa nunggu)
+        $('#notificationDropdown').dropdown('hide');
+        
+        // 2. LANGSUNG SCROLL KE TABEL INFORMASI (tanpa delay)
+        const $informationSection = $('#information-section');
+        if ($informationSection.length) {
+            $('html, body').stop().animate({
+                scrollTop: $informationSection.offset().top - 80
+            }, 300); // SUPER FAST 300ms aja!
+        }
+        
+        // 3. LANGSUNG HIGHLIGHT ROW (tanpa nunggu)
+        setTimeout(() => {
+            this.instantHighlightRow(notificationId);
+        }, 50); // Cuma nunggu 50ms biar scroll dulu dikit
+        
+    } else if (notificationType === 'delay') {
+        // Untuk delay notifications - langsung tutup dropdown aja
+        $('#notificationDropdown').dropdown('hide');
+        this.showToast('info', 'Notification keterlambatan pengiriman');
+    }
+}
+
+instantHighlightRow(notificationId) {
+    console.log(`⚡ INSTANT Highlight row for: ${notificationId}`);
+    
+    // HAPUS SEMUA HIGHLIGHT LAMA
+    $('.highlighted-row').removeClass('highlighted-row');
+    
+    // CARI ROW DENGAN ID YANG COCOK
+    let foundRow = null;
+    
+    // Method 1: Cari berdasarkan data-id langsung
+    foundRow = $(`tr[data-id="${notificationId}"]`);
+    
+    // Method 2: Kalau ga ketemu, cari di semua row
+    if (!foundRow.length) {
+        $('#table-information tbody tr').each(function() {
+            const $row = $(this);
+            const rowId = $row.data('id');
+            const rowText = $row.text();
+            
+            // Cek apakah notificationId ada di dalam row
+            if (rowId == notificationId || 
+                rowText.includes(notificationId) ||
+                $row.find('.btn-edit-info[data-id="' + notificationId + '"]').length ||
+                $row.find('.btn-reply-info[data-id="' + notificationId + '"]').length) {
+                foundRow = $row;
+                return false; // Break loop
+            }
+        });
+    }
+    
+    // Method 3: Kalau masih ga ketemu, coba cari dari ID numerik aja
+    if (!foundRow.length && typeof notificationId === 'string') {
+        const numericId = notificationId.replace(/\D/g, '');
+        if (numericId) {
+            foundRow = $(`tr[data-id="${numericId}"]`);
+        }
+    }
+    
+    // JIKA KETEMU, APPLY HIGHLIGHT SUPER FAST
+    if (foundRow && foundRow.length) {
+        console.log(`✅ Found row instantly!`);
+        
+        // Apply highlight langsung
+        foundRow.addClass('highlighted-row animate__animated animate__pulse');
+        foundRow.css({
+            'border-left': '4px solid #ff0000',
+            'border-right': '4px solid #ff0000',
+            'background-color': 'rgba(255, 0, 0, 0.15)',
+            'box-shadow': '0 0 20px rgba(255, 0, 0, 0.4)'
+        });
+        
+        // SCROLL KE ROW TERSEBUT (lagi buat lebih akurat)
+        setTimeout(() => {
+            const rowPosition = foundRow.offset().top;
+            $('html, body').stop().animate({
+                scrollTop: rowPosition - 150
+            }, 200);
+            
+            // TAMBAH EFFECT BLINK UNTUK PERHATIAN EXTRA
+            foundRow.addClass('animate__flash');
+            setTimeout(() => {
+                foundRow.removeClass('animate__flash');
+            }, 1000);
+            
+        }, 100);
+        
+        // AUTO REMOVE HIGHLIGHT SETELAH 10 DETIK
+        setTimeout(() => {
+            foundRow.removeClass('highlighted-row animate__animated animate__pulse');
+            foundRow.css({
+                'border-left': '',
+                'border-right': '',
+                'background-color': '',
+                'box-shadow': ''
+            });
+        }, 10000);
+        
+    } else {
+        console.log(`❌ Row not found instantly, trying AJAX lookup...`);
+        // Fallback ke method lama kalau ga ketemu
+        this.lookupAndHighlight(notificationId);
+    }
+}
+
+lookupAndHighlight(notificationId) {
+    // AJAX cepat untuk dapetin data
+    $.ajax({
+        url: 'modules/data_information.php',
+        type: 'GET',
+        data: { type: 'get-single', id: notificationId },
+        dataType: 'json',
+        timeout: 2000, // Cuma 2 detik timeout
+        success: (response) => {
+            if (response.success && response.data) {
+                const info = response.data;
+                console.log('✅ Data found via AJAX:', info);
+                
+                // Cari row berdasarkan data yang didapat
+                this.findRowByInfoData(info);
+            } else {
+                this.showToast('warning', 'Data tidak ditemukan di sistem');
+            }
+        },
+        error: () => {
+            this.showToast('error', 'Gagal mengambil data');
+        }
+    });
+}
+
+findRowByInfoData(infoData) {
+    // Cari row berdasarkan PIC_FROM + ITEM + DATE (kombinasi unik)
+    $('#table-information tbody tr').each(function() {
+        const $row = $(this);
+        const rowPicFrom = $row.find('td').eq(3).text().trim();
+        const rowItem = $row.find('td').eq(4).text().trim();
+        const rowDate = $row.find('td').eq(1).text().trim();
+        
+        if (rowPicFrom === infoData.PIC_FROM && 
+            rowItem === infoData.ITEM && 
+            rowDate === infoData.DATE) {
+            
+            console.log(`✅ Found matching row by data!`);
+            
+            // Apply highlight
+            $row.addClass('highlighted-row animate__animated animate__pulse');
+            $row.css({
+                'border-left': '4px solid #ff0000',
+                'border-right': '4px solid #ff0000',
+                'background-color': 'rgba(255, 0, 0, 0.15)'
+            });
+            
+            // Scroll ke row
+            setTimeout(() => {
+                const rowPosition = $row.offset().top;
+                $('html, body').stop().animate({
+                    scrollTop: rowPosition - 150
+                }, 200);
+            }, 50);
+            
+            return false; // Break loop
+        }
+    });
+}
+    
+    highlightInformationRow(notificationId) {
+        console.log(`🎨 Highlighting row for notification ID: ${notificationId}`);
+        
+        // Remove previous highlights
+        this.removeAllHighlights();
+        
+        // Reset current highlight ID
+        this.currentHighlightId = null;
+        
+        // Tunggu sebentar untuk memastikan DataTable sudah render
+        setTimeout(() => {
+            // Cari semua row di tabel informasi
+            const $allRows = $('#table-information tbody tr');
+            let found = false;
+            
+            console.log(`🔍 Searching in ${$allRows.length} rows for ID: ${notificationId}`);
+            
+            // Extract numeric ID dari notificationId
+            let searchId = notificationId;
+            if (typeof notificationId === 'string') {
+                const idMatch = notificationId.match(/\d+/);
+                if (idMatch) {
+                    searchId = idMatch[0];
+                }
+            }
+            
+            // Method 1: Cari berdasarkan data-id
+            $allRows.each((index, row) => {
+                const $row = $(row);
+                
+                // Dapatkan ID_INFORMATION dari row
+                const rowId = $row.data('id');
+                const infoId = $row.find('td').eq(1).text(); // Kolom Date
+                const picFrom = $row.find('td').eq(3).text(); // Kolom PIC FROM
+                const item = $row.find('td').eq(4).text(); // Kolom Item
+                
+                // Debug log
+                console.log(`Row ${index}:`, {
+                    rowId: rowId,
+                    infoId: infoId,
+                    picFrom: picFrom,
+                    item: item
+                });
+                
+                // Check dengan beberapa kemungkinan
+                // Method 1: Cek apakah notificationId ada di data attribute
+                if (rowId == searchId || 
+                    $row.attr('id') === 'info-' + searchId ||
+                    infoId.toString().includes(searchId.toString())) {
+                    
+                    console.log(`✅ Found match at row ${index} by infoId`);
+                    found = true;
+                    this.applyRowHighlight($row);
+                    return false; // Break loop
+                }
+                
+                // Method 2: Coba cari berdasarkan PIC_FROM dan Item (jika notificationId adalah ID database)
+                if (picFrom && item) {
+                    const rowSignature = picFrom.toLowerCase() + '_' + item.toLowerCase().substring(0, 30);
+                    const notificationSignature = notificationId.toString().toLowerCase();
+                    
+                    if (rowSignature.includes(notificationSignature) || 
+                        notificationSignature.includes(rowSignature)) {
+                        
+                        console.log(`✅ Found match at row ${index} by signature`);
+                        found = true;
+                        this.applyRowHighlight($row);
+                        return false;
+                    }
+                }
+            });
+            
+            // Method 3: Jika tidak ditemukan, coba cari dengan AJAX untuk data spesifik
+            if (!found) {
+                console.log(`⚠️ Row not found, trying AJAX lookup...`);
+                this.lookupInformationById(notificationId);
+            }
+        }, 500); // Delay untuk memastikan DataTable sudah selesai render
+    }
+    
+    applyRowHighlight($row) {
+        // Add highlight class
+        $row.addClass('highlighted-row animate__animated animate__pulse');
+        
+        // Add styling
+        $row.css({
+            'border-left': '4px solid #ffc107',
+            'border-right': '4px solid #ffc107',
+            'background-color': 'rgba(255, 193, 7, 0.15)',
+            'box-shadow': '0 0 15px rgba(255, 193, 7, 0.3)',
+            'position': 'relative'
+        });
+        
+        // Scroll ke row dengan smooth animation
+        setTimeout(() => {
+            const rowTop = $row.offset().top;
+            const windowHeight = $(window).height();
+            const scrollPosition = rowTop - (windowHeight / 3);
+            
+            $('html, body').stop().animate({
+                scrollTop: scrollPosition
+            }, 1000);
+            
+            // Tambah efek shake untuk perhatian
+            setTimeout(() => {
+                $row.addClass('animate__shakeX');
+                setTimeout(() => {
+                    $row.removeClass('animate__shakeX');
+                }, 1000);
+            }, 500);
+            
+        }, 300);
+        
+        // Auto remove highlight after 15 seconds
+        setTimeout(() => {
+            this.removeAllHighlights();
+        }, 15000);
+    }
+    
+    lookupInformationById(notificationId) {
+        // AJAX request untuk mendapatkan data spesifik
+        $.ajax({
+            url: 'modules/data_information.php',
+            type: 'GET',
+            data: {
+                type: 'get-single',
+                id: notificationId
+            },
+            dataType: 'json',
+            success: (response) => {
+                if (response.success && response.data) {
+                    const info = response.data;
+                    console.log('✅ Information found:', info);
+                    
+                    // Cari row berdasarkan data yang didapat
+                    this.findAndHighlightByInfoData(info);
+                } else {
+                    this.showToast('warning', 'Informasi tidak ditemukan');
+                }
+            },
+            error: () => {
+                this.showToast('error', 'Gagal mencari informasi');
+            }
+        });
+    }
+    
+    findAndHighlightByInfoData(infoData) {
+        const $allRows = $('#table-information tbody tr');
+        let found = false;
+        
+        $allRows.each((index, row) => {
+            const $row = $(row);
+            
+            // Bandingkan data row dengan infoData
+            const rowPicFrom = $row.find('td').eq(3).text().trim(); // PIC FROM
+            const rowItem = $row.find('td').eq(4).text().trim(); // ITEM
+            const rowDate = $row.find('td').eq(1).text().trim(); // DATE
+            
+            if (rowPicFrom === infoData.PIC_FROM && 
+                rowItem === infoData.ITEM && 
+                rowDate === infoData.DATE) {
+                
+                console.log(`✅ Found matching row by data comparison`);
+                found = true;
+                this.applyRowHighlight($row);
+                return false;
+            }
+        });
+        
+        if (!found) {
+            // Refresh table dan coba lagi
             if (typeof fetchDataInformation === 'function') {
+                this.showToast('info', 'Memuat ulang data untuk menemukan informasi...');
                 fetchDataInformation();
                 
-                // Highlight row after data loads
-                setTimeout(() => {
-                    const $row = $(`#table-information tr[data-id="${notificationId}"]`);
-                    if ($row.length) {
-                        $row.addClass('highlight-row');
-                        $('html, body').animate({
-                            scrollTop: $row.offset().top - 100
-                        }, 1000);
-                        
-                        // Remove highlight after 3 seconds
-                        setTimeout(() => {
-                            $row.removeClass('highlight-row');
-                        }, 3000);
-                    }
-                }, 1000);
+                // Simpan data untuk highlight nanti
+                this.pendingHighlightData = infoData;
+                
+                // Listen untuk DataTable draw
+                $('#table-information').on('draw.dt', () => {
+                    setTimeout(() => {
+                        this.findAndHighlightByInfoData(this.pendingHighlightData);
+                        delete this.pendingHighlightData;
+                    }, 500);
+                });
             }
         }
+    }
+    
+    removeAllHighlights() {
+        console.log('🗑️ Removing all highlights...');
+        
+        $('.highlighted-row').each((index, row) => {
+            $(row).removeClass('highlighted-row animate__animated animate__pulse animate__shakeX');
+            $(row).css({
+                'border-left': '',
+                'border-right': '',
+                'background-color': '',
+                'box-shadow': ''
+            });
+        });
+        
+        this.highlightActive = false;
+        this.currentHighlightId = null;
     }
     
     showToast(type, message) {
         $('.custom-toast').remove();
         
-        const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-info-circle-fill';
-        const title = type === 'success' ? 'Success' : 'Info';
-        const color = type === 'success' ? '#10b981' : '#3b82f6';
+        const iconMap = {
+            'success': 'bi-check-circle-fill',
+            'error': 'bi-exclamation-triangle-fill',
+            'warning': 'bi-exclamation-triangle-fill',
+            'info': 'bi-info-circle-fill'
+        };
+        
+        const colorMap = {
+            'success': '#10b981',
+            'error': '#dc3545',
+            'warning': '#f59e0b',
+            'info': '#3b82f6'
+        };
+        
+        const icon = iconMap[type] || 'bi-info-circle-fill';
+        const color = colorMap[type] || '#3b82f6';
+        const title = type === 'success' ? 'Success' : 
+                     type === 'error' ? 'Error' : 
+                     type === 'warning' ? 'Warning' : 'Info';
         
         const toast = $(`
             <div class="custom-toast" style="border-left-color: ${color}">
@@ -622,11 +1078,11 @@ class NotificationSystem {
         
         setTimeout(() => toast.addClass('show'), 10);
         
-        // Auto remove after 3 seconds
+        // Auto remove after 5 seconds
         setTimeout(() => {
             toast.removeClass('show');
             setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        }, 5000);
     }
     
     // Public method untuk force check
@@ -645,10 +1101,22 @@ $(document).ready(function() {
         console.log('✅ NotificationSystem initialized');
     }
     
-    // Expose forceCheck untuk global access
+    // Expose methods untuk global access
     window.forceNotificationCheck = function() {
         if (window.notificationSystem) {
             window.notificationSystem.forceCheck();
+        }
+    };
+    
+    window.highlightNotificationRow = function(notificationId) {
+        if (window.notificationSystem) {
+            window.notificationSystem.highlightInformationRow(notificationId);
+        }
+    };
+    
+    window.removeAllHighlights = function() {
+        if (window.notificationSystem) {
+            window.notificationSystem.removeAllHighlights();
         }
     };
 });
