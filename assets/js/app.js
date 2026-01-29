@@ -1654,7 +1654,7 @@ function loadDSData() {
 
 // ========== FUNGSI PROSES DS DATA - TAMPIL SEMUA ORDER ==========
 function processDSData(rawData) {
-    console.log("🔍 Processing DS Data - TAMPIL SEMUA ORDER (meski incoming 0)");
+    console.log("🔍 Processing DS Data - WITH ADD ORDER DISTRIBUTION");
     
     let groupedData = {};
     
@@ -1675,38 +1675,42 @@ function processDSData(rawData) {
                 partNo: item.PART_NO,
                 partName: item.PART_DESC || item.PART_NAME,
                 orderData: {},
+                addOrderData: {},
+                totalOrderData: {},
                 incomingData: {},
                 totalOrder: parseInt(item.TOTAL_ORDER || 0),
                 totalIncoming: parseInt(item.TOTAL_INCOMING || 0),
-                addDS: parseInt(item.ADD_DS || 0)
+                addDS: parseInt(item.ADD_DS || 0),
+                totalRegularOrder: parseInt(item.TOTAL_REGULAR_ORDER || 0)
             };
             
-            // Initialize order data per jam (8-20)
-            for(let hour = 8; hour <= 20; hour++) {
+            // Initialize data per jam (7-20)
+            for(let hour = 7; hour <= 20; hour++) {
                 let hourKey = hour < 10 ? '0' + hour : hour.toString();
+                
+                // Regular order dari ETA
                 groupedData[key].orderData[hour] = parseInt(item['ORD_' + hourKey] || 0);
+                
+                // Add order distribution
+                groupedData[key].addOrderData[hour] = parseInt(item['ADD_ORD_' + hourKey] || 0);
+                
+                // Total per jam (regular + add)
+                groupedData[key].totalOrderData[hour] = parseInt(item['TOTAL_ORD_' + hourKey] || 0);
+                
+                // Incoming
                 groupedData[key].incomingData[hour] = parseInt(item['TRAN_' + hourKey] || 0);
             }
-            
-            // Juga untuk jam 7
-            groupedData[key].orderData[7] = parseInt(item['ORD_07'] || 0);
-            groupedData[key].incomingData[7] = parseInt(item['TRAN_07'] || 0);
         }
         
-        // Debug
+        // Debug untuk 2 data pertama
         if (index < 2) {
             console.log(`📊 DS Item ${index+1}:`, {
                 key: key,
-                date: dateFormat,
-                supplier: item.SUPPLIER_CODE,
                 partNo: item.PART_NO,
-                order_08: item.ORD_08 || 0,
-                order_09: item.ORD_09 || 0,
-                incoming_08: item.TRAN_08 || 0,
-                incoming_09: item.TRAN_09 || 0,
-                total_order: item.TOTAL_ORDER || 0,
-                total_incoming: item.TOTAL_INCOMING || 0,
-                add_ds: item.ADD_DS || 0
+                addDS: item.ADD_DS,
+                regular_14: item.ORD_14,
+                add_14: item.ADD_ORD_14,
+                total_14: item.TOTAL_ORD_14
             });
         }
     });
@@ -1717,9 +1721,6 @@ function processDSData(rawData) {
     Object.keys(groupedData).forEach(key => {
         const item = groupedData[key];
         
-        // HITUNG TOTAL ORDER TERMASUK ADD_DS
-        const totalOrderWithAdd = item.totalOrder + item.addDS;
-        
         const searchText = [
             item.date,
             item.supplier,
@@ -1727,44 +1728,48 @@ function processDSData(rawData) {
             item.partName
         ].join(' ').toLowerCase();
         
-        // Add order row
+        // Add order row (pakai TOTAL per jam)
         rows.push({
             id: dataIndex * 2,
             type: 'order',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrderWithAdd,  // TOTAL ORDER + ADD_DS
+            totalOrder: item.totalOrder,
             totalIncoming: item.totalIncoming,
-            addDS: item.addDS
+            addDS: item.addDS,
+            totalRegularOrder: item.totalRegularOrder,
+            orderDistribution: item.totalOrderData // Pakai TOTAL (regular + add)
         });
         
-        // Add incoming row (TAMPIL MESKI 0!)
+        // Add incoming row
         rows.push({
             id: dataIndex * 2 + 1,
             type: 'incoming',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrderWithAdd,
+            totalOrder: item.totalOrder,
             totalIncoming: item.totalIncoming,
-            addDS: item.addDS
+            addDS: item.addDS,
+            orderDistribution: item.totalOrderData
         });
         
         dataIndex++;
         
+        // Log untuk debugging
         console.log(`✅ ${item.date} - ${item.supplier} - ${item.partNo}:`, {
-            order: totalOrderWithAdd,
-            incoming: item.totalIncoming,
+            total_order: item.totalOrder,
             add_ds: item.addDS,
-            status: item.totalIncoming >= totalOrderWithAdd ? '✅ COMPLETE' : '⏳ ON PROGRESS'
+            distribution_14: item.totalOrderData[14],
+            distribution_15: item.totalOrderData[15],
+            has_add_15: item.addOrderData[15] > 0
         });
     });
     
     dsFilteredData = rows;
-    console.log(`📊 DS Data: ${Object.keys(groupedData).length} items (TAMPIL SEMUA ORDER)`);
+    console.log(`📊 DS Data: ${Object.keys(groupedData).length} items (WITH ADD ORDER DISTRIBUTION)`);
     
     renderDSTable();
 }
-
 
 
 // ================= FUNGSI RENDER DS TABLE DENGAN PAGINATION - PERBAIKAN =================
@@ -1808,8 +1813,9 @@ function renderDSTable() {
         
         if (orderRow && orderRow.type === 'order') {
             const item = orderRow.item;
+            const orderDistribution = orderRow.orderDistribution || {};
             
-            // Order row
+            // Order row - PAKAI TOTAL DISTRIBUTION (regular + add)
             const $orderTr = $(`
                 <tr class="table-order-row">
                     <td>${displayNumber}</td>
@@ -1817,20 +1823,23 @@ function renderDSTable() {
                     <td>${item.supplier || ''}</td>
                     <td>${item.partNo || ''}</td>
                     <td class="text-start">${item.partName || ''}</td>
-                    <td><span class="badge badge-order">Order</span></td>
-                    <td>${item.orderData[8] || 0}</td>
-                    <td>${item.orderData[9] || 0}</td>
-                    <td>${item.orderData[10] || 0}</td>
-                    <td>${item.orderData[11] || 0}</td>
-                    <td>${item.orderData[12] || 0}</td>
-                    <td>${item.orderData[13] || 0}</td>
-                    <td>${item.orderData[14] || 0}</td>
-                    <td>${item.orderData[15] || 0}</td>
-                    <td>${item.orderData[16] || 0}</td>
-                    <td>${item.orderData[17] || 0}</td>
-                    <td>${item.orderData[18] || 0}</td>
-                    <td>${item.orderData[19] || 0}</td>
-                    <td>${item.orderData[20] || 0}</td>
+                    <td>
+                        <span class="badge badge-order">Order</span>
+                        ${orderRow.addDS > 0 ? `<br><small class="text-primary">(+${orderRow.addDS} add)</small>` : ''}
+                    </td>
+                    <td>${orderDistribution[8] || 0}</td>
+                    <td>${orderDistribution[9] || 0}</td>
+                    <td>${orderDistribution[10] || 0}</td>
+                    <td>${orderDistribution[11] || 0}</td>
+                    <td>${orderDistribution[12] || 0}</td>
+                    <td>${orderDistribution[13] || 0}</td>
+                    <td>${orderDistribution[14] || 0}</td>
+                    <td>${orderDistribution[15] || 0}</td>
+                    <td>${orderDistribution[16] || 0}</td>
+                    <td>${orderDistribution[17] || 0}</td>
+                    <td>${orderDistribution[18] || 0}</td>
+                    <td>${orderDistribution[19] || 0}</td>
+                    <td>${orderDistribution[20] || 0}</td>
                     <td><strong>${orderRow.totalOrder}</strong></td>
                 </tr>
             `);
@@ -2001,14 +2010,13 @@ function loadNSData() {
         data: {
             date1: sendDate1,
             date2: sendDate2,
-            supplier_code: supplierParam // TAMBAH PARAMETER INI
+            supplier_code: supplierParam
         },
         dataType: 'json',
         success: function(response) {
-            console.log("Night Shift Data Response dengan filter:", {
-                supplierCodes: filteredSupplierCodes,
-                count: filteredSupplierCodes ? filteredSupplierCodes.length : 0,
-                responseData: response
+            console.log("🌙 Night Shift Data Response dengan ADD ORDER DISTRIBUTION:", {
+                count: response.count,
+                data_sample: response.data ? response.data[0] : 'No data'
             });
             
             const data = Array.isArray(response)
@@ -2032,7 +2040,7 @@ function loadNSData() {
 
 // ========== FUNGSI PROSES NS DATA - TAMPIL SEMUA ORDER ==========
 function processNSData(rawData) {
-    console.log("🔍 Processing NS Data - TAMPIL SEMUA ORDER (meski incoming 0)");
+    console.log("🔍 Processing NS Data - WITH ADD ORDER DISTRIBUTION");
     
     let groupedData = {};
     const nsHours = [21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7];
@@ -2054,33 +2062,42 @@ function processNSData(rawData) {
                 partNo: item.PART_NO,
                 partName: item.PART_DESC || item.PART_NAME,
                 orderData: {},
+                addOrderData: {},
+                totalOrderData: {},
                 incomingData: {},
                 totalOrder: parseInt(item.TOTAL_ORDER || 0),
                 totalIncoming: parseInt(item.TOTAL_INCOMING || 0),
-                addNS: parseInt(item.ADD_NS || 0)
+                addNS: parseInt(item.ADD_NS || 0),
+                totalRegularOrder: parseInt(item.TOTAL_REGULAR_ORDER || 0)
             };
             
-            // Initialize NS data per jam
+            // Initialize data per jam NS
             nsHours.forEach(hour => {
                 let hourKey = hour < 10 ? '0' + hour : hour.toString();
+                
+                // Regular order dari ETA
                 groupedData[key].orderData[hour] = parseInt(item['ORD_' + hourKey] || 0);
+                
+                // Add order distribution
+                groupedData[key].addOrderData[hour] = parseInt(item['ADD_ORD_' + hourKey] || 0);
+                
+                // Total per jam (regular + add)
+                groupedData[key].totalOrderData[hour] = parseInt(item['TOTAL_ORD_' + hourKey] || 0);
+                
+                // Incoming
                 groupedData[key].incomingData[hour] = parseInt(item['TRAN_' + hourKey] || 0);
             });
         }
         
+        // Debug untuk 2 data pertama
         if (index < 2) {
             console.log(`📊 NS Item ${index+1}:`, {
                 key: key,
-                date: dateFormat,
-                supplier: item.SUPPLIER_CODE,
                 partNo: item.PART_NO,
-                order_21: item.ORD_21 || 0,
-                order_22: item.ORD_22 || 0,
-                incoming_21: item.TRAN_21 || 0,
-                incoming_22: item.TRAN_22 || 0,
-                total_order: item.TOTAL_ORDER || 0,
-                total_incoming: item.TOTAL_INCOMING || 0,
-                add_ns: item.ADD_NS || 0
+                addNS: item.ADD_NS,
+                regular_21: item.ORD_21,
+                add_21: item.ADD_ORD_21,
+                total_21: item.TOTAL_ORD_21
             });
         }
     });
@@ -2091,9 +2108,6 @@ function processNSData(rawData) {
     Object.keys(groupedData).forEach(key => {
         const item = groupedData[key];
         
-        // HITUNG TOTAL ORDER TERMASUK ADD_NS
-        const totalOrderWithAdd = item.totalOrder + item.addNS;
-        
         const searchText = [
             item.date,
             item.supplier,
@@ -2101,40 +2115,45 @@ function processNSData(rawData) {
             item.partName
         ].join(' ').toLowerCase();
         
-        // Add order row
+        // Add order row (pakai TOTAL per jam)
         rows.push({
             id: dataIndex * 2,
             type: 'order',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrderWithAdd,  // TOTAL ORDER + ADD_NS
+            totalOrder: item.totalOrder,
             totalIncoming: item.totalIncoming,
-            addNS: item.addNS
+            addNS: item.addNS,
+            totalRegularOrder: item.totalRegularOrder,
+            orderDistribution: item.totalOrderData // Pakai TOTAL (regular + add)
         });
         
-        // Add incoming row (TAMPIL MESKI 0!)
+        // Add incoming row
         rows.push({
             id: dataIndex * 2 + 1,
             type: 'incoming',
             item: item,
             searchText: searchText,
-            totalOrder: totalOrderWithAdd,
+            totalOrder: item.totalOrder,
             totalIncoming: item.totalIncoming,
-            addNS: item.addNS
+            addNS: item.addNS,
+            orderDistribution: item.totalOrderData
         });
         
         dataIndex++;
         
+        // Log untuk debugging
         console.log(`🌙 ${item.date} - ${item.supplier} - ${item.partNo}:`, {
-            order: totalOrderWithAdd,
-            incoming: item.totalIncoming,
+            total_order: item.totalOrder,
             add_ns: item.addNS,
-            status: item.totalIncoming >= totalOrderWithAdd ? '✅ COMPLETE' : '⏳ ON PROGRESS'
+            distribution_21: item.totalOrderData[21],
+            distribution_0: item.totalOrderData[0],
+            has_add: item.addNS > 0
         });
     });
     
     nsFilteredData = rows;
-    console.log(`📊 NS Data: ${Object.keys(groupedData).length} items (TAMPIL SEMUA ORDER)`);
+    console.log(`📊 NS Data: ${Object.keys(groupedData).length} items (WITH ADD ORDER DISTRIBUTION)`);
     
     renderNSTable();
 }
@@ -2180,8 +2199,9 @@ function renderNSTable() {
         
         if (orderRow && orderRow.type === 'order') {
             const item = orderRow.item;
+            const orderDistribution = orderRow.orderDistribution || {};
             
-            // Order row
+            // Order row - PAKAI TOTAL DISTRIBUTION (regular + add)
             const $orderTr = $(`
                 <tr class="table-order-row">
                     <td>${displayNumber}</td>
@@ -2189,18 +2209,13 @@ function renderNSTable() {
                     <td>${item.supplier || ''}</td>
                     <td>${item.partNo || ''}</td>
                     <td class="text-start">${item.partName || ''}</td>
-                    <td><span class="badge badge-order">Order</span></td>
-                    <td>${item.orderData[21] || 0}</td>
-                    <td>${item.orderData[22] || 0}</td>
-                    <td>${item.orderData[23] || 0}</td>
-                    <td>${item.orderData[0] || 0}</td>
-                    <td>${item.orderData[1] || 0}</td>
-                    <td>${item.orderData[2] || 0}</td>
-                    <td>${item.orderData[3] || 0}</td>
-                    <td>${item.orderData[4] || 0}</td>
-                    <td>${item.orderData[5] || 0}</td>
-                    <td>${item.orderData[6] || 0}</td>
-                    <td>${item.orderData[7] || 0}</td>
+                    <td>
+                        <span class="badge badge-order">Order</span>
+                        ${orderRow.addNS > 0 ? `<br><small class="text-warning">(+${orderRow.addNS} add)</small>` : ''}
+                    </td>
+                    ${nsHours.map(hour => 
+                        `<td>${orderDistribution[hour] || 0}</td>`
+                    ).join('')}
                     <td><strong>${orderRow.totalOrder}</strong></td>
                 </tr>
             `);
@@ -2219,17 +2234,9 @@ function renderNSTable() {
                     <td></td>
                     <td class="text-start">${item.partName || ''}</td>
                     <td><span class="badge badge-incoming">Incoming</span></td>
-                    <td>${item.incomingData[21] || 0}</td>
-                    <td>${item.incomingData[22] || 0}</td>
-                    <td>${item.incomingData[23] || 0}</td>
-                    <td>${item.incomingData[0] || 0}</td>
-                    <td>${item.incomingData[1] || 0}</td>
-                    <td>${item.incomingData[2] || 0}</td>
-                    <td>${item.incomingData[3] || 0}</td>
-                    <td>${item.incomingData[4] || 0}</td>
-                    <td>${item.incomingData[5] || 0}</td>
-                    <td>${item.incomingData[6] || 0}</td>
-                    <td>${item.incomingData[7] || 0}</td>
+                    ${nsHours.map(hour => 
+                        `<td>${item.incomingData[hour] || 0}</td>`
+                    ).join('')}
                     <td><strong>${incomingRow.totalIncoming}</strong></td>
                 </tr>
             `);

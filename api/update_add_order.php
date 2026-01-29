@@ -77,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $part_name = $row['PART_NAME'] ?? '';
             }
             
+            // ========== UPDATE/INSERT T_ORDER ==========
             if ($type === 'ds') {
                 if ($exists) {
                     // UPDATE existing
@@ -135,15 +136,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Gagal menyimpan data: ' . ($errors[0]['message'] ?? 'Unknown'));
             }
             
-            // ========== PERUBAHAN PENTING: JANGAN SIMPAN KE T_UPDATE_BO! ==========
-            // Add Order HANYA disimpan di T_ORDER, tidak di T_UPDATE_BO
-            // Karena T_UPDATE_BO hanya untuk incoming BO aktual
+            // ========== SIMPAN DISTRIBUSI JAM KE TABEL BARU ==========
+            $type_upper = strtoupper($type);
+            
+            // 1. Hapus distribusi lama untuk type ini
+            $delete_dist_sql = "DELETE FROM T_ADD_ORDER_DISTRIBUTION 
+                               WHERE DATE = ? 
+                               AND SUPPLIER_CODE = ? 
+                               AND PART_NO = ? 
+                               AND TYPE = ?";
+            $delete_dist_params = [$date, $supplier_code, $part_no, $type_upper];
+            sqlsrv_query($conn, $delete_dist_sql, $delete_dist_params);
+            
+            // 2. Insert distribusi baru per jam
+            foreach ($hours_array as $hour => $qty) {
+                $hour_int = intval($hour);
+                $qty_int = intval($qty);
+                
+                if ($qty_int > 0) {
+                    $dist_sql = "INSERT INTO T_ADD_ORDER_DISTRIBUTION 
+                                (DATE, SUPPLIER_CODE, PART_NO, TYPE, HOUR, QUANTITY, CREATED_BY)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    
+                    $dist_params = [$date, $supplier_code, $part_no, $type_upper, 
+                                   $hour_int, $qty_int, $currentUser];
+                    
+                    $dist_stmt = sqlsrv_query($conn, $dist_sql, $dist_params);
+                    
+                    if ($dist_stmt === false) {
+                        error_log("Failed to insert distribution: " . print_r(sqlsrv_errors(), true));
+                    }
+                }
+            }
             
             $response['success'] = true;
             $response['message'] = 'Add order berhasil disimpan! Total: ' . $total_qty . ' pcs';
             $response['total_qty'] = $total_qty;
+            $response['hours_data'] = $hours_array;
             
         } else if ($action === 'reset') {
+            // Reset action
             if ($type === 'ds') {
                 $sql = "UPDATE T_ORDER 
                        SET ADD_DS = 0, 
@@ -166,6 +198,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = sqlsrv_query($conn, $sql, $params);
             
             if ($stmt !== false) {
+                // Hapus juga distribusi jam
+                $type_upper = strtoupper($type);
+                $delete_dist_sql = "DELETE FROM T_ADD_ORDER_DISTRIBUTION 
+                                   WHERE DATE = ? 
+                                   AND SUPPLIER_CODE = ? 
+                                   AND PART_NO = ? 
+                                   AND TYPE = ?";
+                $delete_dist_params = [$date, $supplier_code, $part_no, $type_upper];
+                sqlsrv_query($conn, $delete_dist_sql, $delete_dist_params);
+                
                 $response['success'] = true;
                 $response['message'] = 'Add order berhasil direset ke 0 (remark tetap tersimpan)';
             }

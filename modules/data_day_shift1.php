@@ -6,7 +6,7 @@ $response = [
     "success" => true,
     "data" => [],
     "message" => "",
-    "logic" => "TAMPIL SEMUA ORDER DAY SHIFT (7-20) TERIMA SEMUA ETA"
+    "logic" => "TAMPIL SEMUA ORDER DAY SHIFT (7-20) + ADD ORDER DISTRIBUTION"
 ];
 
 if (!$conn) {
@@ -18,6 +18,7 @@ if (!$conn) {
 
 $date1 = isset($_GET['date1']) ? $_GET['date1'] : date('Ymd');
 $date2 = isset($_GET['date2']) ? $_GET['date2'] : date('Ymd');
+$supplier_code = $_GET['supplier_code'] ?? '';
 
 $sql = "
 WITH AllDayShiftOrders AS (
@@ -26,6 +27,7 @@ WITH AllDayShiftOrders AS (
         PART_NO,
         PART_NAME,
         SUPPLIER_CODE,
+        -- REGULAR ORDER per jam dari ETA
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -37,6 +39,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_07,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -48,6 +51,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_08,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -59,6 +63,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_09,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -70,6 +75,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_10,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -81,6 +87,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_11,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -92,6 +99,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_12,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -103,6 +111,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_13,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -114,6 +123,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_14,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -125,6 +135,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_15,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -136,6 +147,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_16,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -147,6 +159,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_17,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -158,6 +171,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_18,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -169,6 +183,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_19,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -180,6 +195,7 @@ WITH AllDayShiftOrders AS (
             THEN ORD_QTY 
             ELSE 0 
         END) as ORD_20,
+        
         SUM(CASE 
             WHEN ETA IS NOT NULL AND ETA != ''
             AND (
@@ -190,12 +206,43 @@ WITH AllDayShiftOrders AS (
             )
             THEN ORD_QTY 
             ELSE 0 
-        END) as TOTAL_ORDER_DS,
+        END) as TOTAL_REGULAR_ORDER,
+        
         MAX(ADD_DS) as ADD_DS
     FROM T_ORDER
     WHERE DELV_DATE BETWEEN ? AND ?
+    ";
+
+// Add supplier filter if exists
+$params = [$date1, $date2];
+if (!empty($supplier_code)) {
+    $supplier_codes = explode(',', $supplier_code);
+    if (count($supplier_codes) > 0) {
+        $placeholders = implode(',', array_fill(0, count($supplier_codes), '?'));
+        $sql .= " AND SUPPLIER_CODE IN ($placeholders)";
+        
+        foreach ($supplier_codes as $code) {
+            $params[] = trim($code);
+        }
+    }
+}
+
+$sql .= "
     GROUP BY DELV_DATE, PART_NO, PART_NAME, SUPPLIER_CODE
 ),
+
+AddOrderDistribution AS (
+    SELECT 
+        DATE,
+        PART_NO,
+        HOUR,
+        SUM(QUANTITY) as ADD_QTY
+    FROM T_ADD_ORDER_DISTRIBUTION
+    WHERE TYPE = 'DS'
+    AND DATE BETWEEN ? AND ?
+    GROUP BY DATE, PART_NO, HOUR
+),
+
 IncomingData AS (
     SELECT 
         ub.DATE,
@@ -221,9 +268,11 @@ IncomingData AS (
     WHERE ub.HOUR BETWEEN 7 AND 20
     AND ub.DATE BETWEEN ? AND ?
 ),
+
 LatestIncoming AS (
     SELECT * FROM IncomingData WHERE rn = 1
 ),
+
 IncomingPerHour AS (
     SELECT 
         DATE,
@@ -247,12 +296,15 @@ IncomingPerHour AS (
         END as INCOMING_QTY
     FROM LatestIncoming
 )
+
 SELECT 
     o.DATE,
     o.PART_NO,
     o.PART_NAME as PART_DESC,
     o.PART_NAME,
     o.SUPPLIER_CODE,
+    
+    -- REGULAR ORDER
     ISNULL(o.ORD_07, 0) as ORD_07,
     ISNULL(o.ORD_08, 0) as ORD_08,
     ISNULL(o.ORD_09, 0) as ORD_09,
@@ -267,6 +319,40 @@ SELECT
     ISNULL(o.ORD_18, 0) as ORD_18,
     ISNULL(o.ORD_19, 0) as ORD_19,
     ISNULL(o.ORD_20, 0) as ORD_20,
+    
+    -- ADD ORDER DISTRIBUTION
+    ISNULL(a07.ADD_QTY, 0) as ADD_ORD_07,
+    ISNULL(a08.ADD_QTY, 0) as ADD_ORD_08,
+    ISNULL(a09.ADD_QTY, 0) as ADD_ORD_09,
+    ISNULL(a10.ADD_QTY, 0) as ADD_ORD_10,
+    ISNULL(a11.ADD_QTY, 0) as ADD_ORD_11,
+    ISNULL(a12.ADD_QTY, 0) as ADD_ORD_12,
+    ISNULL(a13.ADD_QTY, 0) as ADD_ORD_13,
+    ISNULL(a14.ADD_QTY, 0) as ADD_ORD_14,
+    ISNULL(a15.ADD_QTY, 0) as ADD_ORD_15,
+    ISNULL(a16.ADD_QTY, 0) as ADD_ORD_16,
+    ISNULL(a17.ADD_QTY, 0) as ADD_ORD_17,
+    ISNULL(a18.ADD_QTY, 0) as ADD_ORD_18,
+    ISNULL(a19.ADD_QTY, 0) as ADD_ORD_19,
+    ISNULL(a20.ADD_QTY, 0) as ADD_ORD_20,
+    
+    -- TOTAL PER JAM (REGULAR + ADD)
+    ISNULL(o.ORD_07, 0) + ISNULL(a07.ADD_QTY, 0) as TOTAL_ORD_07,
+    ISNULL(o.ORD_08, 0) + ISNULL(a08.ADD_QTY, 0) as TOTAL_ORD_08,
+    ISNULL(o.ORD_09, 0) + ISNULL(a09.ADD_QTY, 0) as TOTAL_ORD_09,
+    ISNULL(o.ORD_10, 0) + ISNULL(a10.ADD_QTY, 0) as TOTAL_ORD_10,
+    ISNULL(o.ORD_11, 0) + ISNULL(a11.ADD_QTY, 0) as TOTAL_ORD_11,
+    ISNULL(o.ORD_12, 0) + ISNULL(a12.ADD_QTY, 0) as TOTAL_ORD_12,
+    ISNULL(o.ORD_13, 0) + ISNULL(a13.ADD_QTY, 0) as TOTAL_ORD_13,
+    ISNULL(o.ORD_14, 0) + ISNULL(a14.ADD_QTY, 0) as TOTAL_ORD_14,
+    ISNULL(o.ORD_15, 0) + ISNULL(a15.ADD_QTY, 0) as TOTAL_ORD_15,
+    ISNULL(o.ORD_16, 0) + ISNULL(a16.ADD_QTY, 0) as TOTAL_ORD_16,
+    ISNULL(o.ORD_17, 0) + ISNULL(a17.ADD_QTY, 0) as TOTAL_ORD_17,
+    ISNULL(o.ORD_18, 0) + ISNULL(a18.ADD_QTY, 0) as TOTAL_ORD_18,
+    ISNULL(o.ORD_19, 0) + ISNULL(a19.ADD_QTY, 0) as TOTAL_ORD_19,
+    ISNULL(o.ORD_20, 0) + ISNULL(a20.ADD_QTY, 0) as TOTAL_ORD_20,
+    
+    -- INCOMING
     ISNULL(SUM(CASE WHEN i.HOUR = 7 THEN i.INCOMING_QTY ELSE 0 END), 0) as TRAN_07,
     ISNULL(SUM(CASE WHEN i.HOUR = 8 THEN i.INCOMING_QTY ELSE 0 END), 0) as TRAN_08,
     ISNULL(SUM(CASE WHEN i.HOUR = 9 THEN i.INCOMING_QTY ELSE 0 END), 0) as TRAN_09,
@@ -281,28 +367,53 @@ SELECT
     ISNULL(SUM(CASE WHEN i.HOUR = 18 THEN i.INCOMING_QTY ELSE 0 END), 0) as TRAN_18,
     ISNULL(SUM(CASE WHEN i.HOUR = 19 THEN i.INCOMING_QTY ELSE 0 END), 0) as TRAN_19,
     ISNULL(SUM(CASE WHEN i.HOUR = 20 THEN i.INCOMING_QTY ELSE 0 END), 0) as TRAN_20,
-    ISNULL(o.TOTAL_ORDER_DS, 0) as TOTAL_ORDER,
-    ISNULL(SUM(i.INCOMING_QTY), 0) as TOTAL_INCOMING,
-    ISNULL(o.ADD_DS, 0) as ADD_DS
+    
+    -- TOTALS
+    ISNULL(o.TOTAL_REGULAR_ORDER, 0) as TOTAL_REGULAR_ORDER,
+    ISNULL(o.ADD_DS, 0) as ADD_DS,
+    ISNULL(o.TOTAL_REGULAR_ORDER, 0) + ISNULL(o.ADD_DS, 0) as TOTAL_ORDER,
+    ISNULL(SUM(i.INCOMING_QTY), 0) as TOTAL_INCOMING
 FROM AllDayShiftOrders o
+
+-- JOIN Add Order Distribution untuk setiap jam
+LEFT JOIN AddOrderDistribution a07 ON o.DATE = a07.DATE AND o.PART_NO = a07.PART_NO AND a07.HOUR = 7
+LEFT JOIN AddOrderDistribution a08 ON o.DATE = a08.DATE AND o.PART_NO = a08.PART_NO AND a08.HOUR = 8
+LEFT JOIN AddOrderDistribution a09 ON o.DATE = a09.DATE AND o.PART_NO = a09.PART_NO AND a09.HOUR = 9
+LEFT JOIN AddOrderDistribution a10 ON o.DATE = a10.DATE AND o.PART_NO = a10.PART_NO AND a10.HOUR = 10
+LEFT JOIN AddOrderDistribution a11 ON o.DATE = a11.DATE AND o.PART_NO = a11.PART_NO AND a11.HOUR = 11
+LEFT JOIN AddOrderDistribution a12 ON o.DATE = a12.DATE AND o.PART_NO = a12.PART_NO AND a12.HOUR = 12
+LEFT JOIN AddOrderDistribution a13 ON o.DATE = a13.DATE AND o.PART_NO = a13.PART_NO AND a13.HOUR = 13
+LEFT JOIN AddOrderDistribution a14 ON o.DATE = a14.DATE AND o.PART_NO = a14.PART_NO AND a14.HOUR = 14
+LEFT JOIN AddOrderDistribution a15 ON o.DATE = a15.DATE AND o.PART_NO = a15.PART_NO AND a15.HOUR = 15
+LEFT JOIN AddOrderDistribution a16 ON o.DATE = a16.DATE AND o.PART_NO = a16.PART_NO AND a16.HOUR = 16
+LEFT JOIN AddOrderDistribution a17 ON o.DATE = a17.DATE AND o.PART_NO = a17.PART_NO AND a17.HOUR = 17
+LEFT JOIN AddOrderDistribution a18 ON o.DATE = a18.DATE AND o.PART_NO = a18.PART_NO AND a18.HOUR = 18
+LEFT JOIN AddOrderDistribution a19 ON o.DATE = a19.DATE AND o.PART_NO = a19.PART_NO AND a19.HOUR = 19
+LEFT JOIN AddOrderDistribution a20 ON o.DATE = a20.DATE AND o.PART_NO = a20.PART_NO AND a20.HOUR = 20
+
 LEFT JOIN IncomingPerHour i ON 
     o.DATE = i.DATE 
     AND o.PART_NO = i.PART_NO 
     AND o.SUPPLIER_CODE = i.SUPPLIER_CODE
 WHERE o.SUPPLIER_CODE IS NOT NULL
 AND o.SUPPLIER_CODE != ''
-AND o.TOTAL_ORDER_DS > 0
+AND (o.TOTAL_REGULAR_ORDER > 0 OR o.ADD_DS > 0)
 GROUP BY 
     o.DATE, o.PART_NO, o.PART_NAME, o.SUPPLIER_CODE,
     o.ORD_07, o.ORD_08, o.ORD_09, o.ORD_10, o.ORD_11, o.ORD_12, 
     o.ORD_13, o.ORD_14, o.ORD_15, o.ORD_16, o.ORD_17, o.ORD_18, 
     o.ORD_19, o.ORD_20,
-    o.TOTAL_ORDER_DS,
-    o.ADD_DS
+    o.TOTAL_REGULAR_ORDER,
+    o.ADD_DS,
+    a07.ADD_QTY, a08.ADD_QTY, a09.ADD_QTY, a10.ADD_QTY, a11.ADD_QTY, a12.ADD_QTY,
+    a13.ADD_QTY, a14.ADD_QTY, a15.ADD_QTY, a16.ADD_QTY, a17.ADD_QTY, a18.ADD_QTY,
+    a19.ADD_QTY, a20.ADD_QTY
 ORDER BY o.DATE DESC, o.SUPPLIER_CODE, o.PART_NO
 ";
 
-$params = [$date1, $date2, $date1, $date2];
+// Add parameters for AddOrderDistribution and IncomingData
+array_push($params, $date1, $date2, $date1, $date2);
+
 $stmt = sqlsrv_query($conn, $sql, $params);
 
 if ($stmt === false) {
@@ -313,21 +424,26 @@ if ($stmt === false) {
 }
 
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    // Format data
     $row['DATE'] = isset($row['DATE']) ? strval($row['DATE']) : '';
     $row['SUPPLIER_CODE'] = isset($row['SUPPLIER_CODE']) ? strval($row['SUPPLIER_CODE']) : '';
     $row['PART_NO'] = isset($row['PART_NO']) ? strval($row['PART_NO']) : '';
     $row['PART_DESC'] = isset($row['PART_DESC']) ? strval($row['PART_DESC']) : ($row['PART_NAME'] ?? '');
     $row['PART_NAME'] = isset($row['PART_NAME']) ? strval($row['PART_NAME']) : '';
     
+    // Convert all numeric values
     for($hour = 7; $hour <= 20; $hour++) {
         $hourKey = str_pad($hour, 2, '0', STR_PAD_LEFT);
         $row['ORD_' . $hourKey] = intval($row['ORD_' . $hourKey] ?? 0);
+        $row['ADD_ORD_' . $hourKey] = intval($row['ADD_ORD_' . $hourKey] ?? 0);
+        $row['TOTAL_ORD_' . $hourKey] = intval($row['TOTAL_ORD_' . $hourKey] ?? 0);
         $row['TRAN_' . $hourKey] = intval($row['TRAN_' . $hourKey] ?? 0);
     }
     
+    $row['TOTAL_REGULAR_ORDER'] = intval($row['TOTAL_REGULAR_ORDER'] ?? 0);
+    $row['ADD_DS'] = intval($row['ADD_DS'] ?? 0);
     $row['TOTAL_ORDER'] = intval($row['TOTAL_ORDER'] ?? 0);
     $row['TOTAL_INCOMING'] = intval($row['TOTAL_INCOMING'] ?? 0);
-    $row['ADD_DS'] = intval($row['ADD_DS'] ?? 0);
     
     if ($row['TOTAL_ORDER'] > 0) {
         $response["data"][] = $row;
@@ -338,7 +454,7 @@ sqlsrv_free_stmt($stmt);
 sqlsrv_close($conn);
 
 $response['count'] = count($response["data"]);
-$response['message'] = "Tampil " . $response['count'] . " data (semua order DS, terima semua ETA)";
+$response['message'] = "Tampil " . $response['count'] . " data (termasuk distribusi add order per jam)";
 
 echo json_encode($response);
 ?>
