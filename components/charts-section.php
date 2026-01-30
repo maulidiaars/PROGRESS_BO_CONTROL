@@ -99,11 +99,6 @@
                         <span id="currentMonth" class="month-text">Januari 2024</span>
                         <small class="date-range ms-2" id="shiftDateRange">(01 - 31 Jan 2024)</small>
                       </div>
-                      <div class="d-flex gap-3">
-                        <button class="btn btn-sm btn-outline-primary" onclick="downloadShiftReport()">
-                          <i class="bi bi-download me-1"></i> Export
-                        </button>
-                      </div>
                     </div>
                   </div>
 
@@ -331,74 +326,6 @@
       </div>
     </div>
   </div>
-</div>
-
-<!-- BEAUTIFUL TOOLTIP -->
-<div id="chartTooltip" class="chart-tooltip">
-  <div class="tooltip-header">
-    <div class="tooltip-title">
-      <span class="tooltip-icon" id="tooltipIcon"></span>
-      <span class="tooltip-status" id="tooltipStatus">Status</span>
-    </div>
-    <div class="tooltip-actions">
-      <button class="btn-tooltip-action" onclick="drillDownData()" title="View Details">
-        <i class="bi bi-zoom-in"></i>
-      </button>
-      <button class="btn-tooltip-close" onclick="hideTooltip()" title="Close">
-        <i class="bi bi-x"></i>
-      </button>
-    </div>
-  </div>
-  <div class="tooltip-body">
-    <div class="tooltip-metrics">
-      <div class="metric-main">
-        <div class="metric-value" id="tooltipValue">0%</div>
-        <div class="metric-label">Completion Rate</div>
-      </div>
-      <div class="metric-grid">
-        <div class="metric-item">
-          <div class="metric-icon">
-            <i class="bi bi-box"></i>
-          </div>
-          <div class="metric-content">
-            <div class="metric-title">Deliveries</div>
-            <div class="metric-data" id="tooltipDeliveryCount">0</div>
-          </div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-icon">
-            <i class="bi bi-percent"></i>
-          </div>
-          <div class="metric-content">
-            <div class="metric-title">Ratio</div>
-            <div class="metric-data" id="tooltipRatio">0/0</div>
-          </div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-icon">
-            <i class="bi bi-clipboard-check"></i>
-          </div>
-          <div class="metric-content">
-            <div class="metric-title">Order Qty</div>
-            <div class="metric-data" id="tooltipOrderQty">0</div>
-          </div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-icon">
-            <i class="bi bi-clipboard-data"></i>
-          </div>
-          <div class="metric-content">
-            <div class="metric-title">Incoming Qty</div>
-            <div class="metric-data" id="tooltipIncomingQty">0</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="tooltip-footer">
-    <div class="footer-text">Click "View Details" for detailed analysis</div>
-  </div>
-  <div class="tooltip-arrow"></div>
 </div>
 
 <style>
@@ -1674,26 +1601,6 @@ function loadTrendChart() {
                         color: '#0bc5ea'
                     }
                 ],
-                chart: {
-                    height: 380,
-                    type: 'line',
-                    toolbar: {
-                        show: true,
-                        tools: {
-                            download: true,
-                            selection: false,
-                            zoom: true,
-                            zoomin: true,
-                            zoomout: true,
-                            pan: true,
-                            reset: true
-                        }
-                    },
-                    animations: {
-                        enabled: true,
-                        speed: 800
-                    }
-                },
                 stroke: {
                     width: [0, 4],
                     curve: 'smooth'

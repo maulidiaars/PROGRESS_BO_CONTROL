@@ -543,11 +543,6 @@ try {
             sqlsrv_free_stmt($stmt);
         }
         
-        // Add "ALL" option
-        array_unshift($users, [
-            'name' => 'SEMUA USER (Semua Orang)',
-            'value' => 'ALL'
-        ]);
         
         $response["success"] = true;
         $response["users"] = $users;

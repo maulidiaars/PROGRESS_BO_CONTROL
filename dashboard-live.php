@@ -3,24 +3,24 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LIVE DASHBOARD - BO CONTROL MONITORING</title>
+    <title>🚀 LIVE DASHBOARD - BO CONTROL MONITORING REAL-TIME</title>
     
-    <!-- Favicon -->
+    <!-- FAVICON -->
     <link href="assets/img/favicon.png" rel="icon">
     
-    <!-- Bootstrap 5 -->
+    <!-- BOOTSTRAP 5 -->
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Bootstrap Icons -->
+    <!-- BOOTSTRAP ICONS -->
     <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
     
-    <!-- Font Awesome -->
+    <!-- FONT AWESOME -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Google Fonts -->
+    <!-- GOOGLE FONTS -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- ApexCharts -->
+    <!-- APEXCHARTS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.35.0/dist/apexcharts.min.css">
     
     <style>
@@ -88,7 +88,7 @@
             margin-top: 2px;
         }
 
-        /* Back Button - SATU SAJA */
+        /* BACK BUTTON */
         .back-container {
             display: flex;
             align-items: center;
@@ -107,11 +107,14 @@
             align-items: center;
             gap: 8px;
             transition: all 0.3s ease;
+            text-decoration: none;
         }
 
         .back-btn:hover {
             background: rgba(0, 173, 181, 0.2);
             transform: translateX(-3px);
+            color: white;
+            text-decoration: none;
         }
 
         /* ========== DATE TIME DISPLAY ========== */
@@ -158,11 +161,22 @@
         .live-gauge-card, .hourly-card, .info-card {
             background: rgba(22, 33, 62, 0.9);
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px 20px 20px 20px;
             border: 1px solid rgba(0, 173, 181, 0.3);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
         }
+
+        .gauge-container {
+            text-align: center;
+            padding-top: 20px; /* 🔽 turunin chart */
+        }
+
+        #todayGauge {
+            height: 160px !important;
+            margin: 0 auto;
+        }
+
         
         .gauge-header, .hourly-header, .info-header {
             display: flex;
@@ -183,6 +197,9 @@
             gap: 10px;
             margin: 0;
         }
+
+        #todayGauge { height: 50px !important; margin-top: -10px !important; }
+
         
         .live-time {
             font-size: 12px;
@@ -199,10 +216,7 @@
             font-weight: 700;
             text-transform: uppercase;
         }
-        
-        .gauge-container {
-            text-align: center;
-        }
+    
         
         .gauge-stats {
             display: flex;
@@ -248,9 +262,10 @@
             color: #e74c3c;
         }
         
-        /* ========== INFORMATION SECTION ========== */
+        /* ========== INFORMATION SECTION - PERBAIKAN ========== */
         .info-card {
-            max-height: 300px;
+          max-height: 300px; /* UBAH DARI 300px KE 400px */
+          min-height: 250px; /* TAMBAHKAN MIN-HEIGHT */
             display: flex;
             flex-direction: column;
         }
@@ -276,6 +291,11 @@
             border-radius: 3px;
         }
         
+        .info-list::-webkit-scrollbar-thumb:hover {
+            background: #00838f;
+        }
+        
+        /* ========== INFORMATION SECTION - PERBAIKAN FORMAT ========== */
         .info-item {
             background: rgba(0, 173, 181, 0.1);
             border-left: 4px solid #00adb5;
@@ -283,6 +303,103 @@
             padding: 12px;
             margin-bottom: 8px;
             transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .info-item.urgent {
+            border-left-color: #ff416c;
+            background: rgba(255, 65, 108, 0.1);
+        }
+
+        .info-item.assigned {
+            border-left-color: #ffa726;
+            background: rgba(255, 167, 38, 0.1);
+        }
+
+        .info-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: rgba(0, 173, 181, 0.2);
+            color: #00adb5;
+        }
+
+        .info-item.urgent .info-icon {
+            background: rgba(255, 65, 108, 0.2);
+            color: #ff416c;
+        }
+
+        .info-item.assigned .info-icon {
+            background: rgba(255, 167, 38, 0.2);
+            color: #ffa726;
+        }
+
+        .info-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .info-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .info-title span:first-child {
+            font-size: 12px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .info-status {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        .info-message {
+            color: #d1d9e6;
+            font-size: 11px;
+            line-height: 1.4;
+            margin-bottom: 4px;
+            word-break: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .info-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: #a9b7c6;
+        }
+
+        .info-time {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .info-from {
+            color: #888;
         }
         
         .info-item:hover {
@@ -293,11 +410,35 @@
         .info-item.urgent {
             border-left-color: #ff416c;
             background: rgba(255, 65, 108, 0.1);
+            animation: urgentPulse 2s infinite;
         }
         
         .info-item.assigned {
             border-left-color: #ffa726;
             background: rgba(255, 167, 38, 0.1);
+        }
+        
+        .info-item.unread::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 8px;
+            height: 8px;
+            background: #ff416c;
+            border-radius: 50%;
+            animation: blinkDot 1.5s infinite;
+        }
+        
+        @keyframes urgentPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 65, 108, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 65, 108, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 65, 108, 0); }
+        }
+        
+        @keyframes blinkDot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
         
         .info-content {
@@ -331,22 +472,59 @@
         
         .info-details {
             flex: 1;
+            min-width: 0; /* Untuk ellipsis */
+        }
+        
+        .info-title {
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .info-message {
-            color: #ffffff;
-            font-size: 12px;
+            color: #d1d9e6;
+            font-size: 11px;
             line-height: 1.4;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            word-break: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .info-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
         }
         
         .info-time {
             color: #a9b7c6;
-            font-size: 11px;
             display: flex;
             align-items: center;
             gap: 4px;
         }
+        
+        .info-status {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        
+        .info-status.bg-danger { background: #e74c3c; color: white; }
+        .info-status.bg-warning { background: #f39c12; color: white; }
+        .info-status.bg-primary { background: #3498db; color: white; }
+        .info-status.bg-success { background: #2ecc71; color: white; }
+        .info-status.bg-secondary { background: #95a5a6; color: white; }
         
         /* ========== RIGHT PANEL - DATA TABLE ========== */
         .main-data-panel {
@@ -505,7 +683,7 @@
             font-size: 10px;
         }
         
-        /* Set width untuk setiap kolom - DIPERBAIKI LEBIH KECIL */
+        /* SET WIDTH UNTUK SETIAP KOLOM */
         .table-fixed-header th:nth-child(1) { width: 70px; }  /* CODE */
         .table-fixed-header th:nth-child(2) { width: 160px; } /* SUPPLIER */
         .table-fixed-header th:nth-child(3) { width: 60px; }  /* PIC */
@@ -552,7 +730,7 @@
             vertical-align: middle;
         }
         
-        /* Set width yang sama dengan header */
+        /* SET WIDTH YANG SAMA DENGAN HEADER */
         .scrolling-content td:nth-child(1) { width: 70px; }
         .scrolling-content td:nth-child(2) { width: 160px; }
         .scrolling-content td:nth-child(3) { width: 60px; }
@@ -850,6 +1028,22 @@
             transform: translateY(-2px);
         }
         
+        /* ========== LOADING SPINNER ========== */
+        .loading-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         /* ========== HOME BUTTON ========== */
         .home-button {
             position: fixed;
@@ -894,6 +1088,23 @@
         .empty-state p {
             font-size: 14px;
             font-weight: 500;
+        }
+        
+        /* ========== ALERT BADGE ========== */
+        .alert-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff416c;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         /* ========== RESPONSIVE ========== */
@@ -998,6 +1209,119 @@
                 bottom: 15px;
                 right: 15px;
             }
+            
+            .info-item .info-message {
+                -webkit-line-clamp: 3;
+            }
+        }
+
+        /* ========== INFORMATION SECTION - STYLE BARU ========== */
+        .info-card {
+            max-height: 300px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .info-list {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none; /* Hide scrollbar for Firefox */
+            -ms-overflow-style: none; /* Hide scrollbar for IE/Edge */
+        }
+
+        .info-list::-webkit-scrollbar {
+            display: none; /* Hide scrollbar for Chrome/Safari */
+        }
+
+        .info-item {
+            background: rgba(0, 173, 181, 0.08);
+            border-left: 3px solid #00adb5;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .info-item.urgent {
+            border-left-color: #ff416c;
+            background: rgba(255, 65, 108, 0.08);
+        }
+
+        .info-item.assigned {
+            border-left-color: #ffa726;
+            background: rgba(255, 167, 38, 0.08);
+        }
+
+        .info-content {
+            display: flex;
+            gap: 10px;
+        }
+
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: rgba(0, 173, 181, 0.15);
+            color: #00adb5;
+            margin-top: 2px;
+        }
+
+        .info-item.urgent .info-icon {
+            background: rgba(255, 65, 108, 0.15);
+            color: #ff416c;
+        }
+
+        .info-item.assigned .info-icon {
+            background: rgba(255, 167, 38, 0.15);
+            color: #ffa726;
+        }
+
+        .info-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .info-from-to {
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .info-status-badge {
+            margin-bottom: 8px;
+        }
+
+        .info-message {
+            color: #d1d9e6;
+            font-size: 11px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+
+        .info-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #a9b7c6;
+        }
+
+        .info-time, .info-date {
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
     </style>
 </head>
@@ -1008,14 +1332,15 @@
         <div class="logo-container">
             <img src="assets/img/logo-denso.png" alt="DENSO Logo" onerror="this.style.display='none'">
             <div class="header-title">
-                <div class="main-title">LIVE DASHBOARD - BO CONTROL MONITORING</div>
-                <div class="sub-title">Real-time Tracking • Operator View</div>
+                <div class="main-title">🚀 LIVE DASHBOARD - BO CONTROL MONITORING</div>
+                <div class="sub-title">Real-time Tracking • Operator View • Instant Updates</div>
             </div>
         </div>
+    
         
         <div class="datetime-display">
-            <div class="date-display" id="dateDisplay"></div>
-            <div class="time-display" id="timeDisplay"></div>
+            <div class="date-display" id="dateDisplay">Loading date...</div>
+            <div class="time-display" id="timeDisplay">00:00:00</div>
         </div>
     </header>
         
@@ -1029,13 +1354,15 @@
             <div class="live-gauge-card">
                 <div class="gauge-header">
                     <h6><i class="fas fa-tachometer-alt"></i> TODAY'S ACHIEVEMENT</h6>
-                    <span class="live-time" id="lastUpdateTime">Updating...</span>
+                    <span class="live-time" id="lastUpdateTime">
+                        <span class="loading-spinner"></span> Updating...
+                    </span>
                 </div>
                 <div class="gauge-container">
-                    <div id="todayGauge" style="height: 180px;">
-                        <div class="text-center py-4">
+                    <div id="todayGauge" style="height: 180px; margin-top: 10px;">
+                        <div class="text-center py-5">
                             <div class="spinner-border text-primary"></div>
-                            <p class="mt-2 text-white">Loading gauge...</p>
+                            <p class="mt-3 text-white small">Loading achievement data...</p>
                         </div>
                     </div>
                     <div class="gauge-stats">
@@ -1055,51 +1382,44 @@
                 </div>
             </div>
             
-            <!-- HOURLY PROGRESS - DIUBAH: AKUMULASI -->
+            <!-- HOURLY PROGRESS -->
             <div class="hourly-card">
                 <div class="hourly-header">
                     <h6><i class="fas fa-clock"></i> HOURLY INCOMING PROGRESS (pcs)</h6>
                     <div class="shift-badge" id="currentShift">D/S: 07:00-20:00</div>
                 </div>
                 <div id="hourlyChart" style="height: 200px;">
-                    <div class="text-center py-4">
+                    <div class="text-center py-5">
                         <div class="spinner-border text-primary"></div>
-                        <p class="mt-2 text-white">Loading hourly data...</p>
+                        <p class="mt-3 text-white small">Loading hourly data...</p>
                     </div>
-                </div>
-                <div class="text-center mt-2">
-                    <small class="text-info">
-                        <i class="fas fa-info-circle"></i> Data shows cumulative incoming per hour
-                    </small>
                 </div>
             </div>
             
-            <!-- INFORMATION SECTION -->
+            <!-- ========== INFORMATION SECTION ========== -->
             <div class="info-card">
                 <div class="info-header">
-                    <h6><i class="fas fa-info-circle"></i> LATEST INFORMATION</h6>
-                    <span class="badge bg-primary" id="infoCount">0</span>
+                    <h6><i class="fas fa-bullhorn"></i> LIVE INFORMATION</h6>
+                    <span class="badge bg-warning rounded-pill px-2" id="infoCount">0</span>
                 </div>
+                
                 <div class="info-list" id="informationList">
-                    <div class="text-center py-3">
+                    <div class="text-center py-4">
                         <div class="spinner-border spinner-border-sm text-primary"></div>
-                        <p class="mt-2 text-white small">Loading information...</p>
+                        <p class="mt-2 text-white small">Loading live information...</p>
+                        <small class="text-muted">Fetching from last 7 days</small>
                     </div>
                 </div>
-                <div class="text-center mt-2">
-                    <small class="text-muted">
-                        <i class="fas fa-history"></i> Showing last 7 days data
-                    </small>
-                </div>
+            
             </div>
             
             <!-- CONTROL BUTTONS -->
             <div class="control-buttons">
-                <button class="control-btn control-btn-primary" onclick="refreshAllData()">
-                    <i class="fas fa-sync-alt"></i> Refresh Now
+                <button class="control-btn control-btn-primary" onclick="refreshAllData()" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> <span id="refreshText">Refresh Now</span>
                 </button>
                 <button class="control-btn control-btn-secondary" onclick="toggleAutoRefresh()" id="autoRefreshBtn">
-                    <i class="fas fa-power-off"></i> Auto Refresh: ON
+                    <i class="fas fa-power-off"></i> <span id="autoRefreshText">Auto: ON</span>
                 </button>
             </div>
             
@@ -1109,7 +1429,7 @@
         <div class="main-data-panel">
             <div class="panel-header">
                 <div class="panel-title">
-                    <i class="fas fa-truck-loading"></i> LIVE SUPPLIER DELIVERY
+                    <i class="fas fa-truck-loading"></i> LIVE SUPPLIER DELIVERY STATUS
                     <div class="live-badge">
                         <div class="live-dot"></div>
                         LIVE • <span id="todayDate">Today</span>
@@ -1196,420 +1516,512 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.0/dist/apexcharts.min.js"></script>
 
-<script>
-// ========== GLOBAL VARIABLES ==========
-let todayGauge = null;
-let hourlyChart = null;
-let autoRefreshInterval = null;
-let isAutoRefresh = true;
-let today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    <script>
+    // ========== GLOBAL VARIABLES ==========
+    let todayGauge = null;
+    let hourlyChart = null;
+    let autoRefreshInterval = null;
+    let isAutoRefresh = true;
+    let today = new Date().toISOString().split('T')[0].replace(/-/g, '');
 
-// ========== SCROLLING ANIMATION VARIABLES ==========
-let autoScrollInterval = null;
-let isAutoScrolling = true;
-let scrollSpeed = 0.8; // pixels per interval (lebih pelan)
-let scrollPosition = 0;
-let scrollDirection = 1; // 1 = down, -1 = up
+    // ========== SCROLLING ANIMATION VARIABLES ==========
+    let autoScrollInterval = null;
+    let isAutoScrolling = true;
+    let scrollSpeed = 0.8;
+    let tableScrollPosition = 0; // ⬅️ GANTI NAMA, JANGAN scrollPosition
+    let scrollDirection = 1;
 
-// ========== HELPER FUNCTIONS ==========
-function goToMainDashboard() {
-    window.location.href = 'index.php';
-}
+    // ========== INFORMATION SCROLL VARIABLES ==========
+    let infoScrollInterval = null;
+    let isInfoScrolling = true;
+    let infoScrollPosition = 0; // ⬅️ GANTI NAMA, JANGAN scrollPosition
+    let infoScrollSpeed = 0.5;
 
-// ========== DATE TIME FUNCTIONS ==========
-function updateDateTime() {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
-    const timeStr = now.toLocaleTimeString('en-US', { 
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-    
-    $('#dateDisplay').text(dateStr);
-    $('#timeDisplay').text(timeStr);
-    $('#todayDate').text(now.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
-    
-    // Update current shift
-    const hour = now.getHours();
-    if (hour >= 7 && hour <= 20) {
-        $('#currentShift').text('D/S: 07:00-20:00').css('background', 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)');
-    } else {
-        $('#currentShift').text('N/S: 21:00-06:00').css('background', 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)');
+    // ========== DATE TIME FUNCTIONS ==========
+    function updateDateTime() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        const timeStr = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        $('#dateDisplay').text(dateStr);
+        $('#timeDisplay').text(timeStr);
+        $('#todayDate').text(now.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
+        
+        // Update current shift
+        const hour = now.getHours();
+        if (hour >= 7 && hour <= 20) {
+            $('#currentShift').text('D/S: 07:00-20:00')
+                .css('background', 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)');
+        } else {
+            $('#currentShift').text('N/S: 21:00-06:00')
+                .css('background', 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)');
+        }
     }
-}
 
-// ========== TODAY'S GAUGE ==========
-function updateTodayGauge() {
-    $.ajax({
-        url: 'api/get_today_performance.php',
-        type: 'GET',
-        data: { date: today },
-        dataType: 'json',
-        success: function(response) {
-            if (!response) return;
+    // ========== INFORMATION SECTION - FORMAT BARU DENGAN AUTO SCROLL ==========
+    function updateInformation() {
+        console.log('📢 Loading informasi untuk live dashboard...');
+        
+        $.ajax({
+            url: 'api/get_live_information.php',
+            type: 'GET',
+            dataType: 'json',
+            timeout: 8000,
+            beforeSend: function() {
+                $('#informationList').html(`
+                    <div class="text-center py-4">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <p class="mt-2 text-white small">Loading informasi...</p>
+                    </div>
+                `);
+            },
+            success: function(response) {
+                console.log('✅ Informasi diterima:', response.count, 'items');
+                
+                if (!response || !response.success || !response.informations) {
+                    showNoInformation();
+                    return;
+                }
+                
+                const informations = response.informations;
+                
+                if (informations.length === 0) {
+                    showNoInformation();
+                    return;
+                }
+                
+                // RENDER INFORMASI DENGAN FORMAT BARU
+                let html = '';
+                
+                informations.forEach((info) => {
+                    // Tentukan styling berdasarkan status
+                    let statusClass = '';
+                    let statusBadge = '';
+                    let icon = 'info-circle';
+                    
+                    if (info.STATUS === 'Open') {
+                        statusClass = 'urgent';
+                        statusBadge = 'bg-danger';
+                        icon = 'exclamation-triangle';
+                    } else if (info.STATUS === 'On Progress') {
+                        statusClass = 'assigned';
+                        statusBadge = 'bg-warning';
+                        icon = 'clock';
+                    }
+                    
+                    // Format: PENGIRIM → PENERIMA
+                    const fromToText = info.PIC_FROM + ' → ' + info.PIC_TO;
+                    
+                    // Isi informasi (Request atau Item)
+                    const messageText = info.REQUEST || info.ITEM || 'Tidak ada isi';
+                    
+                    html += `
+                    <div class="info-item ${statusClass}">
+                        <div class="info-content">
+                            <div class="info-icon">
+                                <i class="fas fa-${icon}"></i>
+                            </div>
+                            <div class="info-details">
+                                <!-- PENGIRIM → PENERIMA -->
+                                <div class="info-from-to">
+                                    <strong>${fromToText}</strong>
+                                </div>
+                                
+                                <!-- STATUS BADGE -->
+                                <div class="info-status-badge">
+                                    <span class="badge ${statusBadge}">${info.status_text || 'OPEN'}</span>
+                                </div>
+                                
+                                <!-- ISI INFORMASI -->
+                                <div class="info-message">
+                                    ${messageText}
+                                </div>
+                                
+                                <!-- WAKTU & TANGGAL -->
+                                <div class="info-meta">
+                                    <div class="info-time">
+                                        <i class="far fa-clock"></i> ${info.time_formatted || ''}
+                                    </div>
+                                    <div class="info-date">
+                                        ${info.date_formatted || ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                
+                $('#informationList').html(html);
+                $('#infoCount').text(informations.length);
+                
+                // Mulai auto scroll untuk informasi
+                startInfoAutoScroll();
+                
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ Error load informasi:', error);
+                $('#informationList').html(`
+                    <div class="text-center py-4 text-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p class="mt-2 text-white small">Gagal load informasi</p>
+                        <button onclick="updateInformation()" class="btn btn-sm btn-outline-warning mt-2">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>
+                `);
+                $('#infoCount').text('!').removeClass('bg-warning bg-primary').addClass('bg-danger');
+            }
+        });
+    }
+
+    // ========== AUTO SCROLL FUNCTIONS UNTUK INFORMATION ==========
+    function startInfoAutoScroll() {
+        const container = $('#informationList');
+        const items = container.find('.info-item');
+        
+        if (items.length === 0) return;
+        
+        // Reset scroll position
+        container.scrollTop(0);
+        infoScrollPosition = 0;
+        
+        // Clear existing interval
+        if (infoScrollInterval) {
+            clearInterval(infoScrollInterval);
+        }
+        
+        // Start new scrolling
+        infoScrollInterval = setInterval(() => {
+            if (!isInfoScrolling) return;
             
-            const totalOrder = parseInt(response.total_order) || 0;
-            const totalIncoming = parseInt(response.total_incoming) || 0;
-            const achievement = totalOrder > 0 ? Math.min(Math.round((totalIncoming / totalOrder) * 100), 100) : 0;
-            const balance = totalOrder - totalIncoming;
+            const containerHeight = container.height();
+            const contentHeight = container[0].scrollHeight;
             
-            // Update gauge chart
-            if (!todayGauge) {
-                todayGauge = new ApexCharts(document.querySelector("#todayGauge"), {
-                    series: [achievement],
-                    chart: { 
-                        type: 'radialBar', 
-                        height: 180,
-                        animations: { enabled: true, speed: 1000 }
+            // Scroll up slowly
+            infoScrollPosition += infoScrollSpeed;
+            
+            // If reached bottom, reset to top
+            if (infoScrollPosition > contentHeight - containerHeight) {
+                infoScrollPosition = 0;
+                container.scrollTop(0);
+                
+                // Refresh data after full scroll
+                setTimeout(() => {
+                    updateInformation();
+                    console.log('🔄 Refresh informasi setelah scroll selesai');
+                }, 3000);
+            } else {
+                container.scrollTop(infoScrollPosition);
+            }
+        }, 50);
+    }
+
+    function stopInfoAutoScroll() {
+        if (infoScrollInterval) {
+            clearInterval(infoScrollInterval);
+            infoScrollInterval = null;
+        }
+    }
+
+    function toggleInfoAutoScroll() {
+        isInfoScrolling = !isInfoScrolling;
+        const btn = $('#infoScrollBtn');
+        
+        if (isInfoScrolling) {
+            startInfoAutoScroll();
+            btn.html('<i class="fas fa-pause"></i> <span>Pause Scroll</span>');
+            btn.removeClass('active');
+        } else {
+            stopInfoAutoScroll();
+            btn.html('<i class="fas fa-play"></i> <span>Play Scroll</span>');
+            btn.addClass('active');
+        }
+    }
+
+    function showNoInformation() {
+        $('#informationList').html(`
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
+                <p class="mt-3 text-white">Tidak ada informasi Open/On Progress</p>
+                <small class="text-muted">Semua informasi sudah selesai</small>
+            </div>
+        `);
+        $('#infoCount').text('0').removeClass('bg-danger bg-warning').addClass('bg-success');
+    }
+
+    // ========== HOURLY PROGRESS ==========
+    function updateHourlyChart() {
+        console.log('⏰ Updating hourly chart...');
+        
+        const currentHour = new Date().getHours();
+        const isDayShift = currentHour >= 7 && currentHour <= 20;
+        
+        $.ajax({
+            url: 'api/get_hourly_progress.php',
+            type: 'GET',
+            data: { 
+                date: today,
+                shift: isDayShift ? 'DS' : 'NS'
+            },
+            dataType: 'json',
+            timeout: 5000,
+            success: function(response) {
+                if (!response || !Array.isArray(response)) {
+                    console.warn('⚠️ No hourly data available');
+                    $('#hourlyChart').html('<div class="text-center py-5"><i class="fas fa-clock text-muted" style="font-size: 2rem;"></i><p class="mt-2 text-white small">No hourly data available</p></div>');
+                    return;
+                }
+                
+                console.log('✅ Hourly data received:', response.length, 'records');
+                
+                let cumulative = 0;
+                const hours = response.map(r => r.hour + ':00');
+                const quantities = response.map(r => {
+                    cumulative += r.qty;
+                    return cumulative;
+                });
+                
+                const options = {
+                    series: [{
+                        name: 'Cumulative Incoming',
+                        data: quantities
+                    }],
+                    chart: {
+                        type: 'area',
+                        height: 200,
+                        toolbar: { show: false },
+                        animations: { 
+                            enabled: true, 
+                            speed: 800
+                        },
+                        zoom: { enabled: false }
                     },
-                    plotOptions: {
-                        radialBar: {
-                            startAngle: -90,
-                            endAngle: 90,
-                            hollow: { size: '65%' },
-                            track: { background: 'rgba(255, 255, 255, 0.1)' },
-                            dataLabels: {
-                                name: { 
-                                    show: false 
-                                },
-                                value: { 
-                                    fontSize: '32px',
-                                    fontWeight: 'bold',
-                                    offsetY: 5,
-                                    formatter: function(val) { 
-                                        return Math.min(val, 100) + '%'; 
-                                    },
-                                    color: '#ffffff'
-                                }
-                            }
-                        }
+                    stroke: {
+                        curve: 'smooth',
+                        width: 3
                     },
-                    colors: [
-                        achievement >= 90 ? '#2ecc71' : 
-                        achievement >= 70 ? '#f1c40f' : 
-                        achievement >= 50 ? '#e67e22' : '#e74c3c'
-                    ],
                     fill: {
                         type: 'gradient',
                         gradient: {
-                            shade: 'dark',
-                            type: 'horizontal',
-                            gradientToColors: [
-                                achievement >= 90 ? '#27ae60' : 
-                                achievement >= 70 ? '#f39c12' : 
-                                achievement >= 50 ? '#d35400' : '#c0392b'
-                            ],
-                            stops: [0, 100]
+                            shadeIntensity: 1,
+                            opacityFrom: 0.7,
+                            opacityTo: 0.3,
+                            stops: [0, 90, 100]
                         }
-                    }
-                });
-                todayGauge.render();
-            } else {
-                todayGauge.updateSeries([achievement]);
-                todayGauge.updateOptions({
-                    colors: [
-                        achievement >= 90 ? '#2ecc71' : 
-                        achievement >= 70 ? '#f1c40f' : 
-                        achievement >= 50 ? '#e67e22' : '#e74c3c'
-                    ]
-                });
-            }
-            
-            // Update stats
-            $('#targetQty').text(totalOrder.toLocaleString() + ' pcs');
-            $('#incomingQty').text(totalIncoming.toLocaleString() + ' pcs');
-            $('#balanceQty').text(balance.toLocaleString() + ' pcs');
-            $('#lastUpdateTime').text('Last: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        },
-        error: function() {
-            console.error('Failed to load today performance');
-        }
-    });
-}
-
-// ========== HOURLY PROGRESS - DIUBAH JADI AKUMULASI ==========
-function updateHourlyChart() {
-    const currentHour = new Date().getHours();
-    const isDayShift = currentHour >= 7 && currentHour <= 20;
-    
-    $.ajax({
-        url: 'api/get_hourly_progress.php',
-        type: 'GET',
-        data: { 
-            date: today,
-            shift: isDayShift ? 'DS' : 'NS'
-        },
-        dataType: 'json',
-        success: function(response) {
-            if (!response || !Array.isArray(response)) {
-                $('#hourlyChart').html('<div class="text-center py-5"><i class="fas fa-clock text-muted" style="font-size: 2rem;"></i><p class="mt-2 text-white small">No hourly data available</p></div>');
-                return;
-            }
-            
-            // DAPATKAN DATA AKUMULASI
-            let cumulative = 0;
-            const hours = response.map(r => r.hour + ':00');
-            const quantities = response.map(r => {
-                cumulative += r.qty;
-                return cumulative;
-            });
-            
-            const options = {
-                series: [{
-                    name: 'Cumulative Incoming',
-                    data: quantities
-                }],
-                chart: {
-                    type: 'area',
-                    height: 200,
-                    toolbar: { show: false },
-                    animations: { 
-                        enabled: true, 
-                        speed: 800,
-                        animateGradually: { enabled: true, delay: 150 },
-                        dynamicAnimation: { enabled: true, speed: 350 }
                     },
-                    zoom: { enabled: false }
-                },
-                stroke: {
-                    curve: 'smooth',
-                    width: 3
-                },
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        shadeIntensity: 1,
-                        opacityFrom: 0.7,
-                        opacityTo: 0.3,
-                        stops: [0, 90, 100]
-                    }
-                },
-                colors: ['#00adb5'],
-                dataLabels: {
-                    enabled: false
-                },
-                grid: {
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    strokeDashArray: 3,
-                    yaxis: { lines: { show: true } },
-                    xaxis: { lines: { show: true } }
-                },
-                xaxis: {
-                    categories: hours,
-                    labels: { 
-                        style: { colors: '#a9b7c6', fontSize: '11px' },
-                        rotate: -45
+                    colors: ['#00adb5'],
+                    dataLabels: {
+                        enabled: false
                     },
-                    title: { 
-                        text: 'Hour', 
-                        style: { color: '#a9b7c6', fontSize: '12px' }
-                    }
-                },
-                yaxis: {
-                    title: { 
-                        text: 'Cumulative (pcs)', 
-                        style: { color: '#a9b7c6', fontSize: '12px' }
+                    grid: {
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        strokeDashArray: 3,
+                        yaxis: { lines: { show: true } },
+                        xaxis: { lines: { show: true } }
                     },
-                    labels: { 
-                        style: { colors: '#a9b7c6', fontSize: '11px' },
-                        formatter: function(val) { return val.toLocaleString(); }
-                    }
-                },
-                tooltip: {
-                    y: { 
-                        formatter: function(val, { dataPointIndex }) {
-                            const current = quantities[dataPointIndex];
-                            const previous = dataPointIndex > 0 ? quantities[dataPointIndex-1] : 0;
-                            const increment = current - previous;
-                            return `${current.toLocaleString()} pcs (+${increment.toLocaleString()})`;
+                    xaxis: {
+                        categories: hours,
+                        labels: { 
+                            style: { colors: '#a9b7c6', fontSize: '11px' },
+                            rotate: -45
+                        },
+                        title: { 
+                            text: 'Hour', 
+                            style: { color: '#a9b7c6', fontSize: '12px' }
                         }
+                    },
+                    yaxis: {
+                        title: { 
+                            text: 'Cumulative (pcs)', 
+                            style: { color: '#a9b7c6', fontSize: '12px' }
+                        },
+                        labels: { 
+                            style: { colors: '#a9b7c6', fontSize: '11px' },
+                            formatter: function(val) { return val.toLocaleString(); }
+                        }
+                    },
+                    tooltip: {
+                        y: { 
+                            formatter: function(val, { dataPointIndex }) {
+                                const current = quantities[dataPointIndex];
+                                const previous = dataPointIndex > 0 ? quantities[dataPointIndex-1] : 0;
+                                const increment = current - previous;
+                                return `${current.toLocaleString()} pcs (+${increment.toLocaleString()})`;
+                            }
+                        }
+                    },
+                    markers: {
+                        size: 4,
+                        colors: ['#ffffff'],
+                        strokeColors: '#00adb5',
+                        strokeWidth: 2
                     }
-                },
-                markers: {
-                    size: 4,
-                    colors: ['#ffffff'],
-                    strokeColors: '#00adb5',
-                    strokeWidth: 2
+                };
+                
+                if (!hourlyChart) {
+                    hourlyChart = new ApexCharts(document.querySelector("#hourlyChart"), options);
+                    hourlyChart.render();
+                } else {
+                    hourlyChart.updateOptions(options);
+                    hourlyChart.updateSeries(options.series);
                 }
-            };
-            
-            if (!hourlyChart) {
-                hourlyChart = new ApexCharts(document.querySelector("#hourlyChart"), options);
-                hourlyChart.render();
-            } else {
-                hourlyChart.updateOptions(options);
-                hourlyChart.updateSeries(options.series);
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ Failed to load hourly data:', error);
+                $('#hourlyChart').html('<div class="text-center py-5 text-warning"><i class="fas fa-exclamation-triangle"></i><p class="mt-2 text-white small">Failed to load hourly data</p></div>');
             }
-        },
-        error: function() {
-            $('#hourlyChart').html('<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle"></i><p class="mt-2 text-white small">Failed to load hourly data</p></div>');
-        }
-    });
-}
+        });
+    }
 
-// ========== INFORMATION SECTION ==========
-function updateInformation() {
-    $.ajax({
-        url: 'api/get_notifications.php',
-        type: 'GET',
-        dataType: 'json',
-        success: function(response) {
-            if (!response || !response.success || !response.notifications) {
-                $('#informationList').html('<div class="text-center py-3"><i class="fas fa-check-circle text-success"></i><p class="mt-2 text-white small">No new information</p></div>');
-                $('#infoCount').text('0').removeClass('bg-warning').addClass('bg-primary');
-                return;
-            }
-            
-            const notifications = response.notifications;
-            let html = '';
-            let infoCount = 0;
-            
-            // Filter hanya notifikasi dari 7 hari terakhir
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            
-            notifications.slice(0, 5).forEach(notification => {
-                // Filter berdasarkan tanggal (jika ada)
-                if (notification.datetime_full) {
-                    const notifDate = new Date(notification.datetime_full);
-                    if (notifDate < sevenDaysAgo) {
-                        return; // Skip data lebih dari 7 hari
-                    }
-                }
-                
-                infoCount++;
-                
-                let icon = 'info-circle';
-                let alertClass = '';
-                let message = notification.display_message || notification.message || '';
-                
-                if (notification.notification_type === 'assigned_to_you') {
-                    icon = 'exclamation-triangle';
-                    alertClass = 'urgent';
-                } else if (notification.notification_type === 'your_information') {
-                    icon = 'user-check';
-                    alertClass = 'assigned';
-                }
-                
-                const time = notification.time || '';
-                const fromUser = notification.from_user || 'System';
-                
-                html += `
-                <div class="info-item ${alertClass}">
-                    <div class="info-content">
-                        <div class="info-icon">
-                            <i class="fas fa-${icon}"></i>
-                        </div>
-                        <div class="info-details">
-                            <div class="info-message">
-                                <strong>${fromUser}</strong>: ${message}
-                            </div>
-                            <div class="info-time">
-                                <i class="far fa-clock"></i> ${time}
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            });
-            
-            $('#informationList').html(html || '<div class="text-center py-3"><i class="fas fa-check-circle text-success"></i><p class="mt-2 text-white small">No new information</p></div>');
-            $('#infoCount').text(infoCount || '0');
-            
-            if (infoCount > 0) {
-                $('#infoCount').addClass('bg-warning').removeClass('bg-primary');
-            } else {
-                $('#infoCount').addClass('bg-primary').removeClass('bg-warning');
-            }
-        },
-        error: function() {
-            $('#informationList').html('<div class="text-center py-3 text-danger"><i class="fas fa-exclamation-triangle"></i><p class="mt-2 text-white small">Failed to load information</p></div>');
-        }
-    });
-}
-
-// ========== LIVE DATA TABLE WITH FIXED HEADER ==========
-function updateLiveTable() {
-    console.log("🚀 Updating live table...");
-    
-    $.ajax({
-        url: 'api/get_live_supplier_data.php',
-        type: 'GET',
-        data: { date: today },
-        dataType: 'json',
-        timeout: 10000,
-        success: function(response) {
-            console.log("✅ Response received");
-            if (Array.isArray(response)) {
-                renderTableWithFixedHeader(response);
-            } else if (response && response.data) {
-                renderTableWithFixedHeader(response.data);
-            } else {
-                renderTableWithFixedHeader(response);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error("❌ API failed:", status, error);
-            
-            // Fallback to demo data
-            const demoData = generateDemoData();
-            renderTableWithFixedHeader(demoData);
-        }
-    });
-}
-
-function generateDemoData() {
-    const suppliers = [
-        { code: 'C60', name: 'AUTOPLASTIK INDONESIA,PT.', pic: 'SATRIO' },
-        { code: 'A25', name: 'CHANDRA NUGERAHCIPTA, PT.', pic: 'EKA' },
-        { code: 'B79', name: 'YUJU INDONESIA, PT.', pic: 'SATRIO' },
-        { code: 'B70', name: 'DHARMA PRECISION PARTS,PT', pic: 'EKO' },
-        { code: 'C40', name: 'CIPTAJAYA KREASINDO U.,PT', pic: 'EKO' },
-        { code: 'D15', name: 'PRIMA TEKNIK INDONESIA', pic: 'ALBERTO' },
-        { code: 'E22', name: 'SUMBER MAKMUR SEJAHTERA', pic: 'MURSID' },
-        { code: 'F33', name: 'TECHNO PRECISION PARTS', pic: 'SATRIO' },
-        { code: 'G44', name: 'MITRA USAHA BERSAMA', pic: 'EKA' },
-        { code: 'H55', name: 'GLOBAL MANUFACTURING IND.', pic: 'EKO' }
-    ];
-    
-    return suppliers.map(supplier => {
-        const orderQty = Math.floor(Math.random() * 500) + 100;
-        const incomingQty = Math.floor(Math.random() * orderQty * 1.2);
-        const dsIncoming = Math.floor(incomingQty * 0.6);
-        const nsIncoming = Math.floor(incomingQty * 0.4);
-        const completionRate = Math.round((incomingQty / orderQty) * 100);
+    // ========== TODAY'S GAUGE ==========
+    function updateTodayGauge() {
+        console.log('📊 Updating today gauge...');
         
-        let status = 'ON_PROGRESS';
-        if (completionRate >= 100) status = 'OK';
-        else if (completionRate >= 90) status = 'ON_PROGRESS';
-        else if (completionRate >= 70) status = 'DELAY';
-        else status = 'OVER';
-        
-        return {
-            supplier_code: supplier.code,
-            supplier_name: supplier.name,
-            pic_order: supplier.pic,
-            total_order: orderQty,
-            total_incoming: incomingQty,
-            ds_incoming: dsIncoming,
-            ns_incoming: nsIncoming,
-            ds_completion: Math.round((dsIncoming / orderQty) * 100),
-            ns_completion: Math.round((nsIncoming / orderQty) * 100),
-            completion_rate: completionRate,
-            balance: orderQty - incomingQty,
-            STATUS: status
-        };
-    });
-}
+        $.ajax({
+            url: 'api/get_today_performance.php',
+            type: 'GET',
+            data: { date: today },
+            dataType: 'json',
+            timeout: 5000,
+            beforeSend: function() {
+                $('#lastUpdateTime').html('<span class="loading-spinner"></span> Updating...');
+            },
+            success: function(response) {
+                if (!response) {
+                    console.error('❌ No response from today performance API');
+                    return;
+                }
+                
+                const totalOrder = parseInt(response.total_order) || 0;
+                const totalIncoming = parseInt(response.total_incoming) || 0;
+                const achievement = totalOrder > 0 ? Math.min(Math.round((totalIncoming / totalOrder) * 100), 100) : 0;
+                const balance = totalOrder - totalIncoming;
+                
+                console.log('✅ Today stats:', { totalOrder, totalIncoming, achievement, balance });
+                
+                if (!todayGauge) {
+                    todayGauge = new ApexCharts(document.querySelector("#todayGauge"), {
+                        series: [achievement],
+                        chart: { 
+                            type: 'radialBar', 
+                            height: 180,
+                            animations: { enabled: true, speed: 1000 }
+                        },
+                        plotOptions: {
+                            radialBar: {
+                                startAngle: -90,
+                                endAngle: 90,
+                                hollow: { size: '65%' },
+                                track: { background: 'rgba(255, 255, 255, 0.1)' },
+                                dataLabels: {
+                                    name: { 
+                                        show: false 
+                                    },
+                                    value: { 
+                                        fontSize: '32px',
+                                        fontWeight: 'bold',
+                                        offsetY: 5,
+                                        formatter: function(val) { 
+                                            return Math.min(val, 100) + '%'; 
+                                        },
+                                        color: '#ffffff'
+                                    }
+                                }
+                            }
+                        },
+                        colors: [
+                            achievement >= 90 ? '#2ecc71' : 
+                            achievement >= 70 ? '#f1c40f' : 
+                            achievement >= 50 ? '#e67e22' : '#e74c3c'
+                        ],
+                        fill: {
+                            type: 'gradient',
+                            gradient: {
+                                shade: 'dark',
+                                type: 'horizontal',
+                                gradientToColors: [
+                                    achievement >= 90 ? '#27ae60' : 
+                                    achievement >= 70 ? '#f39c12' : 
+                                    achievement >= 50 ? '#d35400' : '#c0392b'
+                                ],
+                                stops: [0, 100]
+                            }
+                        }
+                    });
+                    todayGauge.render();
+                } else {
+                    todayGauge.updateSeries([achievement]);
+                    todayGauge.updateOptions({
+                        colors: [
+                            achievement >= 90 ? '#2ecc71' : 
+                            achievement >= 70 ? '#f1c40f' : 
+                            achievement >= 50 ? '#e67e22' : '#e74c3c'
+                        ]
+                    });
+                }
+                
+                $('#targetQty').text(totalOrder.toLocaleString() + ' pcs');
+                $('#incomingQty').text(totalIncoming.toLocaleString() + ' pcs');
+                $('#balanceQty').text(balance.toLocaleString() + ' pcs');
+                $('#lastUpdateTime').text('Last: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ Failed to load today performance:', error);
+                $('#lastUpdateTime').html('<i class="fas fa-exclamation-triangle text-warning"></i> Failed');
+                
+                $('#targetQty').text('0 pcs');
+                $('#incomingQty').text('0 pcs');
+                $('#balanceQty').text('0 pcs');
+            }
+        });
+    }
 
+    // ========== LIVE DATA TABLE ==========
+    function updateLiveTable() {
+        console.log('📋 Updating live table...');
+        
+        $.ajax({
+            url: 'api/get_live_supplier_data.php',
+            type: 'GET',
+            data: { date: today },
+            dataType: 'json',
+            timeout: 10000,
+            success: function(response) {
+                console.log('✅ Live table response received');
+                
+                if (Array.isArray(response)) {
+                    renderTableWithFixedHeader(response);
+                } else if (response && response.data) {
+                    renderTableWithFixedHeader(response.data);
+                } else {
+                    renderTableWithFixedHeader(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ Live table API failed:', status, error);
+                
+                const demoData = generateDemoData();
+                renderTableWithFixedHeader(demoData);
+                
+                showToast('warning', 'Using demo data - API connection failed');
+            }
+        });
+    }
+
+    // ========== RENDER TABLE FUNCTIONS ==========
 function renderTableWithFixedHeader(data) {
     if (!data || !Array.isArray(data) || data.length === 0) {
+        console.warn('⚠️ No data to render in table');
         $('#scrollingContent').html(`
             <div class="empty-state">
                 <i class="fas fa-database"></i>
@@ -1621,7 +2033,9 @@ function renderTableWithFixedHeader(data) {
         return;
     }
     
-    // Sort data: ON_PROGRESS -> DELAY -> OVER -> OK (Completed di bawah)
+    console.log(`📊 Rendering ${data.length} supplier records`);
+    
+    // Sort data: ON_PROGRESS -> DELAY -> OVER -> OK
     data.sort((a, b) => {
         const statusOrder = {
             'ON_PROGRESS': 1,
@@ -1636,8 +2050,8 @@ function renderTableWithFixedHeader(data) {
         return statusOrder[statusA] - statusOrder[statusB];
     });
     
-    // Duplicate data untuk scrolling yang seamless (8x untuk smooth)
-    const duplicateCount = 8;
+    // Duplicate data untuk scrolling seamless
+    const duplicateCount = 6;
     let duplicatedData = [];
     for (let i = 0; i < duplicateCount; i++) {
         duplicatedData = duplicatedData.concat(data);
@@ -1651,7 +2065,7 @@ function renderTableWithFixedHeader(data) {
     let delayedCount = 0;
     let overCount = 0;
     
-    // Hanya hitung stats dari data asli
+    // Hitung stats dari data asli
     data.forEach((item) => {
         totalSuppliers++;
         const status = item.STATUS || 'ON_PROGRESS';
@@ -1673,6 +2087,7 @@ function renderTableWithFixedHeader(data) {
         }
     });
     
+    // Render semua data
     duplicatedData.forEach((item, index) => {
         const completionRate = parseFloat(item.completion_rate) || 0;
         const status = item.STATUS || 'ON_PROGRESS';
@@ -1714,7 +2129,6 @@ function renderTableWithFixedHeader(data) {
         let incomingClass = 'quantity-warning';
         let remainClass = remainQty > 0 ? 'quantity-danger' : 'quantity-good';
         
-        // Jika status OK atau OVER, gunakan warna khusus
         if (status === 'OK') {
             orderClass = 'quantity-good';
             incomingClass = 'quantity-good';
@@ -1725,7 +2139,7 @@ function renderTableWithFixedHeader(data) {
             remainClass = 'quantity-danger';
         }
         
-        // Format persentase tanpa D/S dan N/S
+        // Format persentase
         const dsPercent = Math.min(item.ds_completion || 0, 100);
         const nsPercent = Math.min(item.ns_completion || 0, 100);
         
@@ -1786,6 +2200,8 @@ function renderTableWithFixedHeader(data) {
     $('#scrollingContent').html(html);
     updateStats(totalSuppliers, completedCount, onProgressCount, delayedCount, overCount);
     
+    console.log('✅ Table rendered successfully');
+    
     // Setup animation setelah konten dimuat
     setTimeout(() => {
         if (isAutoScrolling) {
@@ -1802,174 +2218,287 @@ function updateStats(total, completed, onProgress, delayed, over) {
     $('#overCount').text(over);
 }
 
-// ========== SCROLLING FUNCTIONS ==========
-function startAutoScroll() {
-    if (autoScrollInterval) clearInterval(autoScrollInterval);
+function generateDemoData() {
+    console.log('🔄 Generating demo data for fallback');
     
-    const scrollBody = document.getElementById('tableScrollBody');
-    const content = document.getElementById('scrollingContent');
+    const suppliers = [
+        { code: 'C60', name: 'AUTOPLASTIK INDONESIA,PT.', pic: 'SATRIO' },
+        { code: 'A25', name: 'CHANDRA NUGERAHCIPTA, PT.', pic: 'EKA' },
+        { code: 'B79', name: 'YUJU INDONESIA, PT.', pic: 'SATRIO' },
+        { code: 'B70', name: 'DHARMA PRECISION PARTS,PT', pic: 'EKO' },
+        { code: 'C40', name: 'CIPTAJAYA KREASINDO U.,PT', pic: 'EKO' },
+        { code: 'D15', name: 'PRIMA TEKNIK INDONESIA', pic: 'ALBERTO' },
+        { code: 'E22', name: 'SUMBER MAKMUR SEJAHTERA', pic: 'MURSID' },
+        { code: 'F33', name: 'TECHNO PRECISION PARTS', pic: 'SATRIO' },
+        { code: 'G44', name: 'MITRA USAHA BERSAMA', pic: 'EKA' },
+        { code: 'H55', name: 'GLOBAL MANUFACTURING IND.', pic: 'EKO' }
+    ];
     
-    if (!scrollBody || !content) return;
-    
-    scrollPosition = 0;
-    
-    autoScrollInterval = setInterval(() => {
-        if (!isAutoScrolling) return;
+    return suppliers.map(supplier => {
+        const orderQty = Math.floor(Math.random() * 500) + 100;
+        const incomingQty = Math.floor(Math.random() * orderQty * 1.2);
+        const dsIncoming = Math.floor(incomingQty * 0.6);
+        const nsIncoming = Math.floor(incomingQty * 0.4);
+        const completionRate = Math.round((incomingQty / orderQty) * 100);
         
-        scrollPosition += scrollSpeed * scrollDirection;
-        const contentHeight = content.scrollHeight;
-        const containerHeight = scrollBody.clientHeight;
-        const maxScroll = contentHeight - containerHeight;
+        let status = 'ON_PROGRESS';
+        if (completionRate >= 100) status = 'OK';
+        else if (completionRate >= 90) status = 'ON_PROGRESS';
+        else if (completionRate >= 70) status = 'DELAY';
+        else status = 'OVER';
         
-        // Jika mencapai batas, reset ke atas
-        if (scrollPosition >= maxScroll) {
-            scrollPosition = 0;
-            scrollBody.scrollTop = 0;
-        } else {
-            scrollBody.scrollTop = scrollPosition;
-        }
-    }, 16); // ~60fps
-}
-
-function stopAutoScroll() {
-    if (autoScrollInterval) {
-        clearInterval(autoScrollInterval);
-        autoScrollInterval = null;
-    }
-}
-
-function toggleAutoScroll() {
-    isAutoScrolling = !isAutoScrolling;
-    const btn = document.getElementById('autoScrollBtn');
-    
-    if (isAutoScrolling) {
-        startAutoScroll();
-        btn.innerHTML = '<i class="fas fa-pause"></i> Pause Scroll';
-        btn.classList.add('active');
-    } else {
-        stopAutoScroll();
-        btn.innerHTML = '<i class="fas fa-play"></i> Play Scroll';
-        btn.classList.remove('active');
-    }
-}
-
-function scrollFaster() {
-    scrollSpeed = Math.min(scrollSpeed + 0.2, 3);
-    console.log(`Scroll speed: ${scrollSpeed.toFixed(1)}`);
-}
-
-function scrollSlower() {
-    scrollSpeed = Math.max(scrollSpeed - 0.2, 0.5);
-    console.log(`Scroll speed: ${scrollSpeed.toFixed(1)}`);
-}
-
-// ========== AUTO REFRESH FUNCTIONS ==========
-function refreshAllData() {
-    updateTodayGauge();
-    updateHourlyChart();
-    updateInformation();
-    updateLiveTable();
-    updateDateTime();
-    
-    // Show refresh feedback
-    $('#lastUpdateTime').html('<i class="fas fa-sync-alt fa-spin"></i> Refreshing...');
-    setTimeout(() => {
-        $('#lastUpdateTime').text('Last: ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    }, 1000);
-}
-
-function toggleAutoRefresh() {
-    isAutoRefresh = !isAutoRefresh;
-    
-    if (isAutoRefresh) {
-        startAutoRefresh();
-        $('#autoRefreshBtn').html('<i class="fas fa-power-off"></i> Auto: ON');
-        $('#autoRefreshBtn').removeClass('control-btn-secondary').addClass('control-btn-primary');
-    } else {
-        stopAutoRefresh();
-        $('#autoRefreshBtn').html('<i class="fas fa-power-off"></i> Auto: OFF');
-        $('#autoRefreshBtn').removeClass('control-btn-primary').addClass('control-btn-secondary');
-    }
-}
-
-function startAutoRefresh() {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(refreshAllData, 8 * 60 * 1000); // 8 MENIT
-}
-
-function stopAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-    }
-}
-
-// ========== INITIALIZATION ==========
-$(document).ready(function() {
-    console.log("🎯 LIVE DASHBOARD INITIALIZING...");
-    
-    // Initial data load
-    updateDateTime();
-    updateTodayGauge();
-    updateHourlyChart();
-    updateInformation();
-    updateLiveTable();
-    
-    // Start auto refresh (8 menit)
-    startAutoRefresh();
-    
-    // Update time every second
-    setInterval(updateDateTime, 1000);
-    
-    // Handle page visibility
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            console.log("📱 Page hidden, pausing updates");
-            stopAutoRefresh();
-            stopAutoScroll();
-        } else {
-            console.log("📱 Page visible, resuming updates");
-            if (isAutoRefresh) {
-                startAutoRefresh();
-            }
-            if (isAutoScrolling) {
-                startAutoScroll();
-            }
-            // Force refresh data
-            setTimeout(refreshAllData, 500);
-        }
+        return {
+            supplier_code: supplier.code,
+            supplier_name: supplier.name,
+            pic_order: supplier.pic,
+            total_order: orderQty,
+            total_incoming: incomingQty,
+            ds_incoming: dsIncoming,
+            ns_incoming: nsIncoming,
+            ds_completion: Math.round((dsIncoming / orderQty) * 100),
+            ns_completion: Math.round((nsIncoming / orderQty) * 100),
+            completion_rate: completionRate,
+            balance: orderQty - incomingQty,
+            STATUS: status
+        };
     });
-    
-    // Handle window resize
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            // Reset scroll position on resize
-            const scrollBody = document.getElementById('tableScrollBody');
-            if (scrollBody) {
+}
+
+    // ========== SCROLLING FUNCTIONS UNTUK SUPPLIER TABLE ==========
+    function startAutoScroll() {
+        if (autoScrollInterval) clearInterval(autoScrollInterval);
+        
+        const scrollBody = document.getElementById('tableScrollBody');
+        const content = document.getElementById('scrollingContent');
+        
+        if (!scrollBody || !content) {
+            console.error('❌ Scroll elements not found');
+            return;
+        }
+        
+        tableScrollPosition = 0;
+        
+        autoScrollInterval = setInterval(() => {
+            if (!isAutoScrolling) return;
+            
+            tableScrollPosition += scrollSpeed * scrollDirection;
+            const contentHeight = content.scrollHeight;
+            const containerHeight = scrollBody.clientHeight;
+            const maxScroll = contentHeight - containerHeight;
+            
+            if (tableScrollPosition >= maxScroll) {
+                tableScrollPosition = 0;
                 scrollBody.scrollTop = 0;
-                scrollPosition = 0;
+            } else {
+                scrollBody.scrollTop = tableScrollPosition;
             }
-            // Restart scroll animation
-            if (isAutoScrolling) {
-                stopAutoScroll();
-                setTimeout(startAutoScroll, 100);
-            }
-        }, 250);
-    });
-    
-    console.log("✅ LIVE DASHBOARD INITIALIZED");
-});
-
-// Handle connection issues
-$(document).ajaxError(function(event, jqxhr, settings, thrownError) {
-    if (settings.url.includes('get_live_supplier_data')) {
-        console.warn("⚠️ Connection issue with live data, will retry...");
-        setTimeout(updateLiveTable, 3000);
+        }, 16);
+        
+        console.log('🔄 Auto scroll started');
     }
-});
-</script>
+
+    function stopAutoScroll() {
+        if (autoScrollInterval) {
+            clearInterval(autoScrollInterval);
+            autoScrollInterval = null;
+            console.log('⏸️ Auto scroll stopped');
+        }
+    }
+
+    function toggleAutoScroll() {
+        isAutoScrolling = !isAutoScrolling;
+        const btn = document.getElementById('autoScrollBtn');
+        
+        if (isAutoScrolling) {
+            startAutoScroll();
+            btn.innerHTML = '<i class="fas fa-pause"></i> Pause Scroll';
+            btn.classList.add('active');
+        } else {
+            stopAutoScroll();
+            btn.innerHTML = '<i class="fas fa-play"></i> Play Scroll';
+            btn.classList.remove('active');
+        }
+    }
+
+    function scrollFaster() {
+        scrollSpeed = Math.min(scrollSpeed + 0.2, 3);
+        console.log(`⚡ Scroll speed: ${scrollSpeed.toFixed(1)}`);
+        showToast('info', `Scroll speed: ${scrollSpeed.toFixed(1)}x`);
+    }
+
+    function scrollSlower() {
+        scrollSpeed = Math.max(scrollSpeed - 0.2, 0.5);
+        console.log(`🐢 Scroll speed: ${scrollSpeed.toFixed(1)}`);
+        showToast('info', `Scroll speed: ${scrollSpeed.toFixed(1)}x`);
+    }
+
+    // ========== AUTO REFRESH FUNCTIONS ==========
+    function refreshAllData() {
+        console.log('🔄 Manual refresh triggered');
+        
+        const refreshBtn = $('#refreshBtn');
+        const originalText = refreshBtn.html();
+        refreshBtn.prop('disabled', true);
+        refreshBtn.html('<span class="loading-spinner"></span> Refreshing...');
+        
+        updateTodayGauge();
+        updateHourlyChart();
+        updateInformation(); // ⬅️ INI YANG PENTING!
+        updateLiveTable();
+        updateDateTime();
+        
+        setTimeout(() => {
+            refreshBtn.prop('disabled', false);
+            refreshBtn.html(originalText);
+            showToast('success', 'Data refreshed successfully');
+        }, 2000);
+    }
+
+    function toggleAutoRefresh() {
+        isAutoRefresh = !isAutoRefresh;
+        const btn = $('#autoRefreshBtn');
+        const text = $('#autoRefreshText');
+        
+        if (isAutoRefresh) {
+            startAutoRefresh();
+            text.text('Auto: ON');
+            btn.removeClass('control-btn-secondary').addClass('control-btn-primary');
+            showToast('success', 'Auto refresh enabled (every 8 minutes)');
+        } else {
+            stopAutoRefresh();
+            text.text('Auto: OFF');
+            btn.removeClass('control-btn-primary').addClass('control-btn-secondary');
+            showToast('warning', 'Auto refresh disabled');
+        }
+    }
+
+    function startAutoRefresh() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        autoRefreshInterval = setInterval(refreshAllData, 8 * 60 * 1000);
+        console.log('🔄 Auto refresh started (8 minutes interval)');
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+            console.log('⏸️ Auto refresh stopped');
+        }
+    }
+
+    // ========== TOAST NOTIFICATION ==========
+    function showToast(type, message) {
+        $('.live-toast').remove();
+        
+        const iconMap = {
+            'success': 'check-circle',
+            'error': 'exclamation-triangle',
+            'warning': 'exclamation-circle',
+            'info': 'info-circle'
+        };
+        
+        const colorMap = {
+            'success': '#2ecc71',
+            'error': '#e74c3c',
+            'warning': '#f39c12',
+            'info': '#3498db'
+        };
+        
+        const icon = iconMap[type] || 'info-circle';
+        const color = colorMap[type] || '#3498db';
+        
+        const toast = $(`
+            <div class="live-toast" style="
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                background: rgba(22, 33, 62, 0.95);
+                border-left: 4px solid ${color};
+                color: white;
+                padding: 12px 16px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                backdrop-filter: blur(10px);
+                z-index: 9999;
+                min-width: 300px;
+                max-width: 400px;
+                transform: translateX(120%);
+                transition: transform 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            ">
+                <i class="fas fa-${icon}" style="color: ${color}; font-size: 18px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; margin-bottom: 2px; text-transform: capitalize;">${type}</div>
+                    <div style="font-size: 12px; color: #a9b7c6;">${message}</div>
+                </div>
+                <button onclick="$(this).closest('.live-toast').remove()" style="
+                    background: none;
+                    border: none;
+                    color: #a9b7c6;
+                    cursor: pointer;
+                    padding: 0;
+                    font-size: 14px;
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        $('body').append(toast);
+        
+        setTimeout(() => {
+            toast.css('transform', 'translateX(0)');
+        }, 10);
+        
+        setTimeout(() => {
+            toast.css('transform', 'translateX(120%)');
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+    }
+
+    // ========== INITIALIZATION ==========
+    $(document).ready(function() {
+        console.log('🚀 LIVE DASHBOARD INITIALIZING...');
+        console.log('📅 Today:', today);
+        
+        // Initial data load
+        updateDateTime();
+        updateTodayGauge();
+        updateHourlyChart();
+        updateInformation(); // ⬅️ INI YANG UTAMA!
+        updateLiveTable();
+        
+        // Start auto refresh
+        startAutoRefresh();
+        
+        // Update time every second
+        setInterval(updateDateTime, 1000);
+        
+        // Handle page visibility
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('📱 Page hidden, pausing updates');
+                stopAutoRefresh();
+                stopAutoScroll();
+                stopInfoAutoScroll();
+                showToast('info', 'Dashboard paused');
+            } else {
+                console.log('📱 Page visible, resuming updates');
+                if (isAutoRefresh) startAutoRefresh();
+                if (isAutoScrolling) startAutoScroll();
+                if (isInfoScrolling) startInfoAutoScroll();
+                
+                setTimeout(refreshAllData, 500);
+                showToast('success', 'Dashboard resumed');
+            }
+        });
+        
+        console.log('✅ LIVE DASHBOARD INITIALIZED SUCCESSFULLY');
+        showToast('success', 'Live Dashboard loaded');
+    });
+    </script>
 
 </body>
 </html>

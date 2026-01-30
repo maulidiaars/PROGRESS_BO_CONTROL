@@ -205,47 +205,65 @@ function calculateDSStatus($date, $eta, $dsOrder, $dsAdd, $dsActual, $currentHou
     $orderDate = $date;
     
     // LOGGING
-    error_log("=== DS STATUS CALCULATION ===");
+    error_log("=== DS STATUS CALCULATION (REVISI) ===");
     error_log("DS Order: $dsOrder + $dsAdd = $totalDSOrder | DS Actual: $dsActual");
     error_log("Date: $orderDate | Is Today: " . (isToday($orderDate) ? 'YES' : 'NO'));
     error_log("Current Hour: $currentHour");
     
-    // Tidak ada order DS
+    // 1. Jika tidak ada order DS sama sekali → OK (COMPLETED) - SAMA DENGAN NS
     if ($totalDSOrder == 0 && $dsActual == 0) {
         error_log("No DS order and no DS actual → OK (COMPLETED)");
         return 'OK';
     }
     
-    // Sudah COMPLETED atau OVER
+    // 2. Jika ada order DS (regular atau add) - SAMA DENGAN NS
     if ($totalDSOrder > 0) {
+        // Sudah COMPLETED (incoming = order)
         if ($dsActual == $totalDSOrder) {
             error_log("DS Actual = Order → OK/COMPLETED");
             return 'OK';
         }
         
+        // OVER (incoming > order)
         if ($dsActual > $totalDSOrder) {
             error_log("DS Actual > Order → OVER");
             return 'OVER';
         }
+        
+        // Masih kurang → cek LOGIKA BARU - SAMA DENGAN NS
+        if ($dsActual < $totalDSOrder) {
+            if (isToday($orderDate)) {
+                if ($currentHour < 16) {
+                    error_log("Today, Before 16:00 → ON_PROGRESS (Tameng hari ini untuk DS)");
+                    return 'ON_PROGRESS';
+                } else {
+                    error_log("Today, After 16:00 → DELAY (Tameng OFF hari ini untuk DS)");
+                    return 'DELAY';
+                }
+            } else {
+                error_log("Different day → DELAY (No Tameng forever)");
+                return 'DELAY';
+            }
+        }
     }
     
-    // Masih kurang → cek LOGIKA BARU
-    if ($dsActual < $totalDSOrder) {
+    // 3. PERUBAHAN PENTING: Jika ada order tapi actual = 0, tetap pakai logika tameng
+    if ($totalDSOrder > 0 && $dsActual == 0) {
         if (isToday($orderDate)) {
             if ($currentHour < 16) {
-                error_log("Today, Before 16:00 → ON_PROGRESS (Tameng hari ini)");
+                error_log("Today, Before 16:00, Order > 0, Actual = 0 → ON_PROGRESS");
                 return 'ON_PROGRESS';
             } else {
-                error_log("Today, After 16:00 → DELAY (Tameng OFF hari ini)");
+                error_log("Today, After 16:00, Order > 0, Actual = 0 → DELAY");
                 return 'DELAY';
             }
         } else {
-            error_log("Different day → DELAY (No Tameng forever)");
+            error_log("Different day, Order > 0, Actual = 0 → DELAY");
             return 'DELAY';
         }
     }
     
-    // Default
+    // 4. Default
     error_log("Default case → ON_PROGRESS");
     return 'ON_PROGRESS';
 }

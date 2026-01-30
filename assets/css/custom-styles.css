@@ -1524,23 +1524,48 @@ tbody, td, tfoot, th, thead, tr {
 }
 
 
-/* Hilangin scrollbar horizontal & vertical DataTables */
+/* HIDE SCROLLBAR TAPI MASIH BISA SCROLL */
 .dataTables_scrollBody {
-    scrollbar-width: none;      /* Firefox */
-    -ms-overflow-style: none;   /* IE / Edge lama */
+    cursor: grab !important;
+    overflow: auto !important;
+    
+    /* Hide scrollbar semua browser */
+    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;  /* IE/Edge */
 }
 
 .dataTables_scrollBody::-webkit-scrollbar {
-    display: none;              /* Chrome / Edge / Safari */
+    display: none !important;  /* Chrome/Safari */
 }
 
-.dataTables_scrollBody.dragging {
-    cursor: grabbing;
-}
-.dataTables_scrollBody {
-    cursor: grab;
+.dataTables_scrollBody:active {
+    cursor: grabbing !important;
 }
 
+/* Untuk modal tables juga */
+.table-fixed-container,
+#ds-table-container,
+#ns-table-container,
+#accum-fixed-container {
+    cursor: grab !important;
+    overflow: auto !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.table-fixed-container::-webkit-scrollbar,
+#ds-table-container::-webkit-scrollbar,
+#ns-table-container::-webkit-scrollbar,
+#accum-fixed-container::-webkit-scrollbar {
+    display: none !important;
+}
+
+.table-fixed-container:active,
+#ds-table-container:active,
+#ns-table-container:active,
+#accum-fixed-container:active {
+    cursor: grabbing !important;
+}
 
 /* ================= STATUS BADGE STYLES - BARU ================= */
 .badge.bg-success {

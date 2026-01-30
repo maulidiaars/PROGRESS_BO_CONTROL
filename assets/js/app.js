@@ -792,15 +792,21 @@ function updateGlobalFilters() {
     globalFilters.supplierCode = $('#select-supplier-code').val() || [];
     globalFilters.status = $('#select-status').val() || [];
     
-    // Jika ada "select-all", konversi ke semua nilai
-    if (globalFilters.supplierCode.includes('select-all')) {
-        globalFilters.supplierCode = allSupplierCodes;
-    }
-    
     console.log('🔄 Filter global diperbarui:', globalFilters);
 }
 
 function getFilteredSupplierCodes() {
+    console.log('🔍 getFilteredSupplierCodes() called:', {
+        pic: globalFilters.pic,
+        supplierCode: globalFilters.supplierCode
+    });
+    
+    // Jika ada supplier code spesifik yang dipilih (dan bukan "select-all")
+    if (globalFilters.supplierCode.length > 0 && !globalFilters.supplierCode.includes('select-all')) {
+        console.log('✅ Using selected supplier codes:', globalFilters.supplierCode);
+        return globalFilters.supplierCode;
+    }
+    
     // Jika ada PIC yang dipilih, ambil supplier code dari PIC tersebut
     if (globalFilters.pic.length > 0 && !globalFilters.pic.includes('select-all')) {
         let filteredCodes = [];
@@ -810,18 +816,14 @@ function getFilteredSupplierCodes() {
             }
         });
         
-        // Jika ada supplier code spesifik yang dipilih, intersect
-        if (globalFilters.supplierCode.length > 0) {
-            filteredCodes = filteredCodes.filter(code => 
-                globalFilters.supplierCode.includes(code)
-            );
-        }
-        
-        return [...new Set(filteredCodes)];
+        filteredCodes = [...new Set(filteredCodes)];
+        console.log('✅ Using PIC-based supplier codes:', filteredCodes);
+        return filteredCodes;
     }
     
-    // Jika tidak ada PIC yang dipilih, pakai supplier code yang dipilih
-    return globalFilters.supplierCode;
+    // Default: return semua supplier codes
+    console.log('✅ Using all supplier codes');
+    return allSupplierCodes;
 }
 
 // ================= VARIABEL BARU UNTUK MODAL D/S & N/S =================
@@ -1384,7 +1386,7 @@ function loadTableDetailProgress() {
     let sendDate1 = date1 ? date1.replace(/-/g, '') : '';  
     let sendDate2 = date2 ? date2.replace(/-/g, '') : '';  
     
-    // PAKAI FILTER GLOBAL
+    // PAKAI FILTER GLOBAL YANG SUDAH DIPERBAIKI
     let supplierCodeArr = getFilteredSupplierCodes();
     let supplierCode = supplierCodeArr ? supplierCodeArr.join(',') : '';  
     
@@ -1392,6 +1394,7 @@ function loadTableDetailProgress() {
         date1: sendDate1,
         date2: sendDate2,
         supplierCodes: supplierCodeArr,
+        supplierCount: supplierCodeArr.length,
         status: globalFilters.status
     });
     
@@ -1406,9 +1409,15 @@ function loadTableDetailProgress() {
         data: {  
             date1: sendDate1,  
             date2: sendDate2,  
-            supplier_code: supplierCode,  
+            supplier_code: supplierCode,  // INI YANG DIKIRIM KE SERVER
         },  
         success: function(response) {
+            console.log("📊 Data progress response:", {
+                request_supplier_code: supplierCode,
+                response_count: response.count,
+                data_length: response.data ? response.data.length : 0
+            });
+            
             const data = Array.isArray(response)
                 ? response
                 : (response?.data || []);
@@ -1419,7 +1428,7 @@ function loadTableDetailProgress() {
                 return;
             }
             
-            console.log("Data progress loaded:", data.length, "rows");
+            console.log("✅ Data progress loaded:", data.length, "rows");
             
             // Filter tambahan berdasarkan status di client side
             let filteredData = data;
@@ -1427,7 +1436,7 @@ function loadTableDetailProgress() {
                 filteredData = filteredData.filter(row => 
                     globalFilters.status.includes(row.STATUS)
                 );
-                console.log("Setelah filter status:", filteredData.length, "rows");
+                console.log("✅ Setelah filter status:", filteredData.length, "rows");
             }
             
             let displayData = filteredData;
@@ -1451,10 +1460,18 @@ function loadTableDetailProgress() {
             
             tableDetailProgress.clear().rows.add(displayData).draw();
             hideTableSkeleton('#table-detail-progress tbody');
+            
+            console.log("🎉 Table refreshed with", displayData.length, "rows");
         },  
         error: function(xhr) {  
-            console.log("Error request modules/data_progress_by_pn.php", xhr.status);  
+            console.error("❌ Error loading progress data:", xhr.status, xhr.responseText);  
             hideTableSkeleton('#table-detail-progress tbody');
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Gagal memuat data: ' + xhr.statusText
+            });
         }  
     });  
 }
@@ -5328,6 +5345,74 @@ $('#btn-reset-ns').on('click', function() {
             }
         }, 3000);
     });
+
+    // SIMPLE DRAG FUNCTION UNTUK SEMUA TABLE
+function enableTableDrag() {
+    console.log('🎯 Enable table drag (no scrollbar)');
+    
+    // Selector untuk semua table container
+    const containers = '.dataTables_scrollBody, .table-fixed-container, #ds-table-container, #ns-table-container, #accum-fixed-container';
+    
+    $(containers).each(function() {
+        let isDragging = false;
+        let startX, scrollLeft;
+        
+        // Mouse events
+        $(this).on('mousedown', function(e) {
+            isDragging = true;
+            startX = e.pageX - $(this).offset().left;
+            scrollLeft = $(this).scrollLeft();
+            $(this).css('cursor', 'grabbing');
+            return false; // Prevent text selection
+        });
+        
+        $(document).on('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const x = e.pageX - $(containers).offset().left;
+            const walk = (x - startX) * 2; // Multiply for faster drag
+            
+            $(containers).scrollLeft(scrollLeft - walk);
+        });
+        
+        $(document).on('mouseup', function() {
+            isDragging = false;
+            $(containers).css('cursor', 'grab');
+        });
+        
+        // Touch events for mobile
+        $(this).on('touchstart', function(e) {
+            isDragging = true;
+            startX = e.originalEvent.touches[0].pageX - $(this).offset().left;
+            scrollLeft = $(this).scrollLeft();
+        });
+        
+        $(document).on('touchmove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const x = e.originalEvent.touches[0].pageX - $(containers).offset().left;
+            const walk = (x - startX) * 2;
+            
+            $(containers).scrollLeft(scrollLeft - walk);
+        });
+        
+        $(document).on('touchend', function() {
+            isDragging = false;
+        });
+    });
+}
+
+// Jalankan setelah page load
+$(document).ready(function() {
+    setTimeout(enableTableDrag, 1000);
+    
+    // Jalankan lagi setiap modal dibuka
+    $('.modal').on('shown.bs.modal', function() {
+        setTimeout(enableTableDrag, 300);
+    });
+});
+
 });
 
 // Fungsi untuk refresh modal yang sedang terbuka
